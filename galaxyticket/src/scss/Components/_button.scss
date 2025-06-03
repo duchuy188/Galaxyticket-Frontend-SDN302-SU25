@@ -1,0 +1,81 @@
+.button.active {
+  background-image: linear-gradient(to right, $color-orange-light, $color-orange-dark);
+  color: $color-white;
+  padding: $pd-2 $pd-5;
+  border-radius: $border-ra-1 !important;
+}
+
+.button {
+  color: $color-orange-dark;
+
+  &:hover {
+      color: $color-orange-dark;
+  }
+}
+
+.bt {
+  background-image: linear-gradient(to right, $color-orange-light, $color-orange-dark);
+  color: $color-white;
+  padding: $pd-2 $pd-5;
+  border: none;
+  border-radius: 10px;
+}
+
+.button__muaVe {
+  background-image: linear-gradient(to right, $color-orange-light, $color-orange-dark);
+  color: $color-white;
+  padding: $pd-2 $pd-5;
+  text-align: center;
+  border-radius: 10px;
+
+  .icon__down {
+      padding-left: $pd-2;
+  }
+
+  &:hover {
+      .icon__down {
+          animation: shakeY 1s infinite;
+      }
+  }
+}
+
+@keyframes shakeY {
+  0% {
+      transform: translateY(0px);
+  }
+
+  25% {
+      transform: translateY(3px);
+  }
+
+  50% {
+      transform: translateY(0px);
+  }
+
+  75% {
+      transform: translateY(3px);
+  }
+
+  100% {
+      transform: translateY(0px);
+  }
+}
+
+.icon__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+
+  &:hover {
+      cursor: pointer;
+      transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  i {
+      color: $color-orange-light;
+      border: 2px solid $color-orange-light;
+      padding: $pd-3;
+      border-radius: 50%;
+  }
+}

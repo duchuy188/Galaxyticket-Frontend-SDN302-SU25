@@ -1,0 +1,133 @@
+.formDangKi {
+  background: url("./../../background.jpg");
+  min-height: 968px;
+  .formSignUp {
+    margin: 0 auto;
+    position: fixed;
+    top: 10%;
+    left: 50%;
+    width: 450px !important;
+    transform: translate3d(-50%, 0, 0);
+    width: 350px;
+    padding: 20px;
+    overflow: hidden;
+    background-color: black;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    background: inherit;
+    -moz-border-radius: 12px;
+    -webkit-border-radius: 12px;
+    border-radius: 12px;
+    .forceColor {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+    .topbar {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      font-size: 100%;
+      font: inherit;
+      vertical-align: baseline;
+      .spanColor {
+        position: absolute;
+        width: 0px;
+        right: 20px;
+        height: 43px;
+        opacity: 0.2;
+        background-color: white;
+        border-top-left-radius: 0px;
+        border-bottom-left-radius: 0px;
+        border-top-right-radius: 6px;
+        border-bottom-right-radius: 6px;
+        transition: width 150ms ease-in-out, background-color 150ms ease-in-out 250ms, border 150ms ease-in-out 250ms;
+      }
+      .input {
+        display: block;
+        width: 100%;
+        position: relative;
+        border-radius: 6px;
+        font-size: 1rem;
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        margin-bottom: 25px;
+        color: white;
+        padding: 10px 20px;
+        &::-webkit-input-placeholder {
+          color: white !important;
+          font-size: 1.2rem;
+          font-family: Raleway;
+          line-height: 1.3rem;
+          font-weight: 200;
+        }
+        &:focus {
+          outline: none !important;
+          border: none;
+          color: white;
+          // border: 1px solid white;
+          border: none;
+          box-shadow: none;
+          &:hover {
+            border: 1px solid white;
+          }
+        }
+        // &.disabled:hover {
+        //   border: 1px solid white;
+        // }
+        &:hover {
+          border: 1px solid white;
+        }
+      }
+    }
+    .submit {
+      padding: 8px 16px;
+      width: 100%;
+      font-size: 1.2rem;
+      font-family: Raleway;
+      font-weight: 200;
+      display: block;
+      color: white;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-right: none;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 0;
+
+      // border-radius: 6px;
+
+      cursor: pointer;
+      &:focus {
+        background-color: #c3ab93;
+        font-weight: 600;
+        box-shadow: none !important;
+        border-color: transparent;
+      }
+    }
+    .backHome {
+      // padding: 10px 20px;
+      width: 100%;
+      font-size: 1.2rem;
+      font-family: Raleway;
+      font-weight: 200;
+      display: block;
+      color: white;
+      position: relative;
+      // border: 1px solid rgba(255, 255, 255, 0.4);
+      border-left: none;
+      // background: rgba(255, 255, 255, 0.5);
+      background-color: #8d8782;
+      // border-radius: 6px;
+      cursor: pointer;
+      line-height: 50px;
+      text-decoration: none;
+    }
+    &__title {
+      position: relative;
+      color: white;
+      z-index: 999;
+    }
+  }
+}
