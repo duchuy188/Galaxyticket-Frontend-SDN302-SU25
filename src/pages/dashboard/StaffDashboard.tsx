@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { movies as initialMovies, showtimes as initialShowtimes } from '../utils/mockData';
+import { movies as initialMovies, showtimes as initialShowtimes } from '../../utils/mockData';
 import { EditIcon, TrashIcon, PlusIcon, FilmIcon, AlertCircleIcon } from 'lucide-react';
 const StaffDashboard: React.FC = () => {
   const location = useLocation();
@@ -512,7 +512,7 @@ const StaffDashboard: React.FC = () => {
                     </button>
                   </td>
                 </tr>;
-          })}
+            })}
           </tbody>
         </table>
       </div>

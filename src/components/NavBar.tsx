@@ -1,113 +1,267 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { MenuIcon, XIcon, UserIcon } from 'lucide-react';
+import { Film, ChevronDown, User, LogOut, Ticket, Star } from 'lucide-react';
+import { Movie, getMovies } from '../utils/movie';
+
+interface MovieSection {
+  title: string;
+  movies: Movie[];
+}
+
+interface NavItem {
+  name: string;
+  path: string;
+  items?: string[] | MovieSection[];
+  requireAuth?: boolean;
+}
+
 const NavBar: React.FC = () => {
-  const {
-    user,
-    isAuthenticated,
-    logout
-  } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [movies, setMovies] = useState<Movie[]>([]);
+
+  useEffect(() => {
+    const fetchMovies = async () => {
+      try {
+        const data = await getMovies();
+        setMovies(data || []);
+      } catch (error) {
+        console.error('Error fetching movies:', error);
+        setMovies([]);
+      }
+    };
+
+    fetchMovies();
+  }, []);
+
   const handleLogout = () => {
     logout();
     navigate('/signin');
   };
-  // Don't show admin/staff navigation options in public area
+
   if (user?.role === 'admin' || user?.role === 'staff') {
     return null;
   }
-  return <nav className="bg-gray-800 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Link to="/" className="text-xl font-bold">
-                Cinema Booking
-              </Link>
-            </div>
-            <div className="hidden md:block">
-              <div className="ml-10 flex items-baseline space-x-4">
-                <Link to="/" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
-                  Home
-                </Link>
-                {isAuthenticated && <Link to="/bookings" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
-                    My Bookings
-                  </Link>}
-              </div>
-            </div>
-          </div>
-          <div className="hidden md:block">
-            <div className="ml-4 flex items-center md:ml-6">
-              {isAuthenticated ? <div className="relative ml-3">
-                  <div className="flex items-center">
-                    <Link to="/bookings" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
-                      My Account
+
+  const nowShowing = movies.filter(movie => movie.showingStatus === 'now-showing');
+  const comingSoon = movies.filter(movie => movie.showingStatus === 'coming-soon');
+
+  const navItems: NavItem[] = [
+    {
+      name: 'Movies',
+      path: '/movies',
+      items: [
+        {
+          title: 'NOW SHOWING',
+          movies: nowShowing.slice(0, 4)
+        },
+        {
+          title: 'COMING SOON',
+          movies: comingSoon.slice(0, 4)
+        }
+      ]
+    },
+    {
+      name: 'Theaters',
+      path: '/theaters',
+      items: ['All Theaters', 'Special Screens', 'Theater Rules']
+    },
+    {
+      name: 'My Bookings',
+      path: '/bookings',
+      requireAuth: true
+    }
+  ];
+
+  return (
+    <header className="bg-[#1a237e] shadow-lg">
+      <div className="container mx-auto px-4">
+        <div className="flex justify-between items-center h-16">
+          <Link to="/" className="flex items-center space-x-2 hover:opacity-90 transition-opacity">
+            <Film className="h-6 w-6 text-red-500" />
+            <span className="text-2xl font-bold text-white">Galaxy Cinema</span>
+          </Link>
+          <nav className="hidden md:flex items-center space-x-8">
+            {navItems.map((item) => (
+              (!item.requireAuth || isAuthenticated) && (
+                <div
+                  key={item.name}
+                  className="relative group"
+                  onMouseEnter={() => setActiveDropdown(item.name)}
+                  onMouseLeave={() => setActiveDropdown(null)}
+                >
+                  {item.name === 'Movies' ? (
+                    <div className="flex items-center space-x-1 cursor-pointer py-6">
+                      <Link 
+                        to={item.path}
+                        className="text-gray-200 hover:text-white font-medium"
+                      >
+                        {item.name}
+                      </Link>
+                      <ChevronDown 
+                        className={`w-4 h-4 text-gray-200 transition-transform duration-200 ${
+                          activeDropdown === item.name ? 'transform rotate-180' : ''
+                        }`}
+                      />
+                    </div>
+                  ) : (
+                    <Link 
+                      to={item.path}
+                      className="text-gray-200 hover:text-white font-medium flex items-center space-x-1 py-6"
+                    >
+                      <span>{item.name}</span>
+                      {item.items && <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeDropdown === item.name ? 'transform rotate-180' : ''}`} />}
                     </Link>
-                    <button onClick={handleLogout} className="px-3 py-2 rounded-md text-sm font-medium bg-red-600 hover:bg-red-700 ml-2">
-                      Logout
+                  )}
+                  {item.items && activeDropdown === item.name && (
+                    <div 
+                      className={`absolute left-0 w-[600px] bg-white rounded-lg shadow-xl py-4 z-50 transform transition-all duration-200 ease-out ${
+                        activeDropdown === item.name 
+                          ? 'opacity-100 translate-y-0' 
+                          : 'opacity-0 -translate-y-2'
+                      }`}
+                      style={{ top: '100%' }}
+                      onMouseEnter={() => setActiveDropdown(item.name)}
+                      onMouseLeave={() => setActiveDropdown(null)}
+                    >
+                      {Array.isArray(item.items) && typeof item.items[0] === 'string' ? (
+                        item.items.map((subItem) => (
+                          <Link
+                            key={subItem}
+                            to={`${item.path}/${subItem.toLowerCase().replace(/\s+/g, '-')}`}
+                            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-red-600"
+                          >
+                            {subItem}
+                          </Link>
+                        ))
+                      ) : (
+                        // Movies dropdown with sections
+                        (item.items as MovieSection[]).map((section, index) => (
+                          <div key={section.title} className={`px-4 ${index > 0 ? 'mt-4' : ''}`}>
+                            <h3 className="text-lg font-bold text-gray-900 mb-3 border-l-4 border-blue-600 pl-2">
+                              {section.title}
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                              {section.movies.map((movie) => (
+                                <Link
+                                  key={movie._id}
+                                  to={`/movie/${movie._id}`}
+                                  className="flex items-start space-x-3 p-2 rounded hover:bg-gray-50 group"
+                                >
+                                  {/* Poster */}
+                                  <div className="w-24 h-32 flex-shrink-0 overflow-hidden rounded-lg">
+                                    <img
+                                      src={movie.posterUrl}
+                                      alt={movie.title}
+                                      className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.src = '/placeholder-movie.jpg';
+                                      }}
+                                    />
+                                  </div>
+                                  
+                                  {/* Movie Info */}
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2">
+                                      <h3 className="text-gray-900 font-medium group-hover:text-red-600 transition-colors line-clamp-2">
+                                        {movie.title}
+                                      </h3>
+                                      <span className={`px-1.5 py-0.5 text-xs rounded flex-shrink-0 ${
+                                        movie.ageRating === 'T18' ? 'bg-red-100 text-red-800' :
+                                        movie.ageRating === 'T16' ? 'bg-orange-100 text-orange-800' :
+                                        'bg-green-100 text-green-800'
+                                      }`}>
+                                        {movie.ageRating || 'P'}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center mt-1">
+                                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                                      <span className="text-sm text-gray-600 ml-1">{movie.rating || '7.5'}</span>
+                                      {movie.releaseDate && (
+                                        <span className="text-sm text-gray-500 ml-2">• {new Date(movie.releaseDate).toLocaleDateString('vi-VN')}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            ))}
+          </nav>
+          <div className="flex items-center space-x-4">
+            {isAuthenticated ? (
+              <div className="relative">
+                <button 
+                  onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                  className="flex items-center space-x-2 px-4 py-2 text-gray-200 hover:text-white focus:outline-none"
+                >
+                  <span>{user?.email}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isUserDropdownOpen ? 'transform rotate-180' : ''}`} />
+                </button>
+                
+                {isUserDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-50">
+                    <Link 
+                      to="/profile" 
+                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsUserDropdownOpen(false)}
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      <span>Profile</span>
+                    </Link>
+                    <Link 
+                      to="/bookings" 
+                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsUserDropdownOpen(false)}
+                    >
+                      <Ticket className="w-4 h-4 mr-2" />
+                      <span>My Bookings</span>
+                    </Link>
+                    <hr className="my-2 border-gray-200" />
+                    <button
+                      onClick={() => {
+                        handleLogout();
+                        setIsUserDropdownOpen(false);
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      <span>Logout</span>
                     </button>
                   </div>
-                </div> : <div className="flex items-center space-x-2">
-                  <Link to="/signin" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-700">
-                    Sign In
-                  </Link>
-                  <Link to="/signup" className="px-3 py-2 rounded-md text-sm font-medium bg-blue-600 hover:bg-blue-700">
-                    Sign Up
-                  </Link>
-                </div>}
-            </div>
-          </div>
-          <div className="flex md:hidden">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none">
-              {isMenuOpen ? <XIcon className="block h-6 w-6" /> : <MenuIcon className="block h-6 w-6" />}
-            </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link 
+                  to="/signin" 
+                  className="px-4 py-2 text-gray-200 hover:text-white"
+                >
+                  Sign In
+                </Link>
+                <Link 
+                  to="/signup" 
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-200"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
-      {/* Mobile menu */}
-      {isMenuOpen && <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            <Link to="/" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-700" onClick={() => setIsMenuOpen(false)}>
-              Home
-            </Link>
-            {isAuthenticated && <Link to="/bookings" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-700" onClick={() => setIsMenuOpen(false)}>
-                My Bookings
-              </Link>}
-          </div>
-          <div className="pt-4 pb-3 border-t border-gray-700">
-            {isAuthenticated ? <div className="px-2 space-y-1">
-                <div className="flex items-center px-3">
-                  <div className="flex-shrink-0">
-                    <UserIcon className="h-6 w-6" />
-                  </div>
-                  <div className="ml-3">
-                    <div className="text-base font-medium">
-                      {user?.fullName}
-                    </div>
-                    <div className="text-sm text-gray-400">{user?.email}</div>
-                  </div>
-                </div>
-                <Link to="/bookings" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-700" onClick={() => setIsMenuOpen(false)}>
-                  My Account
-                </Link>
-                <button onClick={() => {
-            handleLogout();
-            setIsMenuOpen(false);
-          }} className="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-gray-700 text-red-400">
-                  Logout
-                </button>
-              </div> : <div className="px-2 space-y-1">
-                <Link to="/signin" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-700" onClick={() => setIsMenuOpen(false)}>
-                  Sign In
-                </Link>
-                <Link to="/signup" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-700" onClick={() => setIsMenuOpen(false)}>
-                  Sign Up
-                </Link>
-              </div>}
-          </div>
-        </div>}
-    </nav>;
+    </header>
+  );
 };
+
 export default NavBar;

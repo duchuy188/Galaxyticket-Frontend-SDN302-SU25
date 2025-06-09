@@ -5,6 +5,7 @@ type User = {
   email: string;
   phone?: string;
   role: 'admin' | 'staff' | 'user';
+  avatar?: string;
 };
 type AuthContextType = {
   user: User | null;

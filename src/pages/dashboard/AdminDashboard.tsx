@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { revenueData } from '../utils/mockData';
+import { revenueData } from '../../utils/mockData';
 import { EditIcon, TrashIcon, LockIcon, UnlockIcon } from 'lucide-react';
 // Mock user data
 const initialUsers = [{

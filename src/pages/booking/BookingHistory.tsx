@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { bookings as mockBookings } from '../utils/mockData';
-import { movies } from '../utils/mockData';
+import { useAuth } from '../../context/AuthContext';
+import { bookings as mockBookings } from '../../utils/mockData';
+import { movies } from '../../utils/mockData';
 import { Link } from 'react-router-dom';
 import { CheckCircleIcon, XCircleIcon } from 'lucide-react';
 type Booking = {

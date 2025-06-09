@@ -5,6 +5,7 @@ const API_URL = 'http://localhost:5000';
 export interface Movie {
     _id: string;
     title: string;
+    vietnameseTitle?: string;
     description: string;
     genre: string;
     duration: number;
@@ -13,7 +14,12 @@ export interface Movie {
     releaseDate: string;
     status: boolean;
     country: string;
+    producer?: string;
+    director?: string;
+    cast?: string;
+    votes?: number;
     showingStatus: 'now-showing' | 'coming-soon' | 'ended';
+    rating?: number;
     createdAt: string;
     updatedAt: string;
     rejectionReason?: string;
@@ -21,6 +27,7 @@ export interface Movie {
     approvedBy?: string | null;
     isActive?: boolean;
     __v?: number;
+    ageRating?: 'T18' | 'T16' | 'K' | 'P';
 }
 
 export const getMovies = async (): Promise<Movie[]> => {
