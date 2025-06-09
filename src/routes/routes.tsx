@@ -13,6 +13,7 @@ import BookingConfirmation from '../pages/booking/BookingConfirmation';
 import BookingHistory from '../pages/booking/BookingHistory';
 import AdminDashboard from '../pages/dashboard/AdminDashboard';
 import StaffDashboard from '../pages/dashboard/StaffDashboard';
+import ManagerDashboard from '../pages/dashboard/ManagerDashboard';
 import PrivateRoute from '../components/PrivateRoute';
 import { PublicRouteGuard, AuthRouteGuard } from './auth';
 import Profile from '../pages/user/Profile';
@@ -57,6 +58,12 @@ export const AppRoutes = () => {
             <Route path="staff/*" element={<PrivateRoute allowedRoles={['staff']}>
                 <DashboardLayout>
                     <StaffDashboard />
+                </DashboardLayout>
+            </PrivateRoute>} />
+            {/* Manager Dashboard Routes */}
+                        <Route path="manager/*" element={<PrivateRoute allowedRoles={['manager']}>
+                <DashboardLayout>
+                    <ManagerDashboard />
                 </DashboardLayout>
             </PrivateRoute>} />
 

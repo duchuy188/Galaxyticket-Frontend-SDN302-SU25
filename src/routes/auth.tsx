@@ -15,6 +15,9 @@ export const PublicRouteGuard: React.FC<{
     if (user?.role === 'staff') {
         return <Navigate to="/staff" replace />;
     }
+        if (user?.role === 'manager') {
+        return <Navigate to="/manager" replace />;
+    }
     return <>{children}</>;
 };
 
@@ -28,6 +31,7 @@ export const AuthRouteGuard: React.FC<{
     if (user) {
         if (user.role === 'admin') return <Navigate to="/admin" replace />;
         if (user.role === 'staff') return <Navigate to="/staff" replace />;
+        if (user.role === 'manager') return <Navigate to="/manager" replace />
         return <Navigate to="/" replace />;
     }
     return <>{children}</>;
