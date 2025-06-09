@@ -177,7 +177,7 @@ const SignIn: React.FC = () => {
           {/* Quick Login Options */}
           <div>
             <div className="text-center text-gray-400 mb-4">Quick Login Options</div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 type="button"
                 onClick={() => quickLogin('admin', '123')}
@@ -191,6 +191,13 @@ const SignIn: React.FC = () => {
                 className="bg-green-900/50 border border-green-700 text-green-200 hover:bg-green-800/50 px-4 py-2.5 rounded-lg text-sm transition-all duration-200"
               >
                 Staff Login
+              </button>
+              <button
+                type="button"
+                onClick={() => quickLogin('manager', '123')}
+                className="bg-yellow-900/50 border border-yellow-700 text-yellow-200 hover:bg-yellow-800/50 px-4 py-2.5 rounded-lg text-sm transition-all duration-200"
+              >
+                Manager Login
               </button>
             </div>
           </div>
@@ -210,4 +217,4 @@ const SignIn: React.FC = () => {
   );
 };
 
-export default SignIn; 
+export default SignIn;
