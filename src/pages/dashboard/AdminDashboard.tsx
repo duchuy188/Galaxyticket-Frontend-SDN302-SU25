@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { revenueData } from '../../utils/mockData';
 import { EditIcon, TrashIcon, LockIcon, UnlockIcon } from 'lucide-react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 // Mock user data
 const initialUsers = [{
   id: '1',
@@ -49,10 +51,23 @@ const AdminDashboard: React.FC = () => {
     }
   }, [location.pathname]);
   const handleToggleLock = (userId: string) => {
-    setUsers(users.map(user => user.id === userId ? {
-      ...user,
-      isLocked: !user.isLocked
-    } : user));
+    try {
+      const user = users.find(u => u.id === userId);
+      setUsers(users.map(user => user.id === userId ? {
+        ...user,
+        isLocked: !user.isLocked
+      } : user));
+      
+      toast.success(`Tài khoản đã được ${user?.isLocked ? 'mở khóa' : 'khóa'} thành công!`, {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    } catch (err) {
+      toast.error('Có lỗi xảy ra khi thay đổi trạng thái tài khoản!', {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
   };
   const handleEditUser = (user: any) => {
     setEditingUser({
@@ -62,14 +77,38 @@ const AdminDashboard: React.FC = () => {
   const handleUpdateUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
-    setUsers(users.map(user => user.id === editingUser.id ? {
-      ...editingUser
-    } : user));
-    setEditingUser(null);
+
+    try {
+      setUsers(users.map(user => user.id === editingUser.id ? {
+        ...editingUser
+      } : user));
+      
+      toast.success('Thông tin người dùng đã được cập nhật thành công!', {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      setEditingUser(null);
+    } catch (err) {
+      toast.error('Có lỗi xảy ra khi cập nhật thông tin người dùng!', {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    }
   };
   const handleDeleteUser = (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(user => user.id !== userId));
+    if (window.confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
+      try {
+        setUsers(users.filter(user => user.id !== userId));
+        toast.success('Người dùng đã được xóa thành công!', {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      } catch (err) {
+        toast.error('Có lỗi xảy ra khi xóa người dùng!', {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      }
     }
   };
   const renderMainDashboard = () => <div>
@@ -416,6 +455,7 @@ const AdminDashboard: React.FC = () => {
       </div>
     </div>;
   return <div>
+      <ToastContainer />
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
       {isMainDashboard && renderMainDashboard()}
       {isUserManagement && renderUserManagement()}

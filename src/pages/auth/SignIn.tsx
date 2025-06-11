@@ -32,10 +32,14 @@ const SignIn: React.FC = () => {
     try {
       const success = await login(formData.username, formData.password);
       if (success) {
+        // Get the latest user state after login
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
         // Redirect based on user role
-        if (user?.role === 'admin') {
+        if (currentUser.role === 'admin') {
           navigate('/admin');
-        } else if (user?.role === 'staff') {
+        } else if (currentUser.role === 'manager') {
+          navigate('/manager');
+        } else if (currentUser.role === 'staff') {
           navigate('/staff');
         } else {
           navigate('/');
@@ -177,13 +181,20 @@ const SignIn: React.FC = () => {
           {/* Quick Login Options */}
           <div>
             <div className="text-center text-gray-400 mb-4">Quick Login Options</div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 type="button"
                 onClick={() => quickLogin('admin', '123')}
                 className="bg-blue-900/50 border border-blue-700 text-blue-200 hover:bg-blue-800/50 px-4 py-2.5 rounded-lg text-sm transition-all duration-200"
               >
                 Admin Login
+              </button>
+              <button
+                type="button"
+                onClick={() => quickLogin('manager', '123')}
+                className="bg-purple-900/50 border border-purple-700 text-purple-200 hover:bg-purple-800/50 px-4 py-2.5 rounded-lg text-sm transition-all duration-200"
+              >
+                Manager Login
               </button>
               <button
                 type="button"

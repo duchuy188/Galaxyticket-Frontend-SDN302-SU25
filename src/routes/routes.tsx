@@ -3,8 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import DashboardLayout from '../layouts/DashboardLayout';
 import SignIn from '../pages/auth/SignIn';
-import SignUp from '../pages/Auth/SignUp';
-import ForgotPassword from '../pages/Auth/ForgotPassword';
+import SignUp from '../pages/auth/SignUp';
+import ForgotPassword from '../pages/auth/ForgotPassword';
 import Home from '../pages/movie/Home';
 import MovieDetail from '../pages/movie/MovieDetail';
 import SeatSelection from '../pages/SeatSelection';
@@ -13,9 +13,11 @@ import BookingConfirmation from '../pages/booking/BookingConfirmation';
 import BookingHistory from '../pages/booking/BookingHistory';
 import AdminDashboard from '../pages/dashboard/AdminDashboard';
 import StaffDashboard from '../pages/dashboard/StaffDashboard';
+import ManagerDashboard from '../pages/dashboard/ManagerDashboard';
 import PrivateRoute from '../components/PrivateRoute';
 import { PublicRouteGuard, AuthRouteGuard } from './auth';
 import Profile from '../pages/user/Profile';
+import TheaterDetail from '../pages/theater/TheaterDetail';
 
 export const AppRoutes = () => {
     return (
@@ -38,6 +40,7 @@ export const AppRoutes = () => {
                 <Route path="seats/:id" element={<SeatSelection />} />
                 <Route path="checkout" element={<Checkout />} />
                 <Route path="confirmation" element={<BookingConfirmation />} />
+                <Route path="theater/:id" element={<TheaterDetail />} />
                 <Route path="bookings" element={<PrivateRoute allowedRoles={['user']}>
                     <BookingHistory />
                 </PrivateRoute>} />
@@ -50,6 +53,13 @@ export const AppRoutes = () => {
             <Route path="admin/*" element={<PrivateRoute allowedRoles={['admin']}>
                 <DashboardLayout>
                     <AdminDashboard />
+                </DashboardLayout>
+            </PrivateRoute>} />
+
+            {/* Manager Dashboard Routes */}
+            <Route path="manager/*" element={<PrivateRoute allowedRoles={['manager']}>
+                <DashboardLayout>
+                    <ManagerDashboard />
                 </DashboardLayout>
             </PrivateRoute>} />
 

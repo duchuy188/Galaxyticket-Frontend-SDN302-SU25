@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 type PrivateRouteProps = {
   children: React.ReactNode;
-  allowedRoles: Array<'admin' | 'staff' | 'user'>;
+  allowedRoles: Array<'admin' | 'manager' | 'staff' | 'user'>;
 };
 const PrivateRoute: React.FC<PrivateRouteProps> = ({
   children,
@@ -19,6 +19,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({
   if (!user || !allowedRoles.includes(user.role)) {
     // Redirect based on role
     if (user?.role === 'admin') return <Navigate to="/admin" replace />;
+    if (user?.role === 'manager') return <Navigate to="/manager" replace />;
     if (user?.role === 'staff') return <Navigate to="/staff" replace />;
     return <Navigate to="/" replace />;
   }

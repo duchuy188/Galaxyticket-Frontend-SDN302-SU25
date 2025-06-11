@@ -4,7 +4,7 @@ type User = {
   fullName: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'staff' | 'user';
+  role: 'admin' | 'manager' | 'staff' | 'user';
   avatar?: string;
 };
 type AuthContextType = {
@@ -28,6 +28,14 @@ const mockUsers = [{
   role: 'admin' as const
 }, {
   id: '2',
+  username: 'manager',
+  password: '123',
+  fullName: 'Manager User',
+  email: 'manager@cinema.com',
+  phone: '123-456-7892',
+  role: 'manager' as const
+}, {
+  id: '3',
   username: 'staff',
   password: '123',
   fullName: 'Staff User',
