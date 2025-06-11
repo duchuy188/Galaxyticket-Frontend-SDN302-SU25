@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -8,7 +10,6 @@ const SignUp: React.FC = () => {
     fullName: '',
     email: '',
     phone: '',
-    username: '',
     password: '',
     confirmPassword: ''
   });
@@ -70,6 +71,10 @@ const SignUp: React.FC = () => {
       setError('Please enter a valid phone number');
       return false;
     }
+    if (!formData.fullName.trim()) {
+      setError('Full name is required');
+      return false;
+    }
     return true;
   };
 
@@ -84,9 +89,16 @@ const SignUp: React.FC = () => {
     }
 
     try {
-      const { confirmPassword, ...userData } = formData;
+      // Map fullName thành name cho backend
+      const userData = {
+        fullName: formData.fullName.trim(),
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+      };
+
       const success = await register(userData);
-      
+
       if (success) {
         navigate('/');
       } else {
@@ -135,8 +147,8 @@ const SignUp: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Full Name Field */}
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            {/* Full Name */}
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-white mb-2">
                 Full Name
@@ -158,7 +170,7 @@ const SignUp: React.FC = () => {
               </div>
             </div>
 
-            {/* Email Field */}
+            {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
                 Email
@@ -180,7 +192,7 @@ const SignUp: React.FC = () => {
               </div>
             </div>
 
-            {/* Phone Field */}
+            {/* Phone */}
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-white mb-2">
                 Phone Number
@@ -202,29 +214,7 @@ const SignUp: React.FC = () => {
               </div>
             </div>
 
-            {/* Username Field */}
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-white mb-2">
-                Username
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-500" />
-                </div>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  required
-                  className="w-full pl-10 px-3 py-2.5 bg-gray-700/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Choose a username"
-                  value={formData.username}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-
-            {/* Password Field */}
+            {/* Password */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
                 Password
@@ -247,11 +237,11 @@ const SignUp: React.FC = () => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {/* Password Strength Indicator */}
               {formData.password && (
                 <div className="mt-2">
                   <div className="flex space-x-1">
@@ -283,7 +273,7 @@ const SignUp: React.FC = () => {
               )}
             </div>
 
-            {/* Confirm Password Field */}
+            {/* Confirm Password */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-white mb-2">
                 Confirm Password
@@ -306,11 +296,11 @@ const SignUp: React.FC = () => {
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {/* Password Match Indicator */}
               {formData.confirmPassword && (
                 <div className="flex items-center mt-2 text-sm">
                   {formData.password === formData.confirmPassword ? (
@@ -328,50 +318,43 @@ const SignUp: React.FC = () => {
               )}
             </div>
 
-            {/* Terms and Conditions */}
+            {/* Terms & Conditions */}
             <div className="flex items-center">
               <input
-                id="terms"
-                name="terms"
+                id="acceptTerms"
+                name="acceptTerms"
                 type="checkbox"
-                className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-700 bg-gray-700 rounded"
                 checked={acceptTerms}
-                onChange={(e) => setAcceptTerms(e.target.checked)}
+                onChange={() => setAcceptTerms(!acceptTerms)}
+                className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
               />
-              <label htmlFor="terms" className="ml-2 block text-sm text-gray-400">
+              <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-300">
                 I accept the{' '}
-                <Link to="/terms" className="text-red-400 hover:text-red-300 transition-colors">
+                <Link
+                  to="/terms"
+                  target="_blank"
+                  className="text-red-500 underline hover:text-red-400"
+                >
                   Terms and Conditions
                 </Link>
               </label>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed mt-6"
+              className="w-full flex justify-center items-center rounded-xl bg-gradient-to-r from-red-600 to-red-700 py-2 text-white font-semibold text-lg hover:from-red-700 hover:to-red-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                  Creating account...
-                </div>
-              ) : (
-                'Create Account'
-              )}
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign Up'}
             </button>
-
-            {/* Sign In Link */}
-            <div className="text-center mt-6">
-              <p className="text-gray-400">
-                Already have an account?{' '}
-                <Link to="/signin" className="text-red-400 hover:text-red-300 transition-colors">
-                  Sign in here
-                </Link>
-              </p>
-            </div>
           </form>
+
+          <p className="mt-6 text-center text-gray-400 text-sm">
+            Already have an account?{' '}
+            <Link to="/login" className="text-red-500 hover:underline">
+              Login
+            </Link>
+          </p>
         </div>
       </div>
     </div>

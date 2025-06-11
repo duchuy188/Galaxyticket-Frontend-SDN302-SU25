@@ -69,6 +69,12 @@ export const AppRoutes = () => {
                     <StaffDashboard />
                 </DashboardLayout>
             </PrivateRoute>} />
+            {/* Manager Dashboard Routes */}
+                        <Route path="manager/*" element={<PrivateRoute allowedRoles={['manager']}>
+                <DashboardLayout>
+                    <ManagerDashboard />
+                </DashboardLayout>
+            </PrivateRoute>} />
 
             {/* Catch all route */}
             <Route path="*" element={<Navigate to="/" replace />} />
