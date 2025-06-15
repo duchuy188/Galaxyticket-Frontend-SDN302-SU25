@@ -83,21 +83,19 @@ const Home: React.FC = () => {
         <div className="flex space-x-4 mb-8">
           <button
             onClick={() => setActiveTab('now-showing')}
-            className={`px-6 py-2.5 rounded-lg transition duration-300 text-lg font-medium ${
-              activeTab === 'now-showing'
+            className={`px-6 py-2.5 rounded-lg transition duration-300 text-lg font-medium ${activeTab === 'now-showing'
                 ? 'bg-red-600 text-white shadow-lg shadow-red-600/30'
                 : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-            }`}
+              }`}
           >
             Now Showing
           </button>
           <button
             onClick={() => setActiveTab('coming-soon')}
-            className={`px-6 py-2.5 rounded-lg transition duration-300 text-lg font-medium ${
-              activeTab === 'coming-soon'
+            className={`px-6 py-2.5 rounded-lg transition duration-300 text-lg font-medium ${activeTab === 'coming-soon'
                 ? 'bg-red-600 text-white shadow-lg shadow-red-600/30'
                 : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-            }`}
+              }`}
           >
             Coming Soon
           </button>
@@ -205,7 +203,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isComingSoon }) => {
   };
 
   return (
-    <div 
+    <div
       className="group bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer"
       onClick={handleCardClick}
     >
@@ -253,15 +251,14 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isComingSoon }) => {
           <h3 className="font-bold text-lg line-clamp-1 group-hover:text-red-600 transition-colors">
             {movie.title}
           </h3>
-          <span className={`px-2 py-0.5 text-xs rounded ${
-            movie.ageRating === 'T18' ? 'bg-red-100 text-red-800' :
-            movie.ageRating === 'T16' ? 'bg-orange-100 text-orange-800' :
-            'bg-green-100 text-green-800'
-          }`}>
+          <span className={`px-2 py-0.5 text-xs rounded ${movie.ageRating === 'T18' ? 'bg-red-100 text-red-800' :
+              movie.ageRating === 'T16' ? 'bg-orange-100 text-orange-800' :
+                'bg-green-100 text-green-800'
+            }`}>
             {movie.ageRating || 'P'}
           </span>
         </div>
-        
+
         <div className="flex items-center gap-4 text-sm text-gray-600">
           <div className="flex items-center gap-1">
             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
