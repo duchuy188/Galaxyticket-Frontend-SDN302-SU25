@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Movie, getMovieById } from '../../utils/movie';
-import { showtimes } from '../../utils/mockData'; 
+import { Screening, getScreeningsByMovie, getScheduleByTheater, TheaterSchedule, getScreenings } from '../../utils/screening';
+import { getTheaters, Theater } from '../../utils/theater';
+import { getRooms, Room } from '../../utils/room';
+import { showtimes } from '../../utils/mockData';
 import { Calendar, Clock, Tag, Star, Film, MapPin, Flag, Building2, User } from 'lucide-react';
 
 const MovieDetail: React.FC = () => {
@@ -15,6 +18,11 @@ const MovieDetail: React.FC = () => {
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [selectedTheater, setSelectedTheater] = useState<string>('');
   const [showTrailer, setShowTrailer] = useState(false);
+  const [screenings, setScreenings] = useState<Screening[]>([]);
+  const [screeningsLoading, setScreeningsLoading] = useState(true);
+  const [selectedScreening, setSelectedScreening] = useState<Screening | null>(null);
+  const [theaters, setTheaters] = useState<Theater[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
 
   useEffect(() => {
     const fetchMovie = async () => {
@@ -37,8 +45,85 @@ const MovieDetail: React.FC = () => {
     fetchMovie();
   }, [id]);
 
-  const movieShowtimes = showtimes.filter(s => s.movieId === id);
-  const filteredShowtimes = movieShowtimes.filter(s => !selectedDate || s.date === selectedDate);
+  useEffect(() => {
+    setScreeningsLoading(true);
+    getScreenings()
+      .then((data: Screening[]) => setScreenings(data))
+      .catch(() => setScreenings([]))
+      .finally(() => setScreeningsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    getTheaters()
+      .then(data => setTheaters(data))
+      .catch(() => setTheaters([]));
+    getRooms()
+      .then(data => setRooms(data))
+      .catch(() => setRooms([]));
+  }, []);
+
+  useEffect(() => {
+    console.log('Inside selectedScreening useEffect');
+    console.log('selectedDate:', selectedDate);
+    console.log('selectedTime:', selectedTime);
+    console.log('selectedTheater:', selectedTheater);
+    console.log('movie:', movie?._id);
+    console.log('screenings length:', screenings.length);
+
+    if (selectedDate && selectedTime && selectedTheater) {
+      const found = screenings.find(
+        s =>
+          s.startTime.startsWith(selectedDate) &&
+          s.startTime.includes(selectedTime) &&
+          (typeof s.theaterId === 'string' ? s.theaterId : s.theaterId?._id) === selectedTheater &&
+          (typeof s.movieId === 'string' ? s.movieId : s.movieId?._id) === movie?._id
+      );
+      setSelectedScreening(found || null);
+    } else {
+      setSelectedScreening(null);
+    }
+  }, [selectedDate, selectedTime, selectedTheater, screenings, movie]);
+
+  // availableDates for selectedTheater
+  const availableDates = useMemo(() => {
+    if (!selectedTheater) return [];
+    const dates = new Set<string>();
+    screenings.forEach(s => {
+      const theaterId = typeof s.theaterId === 'string' ? s.theaterId : s.theaterId?._id;
+      if (theaterId === selectedTheater) {
+        dates.add(s.startTime.split('T')[0]);
+      }
+    });
+    return Array.from(dates).sort();
+  }, [selectedTheater, screenings]);
+
+  // availableTimes for selectedTheater and selectedDate
+  const availableTimes = useMemo(() => {
+    console.log(
+      'Calculating available times with:',
+      'selectedTheater:', selectedTheater,
+      'selectedDate:', selectedDate,
+      'movie:', movie ? movie._id : 'N/A',
+      'screenings length:', screenings.length
+    );
+    if (!selectedTheater || !selectedDate || !movie || !screenings.length) return [];
+
+    const times = new Set<string>();
+    screenings.forEach(s => {
+      const screeningDate = s.startTime.split('T')[0];
+      const theaterId = typeof s.theaterId === 'string' ? s.theaterId : s.theaterId?._id;
+      const movieId = typeof s.movieId === 'string' ? s.movieId : s.movieId?._id;
+
+      if (
+        screeningDate === selectedDate &&
+        theaterId === selectedTheater &&
+        movieId === movie._id
+      ) {
+        times.add(s.startTime.split('T')[1].slice(0, 5));
+      }
+    });
+    return Array.from(times).sort();
+  }, [selectedTheater, selectedDate, movie, screenings]);
 
   // Thêm hàm này để chuyển đổi URL YouTube
   const getEmbedUrl = (url: string) => {
@@ -61,30 +146,33 @@ const MovieDetail: React.FC = () => {
   if (!movie) return <div className="container mx-auto px-4 py-12 text-center"><h2 className="text-2xl font-bold">Movie not found</h2></div>;
 
   const handleBooking = () => {
-    if (!selectedTime || !selectedTheater) {
+    if (!selectedScreening) {
       alert('Please select a time and theater');
       return;
     }
-    navigate(`/seats/${id}?date=${selectedDate}&time=${selectedTime}&theater=${selectedTheater}`);
+    console.log('Selected Screening:', selectedScreening);
+    const navigatePath = `/seats/${movie?._id}?date=${selectedDate}&time=${selectedTime}&theater=${selectedTheater}&screeningId=${selectedScreening._id}&movieTitle=${encodeURIComponent(movie.title)}`;
+    console.log('Navigating to:', navigatePath);
+    navigate(navigatePath);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Banner */}
       <div className="relative w-full h-[600px]">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: movie.trailerUrl 
+            backgroundImage: movie.trailerUrl
               ? `url(https://img.youtube.com/vi/${movie.trailerUrl.split('/').pop()}/maxresdefault.jpg)`
               : `url(${movie.posterUrl})`,
           }}
         >
           <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-gray-50" />
         </div>
-        
+
         <div className="absolute inset-0 flex items-center justify-center">
-          <button 
+          <button
             onClick={() => setShowTrailer(true)}
             className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-all"
           >
@@ -97,7 +185,7 @@ const MovieDetail: React.FC = () => {
       {showTrailer && movie.trailerUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="relative w-full max-w-4xl mx-4">
-            <button 
+            <button
               onClick={() => setShowTrailer(false)}
               className="absolute -top-10 right-0 text-white hover:text-gray-300"
             >
@@ -123,9 +211,9 @@ const MovieDetail: React.FC = () => {
             <div className="flex gap-8">
               {/* Poster */}
               <div className="w-[300px] flex-shrink-0">
-                <img 
-                  src={movie.posterUrl} 
-                  alt={movie.title} 
+                <img
+                  src={movie.posterUrl}
+                  alt={movie.title}
                   className="w-full h-[450px] object-cover rounded-lg shadow-xl"
                 />
               </div>
@@ -179,7 +267,7 @@ const MovieDetail: React.FC = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(movie.genre || 'Tâm Lý,Giật Gân').split(',').map((genre, index) => (
-                      <span 
+                      <span
                         key={index}
                         className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
                       >
@@ -197,7 +285,7 @@ const MovieDetail: React.FC = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(movie.director || 'Pae Arak Amornsupasiri,Wutthiphong Sukanin').split(',').map((director, index) => (
-                      <span 
+                      <span
                         key={index}
                         className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
                       >
@@ -215,7 +303,7 @@ const MovieDetail: React.FC = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(movie.cast || 'Pae Arak Amornsupasiri,Kittikun Chattongkum,Paween Purijitpanya').split(',').map((actor, index) => (
-                      <span 
+                      <span
                         key={index}
                         className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
                       >
@@ -232,35 +320,55 @@ const MovieDetail: React.FC = () => {
           <div className="col-span-12 lg:col-span-3">
             <div className="bg-white rounded-lg p-6 shadow-lg sticky top-8">
               <h3 className="text-xl font-semibold mb-6">Đặt vé</h3>
-              
-              {/* Date Selection */}
+
+              {/* Theater Selection - ĐƯA LÊN ĐẦU TIÊN */}
               <div className="mb-6">
-                <label className="block text-gray-700 font-medium mb-2">Chọn ngày</label>
-                <select 
+                <label className="block text-gray-700 font-medium mb-2">Chọn rạp</label>
+                <select
                   className="w-full p-3 border border-gray-200 rounded-lg"
-                  value={selectedDate}
-                  onChange={e => setSelectedDate(e.target.value)}
+                  value={selectedTheater}
+                  onChange={e => {
+                    setSelectedTheater(e.target.value);
+                    setSelectedDate('');
+                    setSelectedTime('');
+                  }}
                 >
-                  <option value="">Chọn ngày chiếu</option>
-                  {[...new Set(movieShowtimes.map(s => s.date))].map(date => (
-                    <option key={date} value={date}>{date}</option>
+                  <option value="">Chọn rạp</option>
+                  {theaters.map(theater => (
+                    <option key={theater._id} value={theater._id}>{theater.name}</option>
                   ))}
                 </select>
               </div>
 
+              {/* Date Selection */}
+              {selectedTheater && (
+                <div className="mb-6">
+                  <label className="block text-gray-700 font-medium mb-2">Chọn ngày</label>
+                  <select
+                    className="w-full p-3 border border-gray-200 rounded-lg"
+                    value={selectedDate}
+                    onChange={e => { setSelectedDate(e.target.value); setSelectedTime(''); }}
+                  >
+                    <option value="">Chọn ngày chiếu</option>
+                    {availableDates.map(date => (
+                      <option key={date} value={date}>{date}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Time Selection */}
-              {selectedDate && (
+              {selectedTheater && selectedDate && (
                 <div className="mb-6">
                   <label className="block text-gray-700 font-medium mb-2">Chọn suất chiếu</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {[...new Set(filteredShowtimes.map(s => s.time))].map(time => (
+                    {availableTimes.map(time => (
                       <button
                         key={time}
-                        className={`p-2 rounded-lg transition-all ${
-                          selectedTime === time 
-                            ? 'bg-red-600 text-white' 
-                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                        }`}
+                        className={`p-2 rounded-lg transition-all ${selectedTime === time
+                          ? 'bg-red-600 text-white'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                          }`}
                         onClick={() => setSelectedTime(time)}
                       >
                         {time}
@@ -270,39 +378,14 @@ const MovieDetail: React.FC = () => {
                 </div>
               )}
 
-              {/* Theater Selection */}
-              {selectedTime && (
-                <div className="mb-6">
-                  <label className="block text-gray-700 font-medium mb-2">Chọn rạp</label>
-                  <div className="space-y-2">
-                    {[...new Set(filteredShowtimes
-                      .filter(s => s.time === selectedTime)
-                      .map(s => s.theater))].map(theater => (
-                      <button
-                        key={theater}
-                        className={`w-full p-3 rounded-lg text-left ${
-                          selectedTheater === theater 
-                            ? 'bg-red-600 text-white' 
-                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                        }`}
-                        onClick={() => setSelectedTheater(theater)}
-                      >
-                        {theater}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Book Button */}
               <button
-                className={`w-full py-3 rounded-lg font-medium ${
-                  selectedDate && selectedTime && selectedTheater
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
+                className={`w-full py-3 rounded-lg font-medium ${selectedScreening
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
                 onClick={handleBooking}
-                disabled={!selectedDate || !selectedTime || !selectedTheater}
+                disabled={!selectedScreening}
               >
                 Chọn ghế
               </button>
