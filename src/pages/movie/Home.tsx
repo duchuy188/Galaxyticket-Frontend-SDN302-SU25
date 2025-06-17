@@ -251,12 +251,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isComingSoon }) => {
           <h3 className="font-bold text-lg line-clamp-1 group-hover:text-red-600 transition-colors">
             {movie.title}
           </h3>
-          <span className={`px-2 py-0.5 text-xs rounded ${movie.ageRating === 'T18' ? 'bg-red-100 text-red-800' :
-              movie.ageRating === 'T16' ? 'bg-orange-100 text-orange-800' :
-                'bg-green-100 text-green-800'
-            }`}>
-            {movie.ageRating || 'P'}
-          </span>
+       
         </div>
 
         <div className="flex items-center gap-4 text-sm text-gray-600">
