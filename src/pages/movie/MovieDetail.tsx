@@ -6,10 +6,12 @@ import { getTheaters, Theater } from '../../utils/theater';
 import { getRooms, Room } from '../../utils/room';
 import { showtimes } from '../../utils/mockData';
 import { Calendar, Clock, Tag, Star, Film, MapPin, Flag, Building2, User } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const MovieDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
 
   const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
@@ -150,8 +152,15 @@ const MovieDetail: React.FC = () => {
       alert('Please select a time and theater');
       return;
     }
+
+    if (!isAuthenticated) {
+      navigate('/signin');
+      return;
+    }
+
     console.log('Selected Screening:', selectedScreening);
-    const navigatePath = `/seats/${movie?._id}?date=${selectedDate}&time=${selectedTime}&theater=${selectedTheater}&screeningId=${selectedScreening._id}&movieTitle=${encodeURIComponent(movie.title)}`;
+    console.log('Current User ID:', user?.id);
+    const navigatePath = `/seats/${movie?._id}?date=${selectedDate}&time=${selectedTime}&theater=${selectedTheater}&screeningId=${selectedScreening._id}&movieTitle=${encodeURIComponent(movie.title)}&userId=${user?.id}`;
     console.log('Navigating to:', navigatePath);
     navigate(navigatePath);
   };
