@@ -3,36 +3,41 @@ import axios from 'axios';
 const API_URL = 'http://localhost:5000';
 
 export interface Movie {
+    // Các trường bắt buộc
     _id: string;
     title: string;
-    vietnameseTitle?: string;
     description: string;
     genre: string;
     duration: number;
-    posterUrl: string;
-    trailerUrl: string;
     releaseDate: string;
-    status: boolean;
     country: string;
-    producer?: string;
-    director?: string;
-    cast?: string;
-    votes?: number;
-    showingStatus: 'now-showing' | 'coming-soon' | 'ended';
+    producer: string;
+    directors: string[];
+    actors: string[];
+    showingStatus: 'coming-soon' | 'now-showing' | 'ended';
+    status: 'pending' | 'approved' | 'rejected';
+    posterUrl: string;
+    
+    // Các trường tùy chọn
+    trailerUrl?: string;
+    vietnameseTitle?: string;
     rating?: number;
-    createdAt: string;
-    updatedAt: string;
+    votes?: number;
+    createdAt?: string;
+    updatedAt?: string;
     rejectionReason?: string;
     createdBy?: string;
     approvedBy?: string | null;
     isActive?: boolean;
     __v?: number;
-    ageRating?: 'T18' | 'T16' | 'K' | 'P';
+    
+    // Trường temporary cho file upload
+    posterFile?: File;
 }
 
 export const getMovies = async (): Promise<Movie[]> => {
     try {
-        const response = await axios.get(`${API_URL}/api/movies`);
+        const response = await axios.get(`${API_URL}/api/movies/public`);
         return Array.isArray(response.data.data) ? response.data.data : [];
     } catch (error) {
         console.error('Error fetching movies:', error);
@@ -43,27 +48,57 @@ export const getMovies = async (): Promise<Movie[]> => {
 export const getMovieById = async (id: string): Promise<Movie> => {
     try {
         const response = await axios.get(`${API_URL}/api/movies/${id}`);
-        return response.data.data; // Assuming single movie is returned directly under data
+        return response.data.data;
     } catch (error) {
         console.error(`Error fetching movie with id ${id}:`, error);
         throw error;
     }
 };
 
-export const createMovie = async (movieData: Omit<Movie, '_id' | 'createdAt' | 'updatedAt' | '__v' | 'rejectionReason' | 'createdBy' | 'approvedBy' | 'isActive'>): Promise<Movie> => {
+export const createMovie = async (formData: FormData): Promise<Movie> => {
     try {
-        const response = await axios.post(`${API_URL}/api/movies`, movieData);
-        return response.data.data; // Assuming created movie is returned directly under data
+        const token = getAuthToken();
+        const response = await fetch(`${API_URL}/api/movies`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to create movie');
+        }
+
+        const result = await response.json();
+        return result.data;
     } catch (error) {
         console.error('Error creating movie:', error);
         throw error;
     }
 };
 
-export const updateMovie = async (id: string, movieData: Partial<Movie>): Promise<Movie> => {
+export const updateMovie = async (id: string, formData: FormData): Promise<Movie> => {
     try {
-        const response = await axios.put(`${API_URL}/api/movies/${id}`, movieData);
-        return response.data.data; // Assuming updated movie is returned directly under data
+        const token = getAuthToken();
+        const response = await fetch(`${API_URL}/api/movies/${id}`, {
+            method: 'PUT',
+            body: formData,
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to update movie');
+        }
+
+        const result = await response.json();
+        return result.data;
     } catch (error) {
         console.error(`Error updating movie with id ${id}:`, error);
         throw error;
@@ -72,7 +107,12 @@ export const updateMovie = async (id: string, movieData: Partial<Movie>): Promis
 
 export const deleteMovie = async (id: string): Promise<void> => {
     try {
-        await axios.delete(`${API_URL}/api/movies/${id}`);
+        const token = getAuthToken();
+        await axios.delete(`${API_URL}/api/movies/${id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
     } catch (error) {
         console.error(`Error deleting movie with id ${id}:`, error);
         throw error;
@@ -87,4 +127,38 @@ export const getMoviesByStatus = async (status: 'now-showing' | 'coming-soon' | 
         console.error(`Error fetching movies with status ${status}:`, error);
         return [];
     }
+};
+
+export const getPublicMovies = async (): Promise<Movie[]> => {
+    try {
+        const response = await axios.get(`${API_URL}/api/movies/public`);
+        return Array.isArray(response.data.data) ? response.data.data : [];
+    } catch (error) {
+        console.error('Error fetching public movies:', error);
+        return [];
+    }
+};
+
+export const getStaffMovies = async (params?: { 
+    genre?: string, 
+    status?: 'pending' | 'approved' | 'rejected', 
+    showingStatus?: 'coming-soon' | 'now-showing' | 'ended' 
+}): Promise<Movie[]> => {
+    try {
+        const token = getAuthToken();
+        const response = await axios.get(`${API_URL}/api/movies`, { 
+            params,
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return Array.isArray(response.data.data) ? response.data.data : [];
+    } catch (error) {
+        console.error('Error fetching staff movies:', error);
+        return [];
+    }
+};
+
+const getAuthToken = () => {
+    return localStorage.getItem('token');
 };

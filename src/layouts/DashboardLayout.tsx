@@ -10,6 +10,7 @@ import {
   LogOutIcon,
   TagIcon,
   LayoutGridIcon,
+  HomeIcon,
 } from 'lucide-react'
 type DashboardLayoutProps = {
   children: React.ReactNode
@@ -59,9 +60,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       icon: <CalendarIcon size={20} />,
     },
     {
-      label: 'Payment Issues',
-      path: `${basePath}/payments`,
-      icon: <CreditCardIcon size={20} />,
+      label: 'Theater Management',
+      path: `${basePath}/theaters`,
+      icon: <HomeIcon size={20} />,
+    },
+    {
+      label: 'Promotion Management',
+      path: `${basePath}/promotions`,
+      icon: <TagIcon size={20} />,
     },
   ]
   const managerNavItems = [

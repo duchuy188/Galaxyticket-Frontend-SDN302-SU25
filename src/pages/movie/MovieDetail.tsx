@@ -284,7 +284,7 @@ const MovieDetail: React.FC = () => {
                     <span className="text-gray-500">Đạo diễn:</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {(movie.director || 'Pae Arak Amornsupasiri,Wutthiphong Sukanin').split(',').map((director, index) => (
+                    {(movie.directors?.join(',') || 'Pae Arak Amornsupasiri,Wutthiphong Sukanin').split(',').map((director, index) => (
                       <span
                         key={index}
                         className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
@@ -302,7 +302,7 @@ const MovieDetail: React.FC = () => {
                     <span className="text-gray-500">Diễn viên:</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {(movie.cast || 'Pae Arak Amornsupasiri,Kittikun Chattongkum,Paween Purijitpanya').split(',').map((actor, index) => (
+                    {(movie.actors?.join(',') || 'Pae Arak Amornsupasiri,Kittikun Chattongkum,Paween Purijitpanya').split(',').map((actor, index) => (
                       <span
                         key={index}
                         className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
