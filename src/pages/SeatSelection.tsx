@@ -223,7 +223,9 @@ const SeatSelection: React.FC = () => {
       setBookingId(response.data._id as string);
       sessionStorage.setItem('currentBookingId', response.data._id as string);
 
-      const finalTotal = response?.data?.totalPrice || totalPrice;
+      const finalCalculatedTotal = totalPrice;
+      const originalPriceBeforeDiscount = Number(screeningDetails?.ticketPrice) * selectedSeats.length;
+      const discountAmountCalculated = appliedPromoCode ? (originalPriceBeforeDiscount - finalCalculatedTotal) : 0;
 
       const bookingDetails = {
         movieId: id || '',
@@ -234,14 +236,14 @@ const SeatSelection: React.FC = () => {
         room: screeningDetails?.roomId.name || '',
         seats: selectedSeats,
         basePrice: screeningDetails?.ticketPrice || 0,
-        discount: appliedPromoCode ? ((Number(screeningDetails?.ticketPrice) * selectedSeats.length) - finalTotal) : 0,
-        total: finalTotal,
+        discount: discountAmountCalculated,
+        total: finalCalculatedTotal,
         screeningId: screeningId,
         userId: userId,
         bookingId: response.data._id as string,
       };
 
-      console.log('Booking Details prepared in SeatSelection:', bookingDetails);
+      console.log('Booking Details prepared in SeatSelection (before sessionStorage):', bookingDetails);
       sessionStorage.setItem('bookingDetails', JSON.stringify(bookingDetails));
 
       navigate('/checkout');
@@ -353,12 +355,12 @@ const SeatSelection: React.FC = () => {
             {appliedPromoCode && discountAmount > 0 && (
               <div className="flex justify-between text-green-600">
                 <span>Giảm giá  ({100 - (totalPrice / originalPrice * 100)}%)</span>
-                <span>-{Number(discountAmount)} VND</span>
+                <span>-{Math.round(discountAmount)} VND</span>
               </div>
             )}
             <div className="border-t border-gray-300 pt-2 mt-2 flex justify-between font-bold">
               <span>Tổng cộng</span>
-              <span>{Number(totalPrice)} VND</span>
+              <span>{Math.round(totalPrice)} VND</span>
             </div>
           </div>
           <button className={`w-full py-3 rounded-md font-medium ${selectedSeats.length > 0 ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`} onClick={handleProceedToCheckout} disabled={selectedSeats.length === 0}>

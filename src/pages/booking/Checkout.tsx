@@ -45,7 +45,7 @@ const Checkout: React.FC = () => {
         }
 
         const parsedDetails = JSON.parse(storedDetails);
-        console.log('Parsed bookingDetails in Checkout:', parsedDetails);
+        console.log('Parsed bookingDetails in Checkout (after sessionStorage retrieval):', parsedDetails);
 
         const currentBookingId = sessionStorage.getItem('currentBookingId');
         if (currentBookingId) {
@@ -229,15 +229,17 @@ const Checkout: React.FC = () => {
               </div>
               {bookingDetails.discount > 0 && (
                 <div className="flex justify-between text-green-600 mb-2">
-                  <span>Giảm giá ({100 - bookingDetails.discount * 100}%)</span>
                   <span>
-                    -{(bookingDetails.basePrice * bookingDetails.seats.length) - bookingDetails.total} VND
+                    Giảm giá ({(((bookingDetails.basePrice * bookingDetails.seats.length - bookingDetails.total) / (bookingDetails.basePrice * bookingDetails.seats.length)) * 100).toFixed(0)}%)
+                  </span>
+                  <span>
+                    -{((bookingDetails.basePrice * bookingDetails.seats.length) - bookingDetails.total).toFixed(0)} VND
                   </span>
                 </div>
               )}
               <div className="border-t border-gray-300 pt-2 mt-2 flex justify-between font-bold">
                 <span>Tổng cộng</span>
-                <span>{bookingDetails.total} VND</span>
+                <span>{bookingDetails.total.toFixed(0)} VND</span>
               </div>
             </div>
             <div className="border border-gray-300 rounded-lg p-4">

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Movie, getMovieById } from '../../utils/movie';
-import { Screening, getScreeningsByMovie, getScheduleByTheater, TheaterSchedule, getScreenings } from '../../utils/screening';
+import { Screening, getScreeningsByMovie } from '../../utils/screening';
 import { getTheaters, Theater } from '../../utils/theater';
 import { getRooms, Room } from '../../utils/room';
-import { showtimes } from '../../utils/mockData';
-import { Calendar, Clock, Tag, Star, Film, MapPin, Flag, Building2, User } from 'lucide-react';
+import { Calendar, Clock, Tag, Star, Film, MapPin, Flag, Building2, User, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const MovieDetail: React.FC = () => {
@@ -26,6 +25,7 @@ const MovieDetail: React.FC = () => {
   const [theaters, setTheaters] = useState<Theater[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
 
+  // Fetch movie details
   useEffect(() => {
     const fetchMovie = async () => {
       if (!id) {
@@ -38,7 +38,7 @@ const MovieDetail: React.FC = () => {
         setMovie(movieData);
       } catch (err) {
         console.error('Error fetching movie details:', err);
-        setError('Failed to load movie details.');
+        setError('Failed to load movie details. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -47,38 +47,53 @@ const MovieDetail: React.FC = () => {
     fetchMovie();
   }, [id]);
 
+  // Fetch screenings for the movie
   useEffect(() => {
-    setScreeningsLoading(true);
-    getScreenings()
-      .then((data: Screening[]) => setScreenings(data))
-      .catch(() => setScreenings([]))
-      .finally(() => setScreeningsLoading(false));
+    const fetchScreenings = async () => {
+      if (!id) return;
+      setScreeningsLoading(true);
+      try {
+        const data = await getScreeningsByMovie(id);
+        setScreenings(data);
+      } catch (err) {
+        console.error('Error fetching screenings:', err);
+        setError('Failed to load screening times. Please try again later.');
+      } finally {
+        setScreeningsLoading(false);
+      }
+    };
+
+    fetchScreenings();
+  }, [id]);
+
+  // Fetch theaters and rooms
+  useEffect(() => {
+    const fetchTheatersAndRooms = async () => {
+      try {
+        const [theatersData, roomsData] = await Promise.all([
+          getTheaters(),
+          getRooms()
+        ]);
+        setTheaters(theatersData);
+        setRooms(roomsData);
+      } catch (err) {
+        console.error('Error fetching theaters and rooms:', err);
+        setError('Failed to load theater information. Please try again later.');
+      }
+    };
+
+    fetchTheatersAndRooms();
   }, []);
 
+  // Update selected screening when selections change
   useEffect(() => {
-    getTheaters()
-      .then(data => setTheaters(data))
-      .catch(() => setTheaters([]));
-    getRooms()
-      .then(data => setRooms(data))
-      .catch(() => setRooms([]));
-  }, []);
-
-  useEffect(() => {
-    console.log('Inside selectedScreening useEffect');
-    console.log('selectedDate:', selectedDate);
-    console.log('selectedTime:', selectedTime);
-    console.log('selectedTheater:', selectedTheater);
-    console.log('movie:', movie?._id);
-    console.log('screenings length:', screenings.length);
-
-    if (selectedDate && selectedTime && selectedTheater) {
+    if (selectedDate && selectedTime && selectedTheater && movie) {
       const found = screenings.find(
         s =>
           s.startTime.startsWith(selectedDate) &&
           s.startTime.includes(selectedTime) &&
           (typeof s.theaterId === 'string' ? s.theaterId : s.theaterId?._id) === selectedTheater &&
-          (typeof s.movieId === 'string' ? s.movieId : s.movieId?._id) === movie?._id
+          (typeof s.movieId === 'string' ? s.movieId : s.movieId?._id) === movie._id
       );
       setSelectedScreening(found || null);
     } else {
@@ -86,7 +101,7 @@ const MovieDetail: React.FC = () => {
     }
   }, [selectedDate, selectedTime, selectedTheater, screenings, movie]);
 
-  // availableDates for selectedTheater
+  // Available dates for selected theater
   const availableDates = useMemo(() => {
     if (!selectedTheater) return [];
     const dates = new Set<string>();
@@ -99,16 +114,9 @@ const MovieDetail: React.FC = () => {
     return Array.from(dates).sort();
   }, [selectedTheater, screenings]);
 
-  // availableTimes for selectedTheater and selectedDate
+  // Available times for selected theater and date
   const availableTimes = useMemo(() => {
-    console.log(
-      'Calculating available times with:',
-      'selectedTheater:', selectedTheater,
-      'selectedDate:', selectedDate,
-      'movie:', movie ? movie._id : 'N/A',
-      'screenings length:', screenings.length
-    );
-    if (!selectedTheater || !selectedDate || !movie || !screenings.length) return [];
+    if (!selectedTheater || !selectedDate || !movie) return [];
 
     const times = new Set<string>();
     screenings.forEach(s => {
@@ -127,25 +135,19 @@ const MovieDetail: React.FC = () => {
     return Array.from(times).sort();
   }, [selectedTheater, selectedDate, movie, screenings]);
 
-  // Thêm hàm này để chuyển đổi URL YouTube
+  // Convert YouTube URL to embed URL
   const getEmbedUrl = (url: string) => {
     if (!url) return '';
-    // Xử lý URL dạng youtu.be
     if (url.includes('youtu.be')) {
       const videoId = url.split('/').pop();
       return `https://www.youtube.com/embed/${videoId}`;
     }
-    // Xử lý URL dạng youtube.com/watch?v=
     if (url.includes('youtube.com/watch')) {
       const videoId = new URL(url).searchParams.get('v');
       return `https://www.youtube.com/embed/${videoId}`;
     }
     return url;
   };
-
-  if (loading) return <div className="container mx-auto px-4 py-12 text-center"><h2 className="text-2xl font-bold">Loading movie details...</h2></div>;
-  if (error) return <div className="container mx-auto px-4 py-12 text-center"><h2 className="text-2xl font-bold text-red-600">Error: {error}</h2></div>;
-  if (!movie) return <div className="container mx-auto px-4 py-12 text-center"><h2 className="text-2xl font-bold">Movie not found</h2></div>;
 
   const handleBooking = () => {
     if (!selectedScreening) {
@@ -158,12 +160,39 @@ const MovieDetail: React.FC = () => {
       return;
     }
 
-    console.log('Selected Screening:', selectedScreening);
-    console.log('Current User ID:', user?.id);
-    const navigatePath = `/seats/${movie?._id}?date=${selectedDate}&time=${selectedTime}&theater=${selectedTheater}&screeningId=${selectedScreening._id}&movieTitle=${encodeURIComponent(movie.title)}&userId=${user?.id}`;
-    console.log('Navigating to:', navigatePath);
+    const navigatePath = `/seats/${movie?._id}?date=${selectedDate}&time=${selectedTime}&theater=${selectedTheater}&screeningId=${selectedScreening._id}&movieTitle=${encodeURIComponent(movie?.title || '')}&userId=${user?.id}`;
     navigate(navigatePath);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!movie) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Movie Not Found</h2>
+          <p className="text-gray-600">The movie you're looking for doesn't exist.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -181,12 +210,15 @@ const MovieDetail: React.FC = () => {
         </div>
 
         <div className="absolute inset-0 flex items-center justify-center">
-          <button
-            onClick={() => setShowTrailer(true)}
-            className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-all"
-          >
-            <Film className="w-10 h-10 text-white" />
-          </button>
+          {movie.trailerUrl && (
+            <button
+              onClick={() => setShowTrailer(true)}
+              className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-all"
+              aria-label="Play trailer"
+            >
+              <Film className="w-10 h-10 text-white" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -197,6 +229,7 @@ const MovieDetail: React.FC = () => {
             <button
               onClick={() => setShowTrailer(false)}
               className="absolute -top-10 right-0 text-white hover:text-gray-300"
+              aria-label="Close trailer"
             >
               <span className="text-2xl">×</span>
             </button>
@@ -204,6 +237,7 @@ const MovieDetail: React.FC = () => {
               <iframe
                 className="absolute inset-0 w-full h-full"
                 src={getEmbedUrl(movie.trailerUrl)}
+                title={`${movie.title} trailer`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
@@ -217,9 +251,9 @@ const MovieDetail: React.FC = () => {
         <div className="grid grid-cols-12 gap-8">
           {/* Left Section: Poster and Movie Info */}
           <div className="col-span-12 lg:col-span-9">
-            <div className="flex gap-8">
+            <div className="flex flex-col lg:flex-row gap-8">
               {/* Poster */}
-              <div className="w-[300px] flex-shrink-0">
+              <div className="w-full lg:w-[300px] flex-shrink-0">
                 <img
                   src={movie.posterUrl}
                   alt={movie.title}
@@ -245,7 +279,7 @@ const MovieDetail: React.FC = () => {
                 </div>
 
                 {/* Movie Details Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div className="flex items-center gap-2">
                     <Clock className="w-5 h-5 text-blue-500" strokeWidth={2.5} />
                     <span className="text-gray-500">Thời lượng:</span>
@@ -330,11 +364,11 @@ const MovieDetail: React.FC = () => {
             <div className="bg-white rounded-lg p-6 shadow-lg sticky top-8">
               <h3 className="text-xl font-semibold mb-6">Đặt vé</h3>
 
-              {/* Theater Selection - ĐƯA LÊN ĐẦU TIÊN */}
+              {/* Theater Selection */}
               <div className="mb-6">
                 <label className="block text-gray-700 font-medium mb-2">Chọn rạp</label>
                 <select
-                  className="w-full p-3 border border-gray-200 rounded-lg"
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   value={selectedTheater}
                   onChange={e => {
                     setSelectedTheater(e.target.value);
@@ -354,13 +388,20 @@ const MovieDetail: React.FC = () => {
                 <div className="mb-6">
                   <label className="block text-gray-700 font-medium mb-2">Chọn ngày</label>
                   <select
-                    className="w-full p-3 border border-gray-200 rounded-lg"
+                    className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                     value={selectedDate}
                     onChange={e => { setSelectedDate(e.target.value); setSelectedTime(''); }}
                   >
                     <option value="">Chọn ngày chiếu</option>
                     {availableDates.map(date => (
-                      <option key={date} value={date}>{date}</option>
+                      <option key={date} value={date}>
+                        {new Date(date).toLocaleDateString('vi-VN', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -389,14 +430,14 @@ const MovieDetail: React.FC = () => {
 
               {/* Book Button */}
               <button
-                className={`w-full py-3 rounded-lg font-medium ${selectedScreening
+                className={`w-full py-3 rounded-lg font-medium transition-all ${selectedScreening
                   ? 'bg-red-600 hover:bg-red-700 text-white'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   }`}
                 onClick={handleBooking}
                 disabled={!selectedScreening}
               >
-                Chọn ghế
+                {selectedScreening ? 'Chọn ghế' : 'Vui lòng chọn suất chiếu'}
               </button>
             </div>
           </div>
