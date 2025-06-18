@@ -72,13 +72,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   ]
   const managerNavItems = [
     {
-      label: 'Dashboard',
-      path: `${basePath}`,
-      icon: <LayoutDashboardIcon size={20} />,
-    },
-    {
       label: 'Movie Requests',
-      path: `${basePath}/movies`,
+      path: `${basePath}`,
       icon: <FilmIcon size={20} />,
     },
     {
@@ -90,11 +85,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       label: 'Showtime Requests',
       path: `${basePath}/showtimes`,
       icon: <CalendarIcon size={20} />,
-    },
-    {
-      label: 'Seat Map Requests',
-      path: `${basePath}/seatmaps`,
-      icon: <LayoutGridIcon size={20} />,
     },
   ]
   const navItems = isAdmin

@@ -39,7 +39,12 @@ export const getTheaterById = async (id: string): Promise<Theater> => {
 
 export const createTheater = async (theaterData: Omit<Theater, '_id' | 'createdAt' | 'updatedAt' | '__v'>): Promise<Theater> => {
     try {
-        const response = await axios.post(`${API_URL}/api/theaters`, theaterData);
+        const token = localStorage.getItem('token');
+        const response = await axios.post(`${API_URL}/api/theaters`, theaterData, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
         return response.data.data;
     } catch (error) {
         console.error('Error creating theater:', error);
@@ -49,7 +54,12 @@ export const createTheater = async (theaterData: Omit<Theater, '_id' | 'createdA
 
 export const updateTheater = async (id: string, theaterData: Partial<Theater>): Promise<Theater> => {
     try {
-        const response = await axios.put(`${API_URL}/api/theaters/${id}`, theaterData);
+        const token = localStorage.getItem('token');
+        const response = await axios.put(`${API_URL}/api/theaters/${id}`, theaterData, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
         return response.data.data;
     } catch (error) {
         console.error(`Error updating theater with id ${id}:`, error);
@@ -59,7 +69,12 @@ export const updateTheater = async (id: string, theaterData: Partial<Theater>): 
 
 export const deleteTheater = async (id: string): Promise<void> => {
     try {
-        await axios.delete(`${API_URL}/api/theaters/${id}`);
+        const token = localStorage.getItem('token');
+        await axios.delete(`${API_URL}/api/theaters/${id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
     } catch (error) {
         console.error(`Error deleting theater with id ${id}:`, error);
         throw error;
