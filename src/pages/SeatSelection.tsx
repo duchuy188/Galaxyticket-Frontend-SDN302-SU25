@@ -6,37 +6,6 @@ import { createBooking, cancelBooking } from '../utils/booking';
 import { getScreeningById, Screening } from '../utils/screening';
 import { validatePromotionCode } from '../utils/promotion';
 
-const CountdownTimer: React.FC<{ onTimeUp: () => void }> = ({ onTimeUp }) => {
-  const [timeLeft, setTimeLeft] = useState(5 * 60); // 5 minutes in seconds
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime <= 1) {
-          clearInterval(timer);
-          onTimeUp();
-          return 0;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [onTimeUp]);
-
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
-
-  return (
-    <div className="text-center mb-4">
-      <div className="text-lg font-semibold text-gray-700">Thời gian còn lại để thanh toán:</div>
-      <div className="text-2xl font-bold text-red-600">
-        {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-      </div>
-    </div>
-  );
-};
-
 const SeatSelection: React.FC = () => {
   const {
     id
@@ -173,25 +142,6 @@ const SeatSelection: React.FC = () => {
     }
   };
 
-  const handleTimeUp = async () => {
-    if (bookingId) {
-      try {
-        await cancelBooking(bookingId);
-        setError('Hết thời gian thanh toán. Vui lòng đặt vé lại.');
-        setShowTimer(false);
-        setBookingId(null);
-        setSelectedSeats([]);
-        if (appliedPromoCode) {
-          setAppliedPromoCode(null);
-          setPromoCode('');
-          setPromoMessage(null);
-        }
-      } catch (error) {
-        console.error('Error cancelling booking:', error);
-      }
-    }
-  };
-
   const handleProceedToCheckout = async () => {
     if (selectedSeats.length === 0) {
       setError('Vui lòng chọn ít nhất một ghế');
@@ -283,11 +233,6 @@ const SeatSelection: React.FC = () => {
             Làm mới danh sách ghế
           </button>
         )}
-      </div>
-    )}
-    {showTimer && (
-      <div className="fixed top-4 right-4 bg-white p-4 rounded-lg shadow-lg z-50">
-        <CountdownTimer onTimeUp={handleTimeUp} />
       </div>
     )}
     <div className="bg-white rounded-lg shadow-md p-6 mb-8">

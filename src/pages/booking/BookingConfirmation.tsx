@@ -194,7 +194,9 @@ const BookingConfirmation: React.FC = () => {
               <div>
                 <p className="text-gray-600 text-sm">Ngày & Giờ</p>
                 <p className="font-medium">
-                  {formatDateTime(confirmationDetails.screeningTime || '')}
+                  {confirmationDetails.screeningTime
+                    ? `${confirmationDetails.screeningTime.slice(0, 10)} lúc ${confirmationDetails.screeningTime.slice(11, 16)}`
+                    : 'N/A'}
                 </p>
               </div>
               <div>
@@ -229,7 +231,9 @@ const BookingConfirmation: React.FC = () => {
                     {confirmationDetails.movieTitle || 'N/A'}
                   </h4>
                   <p className="text-sm">
-                    {formatDateTime(confirmationDetails.screeningTime || '')}
+                    {confirmationDetails.screeningTime
+                      ? `${confirmationDetails.screeningTime.slice(0, 10)} lúc ${confirmationDetails.screeningTime.slice(11, 16)}`
+                      : 'N/A'}
                   </p>
                 </div>
                 <div className="text-right">
