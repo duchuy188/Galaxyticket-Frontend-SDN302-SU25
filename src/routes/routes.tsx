@@ -18,6 +18,9 @@ import PrivateRoute from '../components/PrivateRoute';
 import { PublicRouteGuard, AuthRouteGuard } from './auth';
 import Profile from '../pages/user/Profile';
 import TheaterDetail from '../pages/theater/TheaterDetail';
+import TheaterManagement from '../pages/dashboard/TheaterManagement';
+import StaffRoutes from './StaffRoutes';
+import ManagerRoutes from './ManagerRoutes';
 
 export const AppRoutes = () => {
     return (
@@ -59,20 +62,14 @@ export const AppRoutes = () => {
             {/* Manager Dashboard Routes */}
             <Route path="manager/*" element={<PrivateRoute allowedRoles={['manager']}>
                 <DashboardLayout>
-                    <ManagerDashboard />
+                    <ManagerRoutes />
                 </DashboardLayout>
             </PrivateRoute>} />
 
             {/* Staff Dashboard Routes */}
             <Route path="staff/*" element={<PrivateRoute allowedRoles={['staff']}>
                 <DashboardLayout>
-                    <StaffDashboard />
-                </DashboardLayout>
-            </PrivateRoute>} />
-            {/* Manager Dashboard Routes */}
-                        <Route path="manager/*" element={<PrivateRoute allowedRoles={['manager']}>
-                <DashboardLayout>
-                    <ManagerDashboard />
+                    <StaffRoutes />
                 </DashboardLayout>
             </PrivateRoute>} />
 

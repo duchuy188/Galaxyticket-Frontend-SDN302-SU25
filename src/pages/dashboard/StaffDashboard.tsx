@@ -138,6 +138,8 @@ const StaffDashboard: React.FC = () => {
   const [newActor, setNewActor] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [showingStatusFilter, setShowingStatusFilter] = useState<'all' | 'coming-soon' | 'now-showing' | 'ended'>('all');
+  const [localMovies, setLocalMovies] = useState<Movie[]>([]);
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
   // Check which section we're on
   const isMainDashboard = location.pathname === '/staff';
   const isMovieManagement = location.pathname === '/staff/movies';
@@ -146,17 +148,14 @@ const StaffDashboard: React.FC = () => {
   // Thêm state cho movie detail modal
   const [viewingMovie, setViewingMovie] = useState<Movie | null>(null);
 
-
+  // Lấy dữ liệu ban đầu một lần
   useEffect(() => {
-    const fetchMovies = async () => {
+    const fetchAllMovies = async () => {
       try {
         setIsLoading(true);
-        const params: any = {};
-        if (showingStatusFilter !== 'all') params.showingStatus = showingStatusFilter;
-        if (statusFilter !== 'all') params.status = statusFilter;  // Đổi từ approvalStatus thành status
-        
-        const data = await getStaffMovies(params);
+        const data = await getStaffMovies({});
         setMovies(data);
+        setLocalMovies(data);
       } catch (err) {
         setError('Failed to fetch movies');
         toast.error('Failed to fetch movies');
@@ -165,8 +164,26 @@ const StaffDashboard: React.FC = () => {
       }
     };
 
-    fetchMovies();
-  }, [statusFilter, showingStatusFilter]);
+    fetchAllMovies();
+  }, []); // Chỉ fetch một lần khi component được mount
+
+  // Thêm useEffect để lọc phim từ dữ liệu local
+  useEffect(() => {
+    setIsFilterLoading(true);
+    // Lọc phim dựa trên tiêu chí từ state
+    let filtered = [...movies];
+    
+    if (showingStatusFilter !== 'all') {
+      filtered = filtered.filter(movie => movie.showingStatus === showingStatusFilter);
+    }
+    
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(movie => movie.status === statusFilter);
+    }
+    
+    setLocalMovies(filtered);
+    setIsFilterLoading(false);
+  }, [statusFilter, showingStatusFilter, movies]);
 
   const handleAddMovie = () => {
     setEditingMovie({
@@ -179,10 +196,15 @@ const StaffDashboard: React.FC = () => {
       releaseDate: new Date().toISOString(),
       country: '',
       producer: '',
-      directors: [],
-      actors: [],
+      directors: [], // Bắt đầu với một mảng rỗng, không phải null hoặc undefined
+      actors: [],    // Bắt đầu với một mảng rỗng
       showingStatus: 'coming-soon'
     });
+    // Reset các state phụ
+    setNewDirector('');
+    setNewActor('');
+    setPreviewImage(null);
+    setUploadError(null);
   };
 
   const handleEditMovie = (movie: Movie) => {
@@ -210,6 +232,28 @@ const StaffDashboard: React.FC = () => {
 
     try {
       setIsLoading(true);
+
+      // Kiểm tra xem có đạo diễn đang nhập chưa được thêm
+      if (newDirector.trim()) {
+        const updatedDirectors = Array.isArray(editingMovie.directors) 
+          ? [...editingMovie.directors, newDirector.trim()]
+          : [newDirector.trim()];
+        
+        // Cập nhật trực tiếp object hiện tại để đảm bảo có trong validation
+        editingMovie.directors = updatedDirectors;
+        setNewDirector('');
+      }
+      
+      // Kiểm tra xem có diễn viên đang nhập chưa được thêm
+      if (newActor.trim()) {
+        const updatedActors = Array.isArray(editingMovie.actors) 
+          ? [...editingMovie.actors, newActor.trim()]
+          : [newActor.trim()];
+        
+        // Cập nhật trực tiếp object hiện tại
+        editingMovie.actors = updatedActors;
+        setNewActor('');
+      }
 
       // Validate file poster
       if (!editingMovie.posterFile && !editingMovie._id) {
@@ -253,8 +297,10 @@ const StaffDashboard: React.FC = () => {
       formData.append('producer', editingMovie.producer?.trim() || '');
       formData.append('showingStatus', editingMovie.showingStatus || 'coming-soon');
 
-      // Gửi directors và actors như một mảng JSON
+      // Gửi directors như một mảng JSON string để BE hiểu được
       formData.append('directors', JSON.stringify(directors));
+      
+      // Gửi actors cũng phải giống directors để nhất quán
       formData.append('actors', JSON.stringify(actors));
 
       // Thêm poster nếu có
@@ -678,7 +724,7 @@ const StaffDashboard: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredMovies.map(movie => (
+            {localMovies.map(movie => (
               <tr key={movie._id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
@@ -775,15 +821,17 @@ const StaffDashboard: React.FC = () => {
                   {editingMovie._id ? 'Chỉnh Sửa Phim' : 'Thêm Phim Mới'}
                 </h3>
                 <button 
-                  onClick={() => setEditingMovie(null)}
-                  className="text-gray-400 hover:text-gray-500"
+                  onClick={() => !isLoading && setEditingMovie(null)}
+                  className={`text-gray-400 hover:text-gray-500 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={isLoading}
                 >
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-              <form onSubmit={handleSaveMovie} className="space-y-6">
+              
+              <form onSubmit={handleSaveMovie} className="space-y-6 relative">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
@@ -806,7 +854,7 @@ const StaffDashboard: React.FC = () => {
                     </label>
                     <select 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      value={editingMovie.genre || 'Action'}
+                      value={editingMovie.genre || 'Phim Hoạt Hình'}
                       onChange={e => setEditingMovie({
                         ...editingMovie,
                         genre: e.target.value as Movie['genre']
@@ -814,26 +862,26 @@ const StaffDashboard: React.FC = () => {
                       required
                     >
                       {[
-                        { value: 'Action', label: 'Hành Động (Action)' },
-                        { value: 'Adventure', label: 'Phiêu Lưu (Adventure)' },
-                        { value: 'Animation', label: 'Hoạt Hình (Animation)' },
-                        { value: 'Biography', label: 'Tiểu Sử (Biography)' },
-                        { value: 'Comedy', label: 'Hài Hước (Comedy)' },
-                        { value: 'Crime', label: 'Tội Phạm (Crime)' },
-                        { value: 'Documentary', label: 'Tài Liệu (Documentary)' },
-                        { value: 'Drama', label: 'Chính Kịch (Drama)' },
-                        { value: 'Family', label: 'Gia Đình (Family)' },
-                        { value: 'Fantasy', label: 'Viễn Tưởng (Fantasy)' },
-                        { value: 'Historical', label: 'Lịch Sử (Historical)' },
-                        { value: 'Horror', label: 'Kinh Dị (Horror)' },
-                        { value: 'Musical', label: 'Âm Nhạc (Musical)' },
-                        { value: 'Mystery', label: 'Bí Ẩn (Mystery)' },
-                        { value: 'Mythology', label: 'Thần Thoại (Mythology)' },
-                        { value: 'Romance', label: 'Lãng Mạn (Romance)' },
-                        { value: 'Sports', label: 'Thể Thao (Sports)' },
-                        { value: 'Thriller', label: 'Giật Gân (Thriller)' },
-                        { value: 'War', label: 'Chiến Tranh (War)' },
-                        { value: 'Western', label: 'Cao Bồi (Western)' }
+                        { value: 'Phim Hành Động', label: 'Phim Hành Động' },
+                        { value: 'Phim Phiêu Lưu', label: 'Phim Phiêu Lưu' },
+                        { value: 'Phim Hoạt Hình', label: 'Phim Hoạt Hình' },
+                        { value: 'Phim Tiểu Sử', label: 'Phim Tiểu Sử' },
+                        { value: 'Phim Hài', label: 'Phim Hài' },
+                        { value: 'Phim Hình Sự', label: 'Phim Hình Sự' },
+                        { value: 'Phim Tài Liệu', label: 'Phim Tài Liệu' },
+                        { value: 'Phim Chính Kịch', label: 'Phim Chính Kịch' },
+                        { value: 'Phim Gia Đình', label: 'Phim Gia Đình' },
+                        { value: 'Phim Giả Tưởng', label: 'Phim Giả Tưởng' },
+                        { value: 'Phim Lịch Sử', label: 'Phim Lịch Sử' },
+                        { value: 'Phim Kinh Dị', label: 'Phim Kinh Dị' },
+                        { value: 'Phim Âm Nhạc', label: 'Phim Âm Nhạc' },
+                        { value: 'Phim Bí Ẩn', label: 'Phim Bí Ẩn' },
+                        { value: 'Phim Thần Thoại', label: 'Phim Thần Thoại' },
+                        { value: 'Phim Lãng Mạn', label: 'Phim Lãng Mạn' },
+                        { value: 'Phim Thể Thao', label: 'Phim Thể Thao' },
+                        { value: 'Phim Giật Gân', label: 'Phim Giật Gân' },
+                        { value: 'Phim Chiến Tranh', label: 'Phim Chiến Tranh' },
+                        { value: 'Phim Cao Bồi', label: 'Phim Cao Bồi' }
                       ].map(genre => (
                         <option key={genre.value} value={genre.value}>
                           {genre.label}
@@ -924,130 +972,144 @@ const StaffDashboard: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Đạo Diễn
+                    <label className="block text-sm font-medium text-gray-700 flex items-center justify-between">
+                      <span>Đạo Diễn {editingMovie.directors && editingMovie.directors.length > 0 ? 
+                        <span className="text-blue-600">({editingMovie.directors.length} đã thêm)</span> : 
+                        <span className="text-red-600">(chưa có)</span>}</span>
                     </label>
-                    <div className="space-y-2">
-                      {editingMovie.directors?.map((director: string, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <input 
-                            type="text" 
-                            className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" 
-                            value={director}
-                            onChange={e => {
-                              const newDirectors = [...(editingMovie.directors || [])];
-                              newDirectors[index] = e.target.value;
-                              setEditingMovie({
-                                ...editingMovie,
-                                directors: newDirectors
-                              });
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newDirectors = editingMovie.directors?.filter((_, i) => i !== index) || [];
-                              setEditingMovie({
-                                ...editingMovie,
-                                directors: newDirectors
-                              });
-                            }}
-                            className="p-2 text-red-600 hover:text-red-800"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-                      <div className="flex items-center space-x-2">
-                        <input 
-                          type="text" 
-                          className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" 
-                          value={newDirector}
-                          onChange={e => setNewDirector(e.target.value)}
-                          placeholder="Nhập tên đạo diễn"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (newDirector.trim()) {
-                              setEditingMovie({
-                                ...editingMovie,
-                                directors: [...(editingMovie.directors || []), newDirector.trim()]
-                              });
-                              setNewDirector('');
-                            }
-                          }}
-                          className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"
-                        >
-                          Thêm
-                        </button>
+
+                    {/* Hiển thị danh sách đạo diễn dưới dạng tags */}
+                    {Array.isArray(editingMovie.directors) && editingMovie.directors.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3 p-2 bg-blue-50 rounded-md border border-blue-100">
+                        {editingMovie.directors.map((director, idx) => (
+                          <div key={idx} className="bg-white px-3 py-1 rounded-full shadow-sm border border-blue-200 flex items-center gap-1">
+                            <span>{director}</span>
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const newDirectors = [...(editingMovie.directors || [])].filter((_, i) => i !== idx);
+                                setEditingMovie({...editingMovie, directors: newDirectors});
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
                       </div>
+                    )}
+
+                    {/* Form thêm đạo diễn mới */}
+                    <div className="flex items-center border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white overflow-hidden">
+                      <input 
+                        type="text" 
+                        className="flex-grow px-3 py-2 focus:outline-none bg-white" 
+                        value={newDirector}
+                        onChange={e => setNewDirector(e.target.value)}
+                        placeholder="Nhập tên đạo diễn rồi nhấn Enter hoặc nút Thêm"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && newDirector.trim()) {
+                            e.preventDefault();
+                            const updatedDirectors = Array.isArray(editingMovie.directors) 
+                              ? [...editingMovie.directors, newDirector.trim()]
+                              : [newDirector.trim()];
+                            setEditingMovie({...editingMovie, directors: updatedDirectors});
+                            setNewDirector('');
+                            toast.success(`Đã thêm đạo diễn: ${newDirector.trim()}`);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newDirector.trim()) {
+                            const updatedDirectors = Array.isArray(editingMovie.directors) 
+                              ? [...editingMovie.directors, newDirector.trim()]
+                              : [newDirector.trim()];
+                            
+                            setEditingMovie({...editingMovie, directors: updatedDirectors});
+                            setNewDirector('');
+                            toast.success(`Đã thêm đạo diễn: ${newDirector.trim()}`);
+                          } else {
+                            toast.warning('Vui lòng nhập tên đạo diễn');
+                          }
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        Thêm
+                      </button>
                     </div>
+                    <p className="text-xs text-gray-500">* Thêm ít nhất một đạo diễn cho bộ phim</p>
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Diễn Viên
+                    <label className="block text-sm font-medium text-gray-700 flex items-center justify-between">
+                      <span>Diễn Viên {editingMovie.actors && editingMovie.actors.length > 0 ? 
+                        <span className="text-blue-600">({editingMovie.actors.length} đã thêm)</span> : 
+                        <span className="text-red-600">(chưa có)</span>}</span>
                     </label>
-                    <div className="space-y-2">
-                      {editingMovie.actors?.map((actor, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <input 
-                            type="text" 
-                            className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" 
-                            value={actor}
-                            onChange={e => {
-                              const newActors = [...(editingMovie.actors || [])];
-                              newActors[index] = e.target.value;
-                              setEditingMovie({
-                                ...editingMovie,
-                                actors: newActors
-                              });
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const newActors = editingMovie.actors?.filter((_, i) => i !== index) || [];
-                              setEditingMovie({
-                                ...editingMovie,
-                                actors: newActors
-                              });
-                            }}
-                            className="p-2 text-red-600 hover:text-red-800"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-                      <div className="flex items-center space-x-2">
-                        <input 
-                          type="text" 
-                          className="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white" 
-                          value={newActor}
-                          onChange={e => setNewActor(e.target.value)}
-                          placeholder="Nhập tên diễn viên"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (newActor.trim()) {
-                              setEditingMovie({
-                                ...editingMovie,
-                                actors: [...(editingMovie.actors || []), newActor.trim()]
-                              });
-                              setNewActor('');
-                            }
-                          }}
-                          className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"
-                        >
-                          Thêm
-                        </button>
+
+                    {/* Hiển thị danh sách diễn viên dưới dạng tags */}
+                    {Array.isArray(editingMovie.actors) && editingMovie.actors.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3 p-2 bg-blue-50 rounded-md border border-blue-100">
+                        {editingMovie.actors.map((actor, idx) => (
+                          <div key={idx} className="bg-white px-3 py-1 rounded-full shadow-sm border border-blue-200 flex items-center gap-1">
+                            <span>{actor}</span>
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const newActors = [...(editingMovie.actors || [])].filter((_, i) => i !== idx);
+                                setEditingMovie({...editingMovie, actors: newActors});
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
                       </div>
+                    )}
+                    
+                    {/* Form thêm diễn viên mới */}
+                    <div className="flex items-center border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white overflow-hidden">
+                      <input 
+                        type="text" 
+                        className="flex-grow px-3 py-2 focus:outline-none bg-white" 
+                        value={newActor}
+                        onChange={e => setNewActor(e.target.value)}
+                        placeholder="Nhập tên diễn viên rồi nhấn Enter hoặc nút Thêm"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && newActor.trim()) {
+                            e.preventDefault();
+                            const updatedActors = Array.isArray(editingMovie.actors) 
+                              ? [...editingMovie.actors, newActor.trim()]
+                              : [newActor.trim()];
+                            setEditingMovie({...editingMovie, actors: updatedActors});
+                            setNewActor('');
+                            toast.success(`Đã thêm diễn viên: ${newActor.trim()}`);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (newActor.trim()) {
+                            const updatedActors = Array.isArray(editingMovie.actors) 
+                              ? [...editingMovie.actors, newActor.trim()]
+                              : [newActor.trim()];
+                            
+                            setEditingMovie({...editingMovie, actors: updatedActors});
+                            setNewActor('');
+                            toast.success(`Đã thêm diễn viên: ${newActor.trim()}`);
+                          } else {
+                            toast.warning('Vui lòng nhập tên diễn viên');
+                          }
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        Thêm
+                      </button>
                     </div>
+                    <p className="text-xs text-gray-500">* Thêm ít nhất một diễn viên cho bộ phim</p>
                   </div>
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
@@ -1233,18 +1295,37 @@ const StaffDashboard: React.FC = () => {
                 <div className="flex justify-end space-x-3 pt-6 border-t">
                   <button 
                     type="button" 
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" 
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50" 
                     onClick={() => setEditingMovie(null)}
+                    disabled={isLoading}
                   >
                     Hủy
                   </button>
                   <button 
                     type="submit" 
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="relative px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    disabled={isLoading}
                   >
-                    {editingMovie._id ? 'Cập Nhật' : 'Thêm Mới'}
+                    {isLoading ? (
+                      <>
+                        <span className="opacity-0">{editingMovie._id ? 'Cập Nhật' : 'Thêm Mới'}</span>
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </span>
+                      </>
+                    ) : (
+                      editingMovie._id ? 'Cập Nhật' : 'Thêm Mới'
+                    )}
                   </button>
                 </div>
+                
+                {/* Sửa phần overlay loading */}
+                {isLoading && (
+                  <div className="absolute inset-0 bg-gray-100 bg-opacity-40 pointer-events-auto cursor-not-allowed z-10" />
+                )}
               </form>
             </div>
           </div>
@@ -1521,6 +1602,23 @@ const StaffDashboard: React.FC = () => {
             </div>
           </div>
         </div>}
+      {/* Lớp phủ loading khi đang xử lý */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-gray-200 bg-opacity-50 flex items-center justify-center z-10 rounded-lg">
+          <div className="bg-white p-4 rounded-lg shadow-lg flex items-center space-x-3">
+            <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span className="text-gray-700">Đang xử lý...</span>
+          </div>
+        </div>
+      )}
+      {isFilterLoading && (
+        <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        </div>
+      )}
     </div>
   );
   const renderPromotionManagement = () => {
