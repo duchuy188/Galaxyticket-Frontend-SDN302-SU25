@@ -116,7 +116,7 @@ const SeatGrid: React.FC<SeatGridProps> = ({
   return <div className="w-full max-w-3xl mx-auto">
     <div className="mb-8 p-4 bg-gray-800 text-white text-center rounded-lg">
       <div className="w-full h-2 bg-gray-600 rounded-lg mb-8"></div>
-      <p className="text-sm">SCREEN</p>
+      <p className="text-sm">Màn hình</p>
     </div>
     <div className="space-y-4">
       {rows.map(row => <div key={row} className="flex items-center">
