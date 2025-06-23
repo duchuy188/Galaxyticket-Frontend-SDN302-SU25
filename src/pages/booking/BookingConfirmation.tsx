@@ -11,6 +11,8 @@ type ConfirmationDetails = {
   roomName?: string;
   seatNumbers: string[];
   totalPrice: number;
+  basePrice?: number;
+  discount?: number;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'cancelled';
   createdAt?: string;
   qrCodeDataUrl?: string;
@@ -29,10 +31,11 @@ const BookingConfirmation: React.FC = () => {
         const storedDetails = sessionStorage.getItem('confirmationDetails');
         console.log('Chi tiết lưu trữ từ sessionStorage:', storedDetails);
         let bookingId: string | undefined;
+        let storedConfirmationDetails: any = null;
 
         if (storedDetails) {
-          const details = JSON.parse(storedDetails);
-          bookingId = details.bookingId;
+          storedConfirmationDetails = JSON.parse(storedDetails);
+          bookingId = storedConfirmationDetails.bookingId;
         }
 
         console.log('ID đặt chỗ đã trích xuất:', bookingId);
@@ -54,15 +57,17 @@ const BookingConfirmation: React.FC = () => {
 
         console.log('Đối tượng Đặt chỗ đã cập nhật từ API:', updatedBooking);
 
-        // Ánh xạ updatedBooking sang kiểu ConfirmationDetails
+        // Ánh xạ updatedBooking sang kiểu ConfirmationDetails, giữ lại thông tin giảm giá từ sessionStorage
         const confirmedDetails: ConfirmationDetails = {
           bookingId: updatedBooking._id,
-          movieTitle: updatedBooking.movieTitle,
-          moviePoster: updatedBooking.moviePoster,
-          screeningTime: updatedBooking.screeningTime,
-          roomName: updatedBooking.roomName,
+          movieTitle: updatedBooking.movieTitle || storedConfirmationDetails?.movieTitle,
+          moviePoster: updatedBooking.moviePoster || storedConfirmationDetails?.moviePoster,
+          screeningTime: updatedBooking.screeningTime || storedConfirmationDetails?.screeningTime,
+          roomName: updatedBooking.roomName || storedConfirmationDetails?.roomName,
           seatNumbers: Array.isArray(updatedBooking.seatNumbers) ? updatedBooking.seatNumbers : [],
-          totalPrice: updatedBooking.totalPrice || 0,
+          totalPrice: updatedBooking.totalPrice || storedConfirmationDetails?.totalPrice || 0,
+          basePrice: storedConfirmationDetails?.basePrice || updatedBooking.basePrice,
+          discount: storedConfirmationDetails?.discount || updatedBooking.discount || 0,
           paymentStatus: updatedBooking.paymentStatus,
           createdAt: updatedBooking.bookingDate || updatedBooking.createdAt,
           qrCodeDataUrl: updatedBooking.qrCodeDataUrl
@@ -72,6 +77,7 @@ const BookingConfirmation: React.FC = () => {
 
         // Xóa ID đặt chỗ hiện tại khỏi sessionStorage sau khi xác nhận thành công
         sessionStorage.removeItem('currentBookingId');
+        sessionStorage.removeItem('confirmationDetails');
 
       } catch (err) {
         setError('Không thể xác nhận đặt chỗ. Vui lòng thử lại.');
@@ -210,9 +216,23 @@ const BookingConfirmation: React.FC = () => {
                 </p>
               </div>
               <div>
-                <p className="text-gray-600 text-sm">Số tiền đã thanh toán</p>
+                <p className="text-gray-600 text-sm">Giá gốc</p>
                 <p className="font-medium">
-                  {(confirmationDetails.totalPrice || 0).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
+                  {((confirmationDetails.basePrice || 0) * seatNumbers.length).toLocaleString('vi-VN')} VND
+                </p>
+              </div>
+              {(confirmationDetails?.discount || 0) > 0 && (
+                <div>
+                  <p className="text-gray-600 text-sm">Giảm giá</p>
+                  <p className="font-medium text-green-600">
+                    -{(confirmationDetails?.discount || 0).toLocaleString('vi-VN')} VND
+                  </p>
+                </div>
+              )}
+              <div>
+                <p className="text-gray-600 text-sm">Tổng tiền</p>
+                <p className="font-bold text-lg">
+                  {(confirmationDetails.totalPrice || 0).toLocaleString('vi-VN')} VND
                 </p>
               </div>
               <div>

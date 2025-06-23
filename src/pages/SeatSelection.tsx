@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import SeatGrid from '../components/SeatGrid';
 import { getTheaterById } from '../utils/theater';
-import { createBooking, cancelBooking } from '../utils/booking';
+import { createBooking, updateBooking, cancelBooking } from '../utils/booking';
 import { getScreeningById, Screening } from '../utils/screening';
 import { validatePromotionCode } from '../utils/promotion';
 
@@ -32,7 +32,25 @@ const SeatSelection: React.FC = () => {
   const [theaterName, setTheaterName] = useState('');
   const [showTimer, setShowTimer] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [isUpdateMode, setIsUpdateMode] = useState(false);
   const isProceedingToCheckout = React.useRef(false);
+
+  useEffect(() => {
+    // Check for update mode when component mounts
+    const isUpdating = sessionStorage.getItem('isUpdatingBooking');
+    if (isUpdating === 'true') {
+      const storedDetails = sessionStorage.getItem('bookingDetails');
+      const currentBookingId = sessionStorage.getItem('currentBookingId');
+      if (storedDetails && currentBookingId) {
+        setIsUpdateMode(true);
+        const parsedDetails = JSON.parse(storedDetails);
+        setSelectedSeats(parsedDetails.seats || []);
+        setBookingId(currentBookingId);
+      }
+      // Clean up the flag
+      sessionStorage.removeItem('isUpdatingBooking');
+    }
+  }, []);
 
   useEffect(() => {
     const fetchScreeningDetails = async () => {
@@ -139,6 +157,64 @@ const SeatSelection: React.FC = () => {
         setTotalPrice(Number(currentTicketPrice) * selectedSeats.length);
         setAppliedPromoCode(null);
       }
+    }
+  };
+
+  const handleUpdateAndReturnToCheckout = async () => {
+    if (!bookingId) {
+      setError('Không tìm thấy mã đặt vé để cập nhật.');
+      return;
+    }
+    if (selectedSeats.length === 0) {
+      setError('Vui lòng chọn ít nhất một ghế.');
+      return;
+    }
+
+    if (isProceedingToCheckout.current) return;
+    isProceedingToCheckout.current = true;
+    setError(null);
+
+    try {
+      const finalCalculatedTotal = totalPrice;
+      const originalPriceBeforeDiscount = (screeningDetails?.ticketPrice || 0) * selectedSeats.length;
+      const discountAmountCalculated = appliedPromoCode ? (originalPriceBeforeDiscount - finalCalculatedTotal) : 0;
+
+      const updateData = {
+        seatNumbers: selectedSeats,
+        code: appliedPromoCode || undefined,
+        totalPrice: finalCalculatedTotal,
+        discount: discountAmountCalculated,
+        basePrice: screeningDetails?.ticketPrice || 0,
+      };
+      
+      await updateBooking(bookingId, updateData);
+
+      const bookingDetails = {
+        movieId: id || '',
+        movieTitle: movieTitle,
+        date: date,
+        time: time,
+        theater: theater,
+        room: screeningDetails?.roomId.name || '',
+        seats: selectedSeats,
+        basePrice: screeningDetails?.ticketPrice || 0,
+        discount: discountAmountCalculated,
+        total: finalCalculatedTotal,
+        screeningId: screeningId,
+        userId: userId,
+        bookingId: bookingId,
+      };
+
+      sessionStorage.setItem('bookingDetails', JSON.stringify(bookingDetails));
+      sessionStorage.setItem('bookingUpdateSuccess', 'true');
+
+      navigate('/checkout');
+
+    } catch (error: any) {
+      console.error('Error updating booking:', error);
+      setError(error.message || 'Không thể cập nhật đặt vé.');
+    } finally {
+      isProceedingToCheckout.current = false;
     }
   };
 
@@ -308,9 +384,23 @@ const SeatSelection: React.FC = () => {
               <span>{Math.round(totalPrice)} VND</span>
             </div>
           </div>
-          <button className={`w-full py-3 rounded-md font-medium ${selectedSeats.length > 0 ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`} onClick={handleProceedToCheckout} disabled={selectedSeats.length === 0}>
-            Tiến hành thanh toán
-          </button>
+          {isUpdateMode ? (
+            <button
+              className={`w-full py-3 rounded-md font-medium ${selectedSeats.length > 0 ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+              onClick={handleUpdateAndReturnToCheckout}
+              disabled={selectedSeats.length === 0 || isProceedingToCheckout.current}
+            >
+              Cập nhật vé
+            </button>
+          ) : (
+            <button
+              className={`w-full py-3 rounded-md font-medium ${selectedSeats.length > 0 ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+              onClick={handleProceedToCheckout}
+              disabled={selectedSeats.length === 0 || isProceedingToCheckout.current}
+            >
+              Tiến hành thanh toán
+            </button>
+          )}
         </div>
       </div>
     </div>

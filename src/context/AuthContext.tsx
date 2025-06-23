@@ -1,14 +1,13 @@
-
-
 import React, { useEffect, useState, createContext, useContext } from 'react';
 import axios from 'axios';
 
 type User = {
   id: string;
+  _id: string;
   fullName: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'manager' | 'staff' | 'user';
+  role: 'admin' | 'manager' | 'staff' | 'member';
   avatar?: string;
 };
 
@@ -17,7 +16,7 @@ type AuthContextType = {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (
-    userData: Omit<User, 'id' | 'role'> & { password: string }
+    userData: Omit<User, 'id' | '_id' | 'role'> & { password: string }
   ) => Promise<boolean>;
   logout: () => void;
 };
@@ -72,7 +71,8 @@ export const AuthProvider: React.FC<{
 
       if (res.data.success) {
         const userInfo: User = {
-          id: res.data.user.id,
+          id: res.data.user._id,
+          _id: res.data.user._id,
           fullName: res.data.user.fullName,
           email: res.data.user.email,
           phone: res.data.user.phone,
@@ -120,7 +120,7 @@ export const AuthProvider: React.FC<{
   // };
 
   const register = async (
-  userData: Omit<User, 'id' | 'role'> & { password: string }
+  userData: Omit<User, 'id' | '_id' | 'role'> & { password: string }
 ): Promise<boolean> => {
   try {
     const res = await axios.post('http://localhost:5000/api/auth/register', {
@@ -133,7 +133,8 @@ export const AuthProvider: React.FC<{
 
     if (res.data.success && res.data.user) {
       const userInfo: User = {
-        id: res.data.user.id,
+        id: res.data.user._id,
+        _id: res.data.user._id,
         fullName: res.data.user.name, // lấy lại theo cách BE trả về
         email: res.data.user.email,
         phone: res.data.user.phone,

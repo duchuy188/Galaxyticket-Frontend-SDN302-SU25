@@ -51,9 +51,9 @@ export const validatePromotionCode = async (
         console.log('Initial calculated price (before discount):', calculatedDiscountedPrice);
 
         if (promotion.type === 'percent') {
-            calculatedDiscountedPrice = calculatedDiscountedPrice * (1 - promotionValue / 100);
+            calculatedDiscountedPrice = Math.round(calculatedDiscountedPrice * (1 - promotionValue / 100));
         } else if (promotion.type === 'fixed') {
-            calculatedDiscountedPrice = Math.max(0, calculatedDiscountedPrice - promotionValue);
+            calculatedDiscountedPrice = Math.round(Math.max(0, calculatedDiscountedPrice - promotionValue));
         }
         console.log('Final calculated discounted price:', calculatedDiscountedPrice);
 
