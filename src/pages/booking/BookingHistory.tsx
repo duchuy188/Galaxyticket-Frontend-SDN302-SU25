@@ -12,7 +12,6 @@ const BookingHistory: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -69,16 +68,11 @@ const BookingHistory: React.FC = () => {
     );
   }
 
-  // Lọc booking theo trạng thái
-  const filteredBookings = statusFilter === 'all' 
-    ? bookings 
-    : bookings.filter(booking => booking.paymentStatus === statusFilter);
-
   // Tính toán số trang
-  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(bookings.length / ITEMS_PER_PAGE);
   
   // Lấy bookings cho trang hiện tại
-  const currentBookings = filteredBookings.slice(
+  const currentBookings = bookings.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -88,21 +82,6 @@ const BookingHistory: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Vé Của Tôi</h1>
-          <div className="flex gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setCurrentPage(1); // Reset về trang 1 khi thay đổi bộ lọc
-              }}
-              className="px-3 py-2 border rounded-md"
-            >
-              <option value="all">Tất cả</option>
-              <option value="paid">Đã thanh toán</option>
-              <option value="pending">Chờ thanh toán</option>
-              <option value="cancelled">Đã hủy</option>
-            </select>
-          </div>
         </div>
 
         {currentBookings.length === 0 ? (
