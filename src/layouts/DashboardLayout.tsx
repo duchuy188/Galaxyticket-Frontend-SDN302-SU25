@@ -10,6 +10,7 @@ import {
   LogOutIcon,
   TagIcon,
   LayoutGridIcon,
+  UserIcon,
 } from 'lucide-react'
 type DashboardLayoutProps = {
   children: React.ReactNode
@@ -41,6 +42,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       path: `${basePath}/reports`,
       icon: <CreditCardIcon size={20} />,
     },
+    {
+      label: 'Profile',
+      path: `${basePath}/profile`,
+      icon: <UserIcon size={20} />,
+    },
   ]
   const staffNavItems = [
     {
@@ -62,6 +68,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       label: 'Payment Issues',
       path: `${basePath}/payments`,
       icon: <CreditCardIcon size={20} />,
+    },
+    {
+      label: 'Profile',
+      path: `${basePath}/profile`,
+      icon: <UserIcon size={20} />,
     },
   ]
   const managerNavItems = [
@@ -90,6 +101,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       path: `${basePath}/seatmaps`,
       icon: <LayoutGridIcon size={20} />,
     },
+    {
+      label: 'Profile',
+      path: `${basePath}/profile`,
+      icon: <UserIcon size={20} />,
+    },
   ]
   const navItems = isAdmin
     ? adminNavItems
@@ -113,13 +129,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             <ul className="space-y-2">
               {navItems.map((item) => (
                 <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    className={`flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700 transition-colors ${location.pathname === item.path ? 'bg-gray-700' : ''}`}
+                  <button
+                    onClick={() => {
+                      if (item.label === 'Profile') {
+                        console.log('Profile clicked from DashboardLayout!');
+                        console.log('User role:', user?.role);
+                        console.log('User:', user);
+                      }
+                      navigate(item.path);
+                    }}
+                    className={`flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700 transition-colors w-full text-left ${location.pathname === item.path ? 'bg-gray-700' : ''}`}
                   >
                     {item.icon}
                     <span>{item.label}</span>
-                  </Link>
+                  </button>
                 </li>
               ))}
             </ul>

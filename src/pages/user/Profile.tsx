@@ -1,63 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { User, Mail, Phone, Lock, Edit2, Camera, History, Bell, X, Eye, EyeOff, Check, Loader2, AlertTriangle } from 'lucide-react';
+import { User, Mail, Phone, Lock, Edit2, Save, X, Eye, EyeOff, Check, Loader2, ArrowLeft } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
-type TabType = 'history' | 'profile' | 'notifications';
+import api from '../../utils/api';
 
 interface FormErrors {
   fullName?: string;
   email?: string;
   phone?: string;
-  birthday?: string;
 }
 
 const Profile: React.FC = () => {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>('profile');
+  console.log('Profile component loaded!');
+  
+  const { user, updateProfile } = useAuth();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
     email: user?.email || '',
-    phone: user?.phone || '',
-    avatar: user?.avatar || 'https://via.placeholder.com/150',
-    birthday: '2003-11-30' // Changed to YYYY-MM-DD format for date input
+    phone: user?.phone || ''
   });
-
-  const getPasswordStrength = (password: string) => {
-    let strength = 0;
-    if (password.length >= 8) strength++;
-    if (/[A-Z]/.test(password)) strength++;
-    if (/[0-9]/.test(password)) strength++;
-    if (/[^A-Za-z0-9]/.test(password)) strength++;
-    return strength;
-  };
-
-  const getPasswordStrengthText = (strength: number) => {
-    switch (strength) {
-      case 0: return 'Very Weak';
-      case 1: return 'Weak';
-      case 2: return 'Medium';
-      case 3: return 'Strong';
-      case 4: return 'Very Strong';
-      default: return '';
-    }
-  };
 
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
 
+  // Update formData when user context changes
+  useEffect(() => {
+    console.log('User context changed:', user);
+    setFormData({
+      fullName: user?.fullName || '',
+      email: user?.email || '',
+      phone: user?.phone || ''
+    });
+  }, [user]);
+
+  // Get the correct back path based on user role
+  const getBackPath = () => {
+    if (user?.role === 'admin') return '/admin';
+    if (user?.role === 'staff') return '/staff';
+    if (user?.role === 'manager') return '/manager';
+    return '/'; // For member role
+  };
+
   const validateForm = (): boolean => {
+    console.log('🔍 validateForm called');
     const errors: FormErrors = {};
     let isValid = true;
 
@@ -80,11 +78,7 @@ const Profile: React.FC = () => {
       isValid = false;
     }
 
-    if (!formData.birthday) {
-      errors.birthday = 'Date of birth is required';
-      isValid = false;
-    }
-
+    console.log('🔍 Validation result:', { isValid, errors });
     setFormErrors(errors);
     return isValid;
   };
@@ -112,29 +106,40 @@ const Profile: React.FC = () => {
     }));
   };
 
+  // Check if passwords match for real-time validation
+  const passwordsMatch = passwordData.newPassword === passwordData.confirmPassword && passwordData.confirmPassword !== '';
+  const passwordStrength = passwordData.newPassword.length >= 8;
+
   const handleEditClick = () => {
-    if (isEditing) {
-      setShowConfirmDialog(true);
-    } else {
-      setIsEditing(true);
-    }
+    setIsEditing(true);
   };
 
   const handleCancelEdit = () => {
     setFormData({
       fullName: user?.fullName || '',
       email: user?.email || '',
-      phone: user?.phone || '',
-      avatar: user?.avatar || 'https://via.placeholder.com/150',
-      birthday: '2003-11-30'
+      phone: user?.phone || ''
     });
     setFormErrors({});
     setIsEditing(false);
-    setShowConfirmDialog(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    console.log('🚀 handleSubmit STARTED');
     e.preventDefault();
+    
+    console.log('handleSubmit called');
+    
+    // Check if user is authenticated and token exists
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('You are not authenticated. Please login again.');
+      navigate('/signin');
+      return;
+    }
+    
+    console.log('Token exists:', !!token);
+    console.log('User:', user);
     
     if (!validateForm()) {
       toast.error('Please fix the errors in the form');
@@ -143,441 +148,554 @@ const Profile: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // TODO: Implement update logic
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated API call
-      setIsEditing(false);
-      toast.success('Profile updated successfully!');
-    } catch (error) {
+      console.log('Sending profile update request:', {
+        name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone
+      });
+
+      // Test notification first
+      toast.info('Sending update request...');
+
+      console.log('Request payload:', {
+        name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone
+      });
+
+      console.log('Request headers:', {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      });
+
+      // Call API to update profile
+      const response = await api.put('/api/auth/profile', {
+        name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone
+      });
+
+      console.log('Profile update response:', response.data);
+      console.log('Response status:', response.status);
+      console.log('Response has message:', !!response.data.message);
+      console.log('Response has user:', !!response.data.user);
+
+      // Backend returns { message: "...", user: {...} } not { success: true, ... }
+      if (response.data.message && response.data.user) {
+        console.log('✅ Success condition met!');
+        // Exit edit mode and return to view mode
+        setIsEditing(false);
+        console.log('✅ isEditing set to false');
+        toast.success('Profile updated successfully!');
+        
+        // Get updated user data from response
+        const updatedUserData = response.data.user;
+        console.log('Updated user data from backend:', updatedUserData);
+        
+        // Update user context with new data
+        updateProfile({
+          fullName: updatedUserData.name || updatedUserData.fullName || formData.fullName,
+          email: updatedUserData.email || formData.email,
+          phone: updatedUserData.phone || formData.phone
+        });
+        
+        console.log('✅ updateProfile called with:', {
+          fullName: updatedUserData.name || updatedUserData.fullName || formData.fullName,
+          email: updatedUserData.email || formData.email,
+          phone: updatedUserData.phone || formData.phone
+        });
+        
+        // Clear any form errors
+        setFormErrors({});
+        console.log('✅ Form errors cleared');
+      } else {
+        console.log('❌ Success condition not met');
+        console.log('Message:', response.data.message);
+        console.log('User:', response.data.user);
+        toast.error(response.data.message || 'Failed to update profile');
+      }
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile. Please try again.');
+      console.error('Error response:', error.response);
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
+      
+      if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please login again.');
+      } else if (error.response?.status === 404) {
+        toast.error('Profile update endpoint not found. Please contact administrator.');
+      } else if (error.response?.status === 500) {
+        toast.error('Server error. Please try again later.');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to update profile. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [formData, updateProfile, navigate]);
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    console.log('🔐 handlePasswordSubmit STARTED');
+    console.log('Password data:', {
+      currentPassword: passwordData.currentPassword ? '***' : 'empty',
+      newPassword: passwordData.newPassword ? '***' : 'empty',
+      confirmPassword: passwordData.confirmPassword ? '***' : 'empty'
+    });
+    
+    // Validate password fields
+    if (!passwordData.currentPassword.trim()) {
+      toast.error('Current password is required');
+      return;
+    }
+
+    if (!passwordData.newPassword.trim()) {
+      toast.error('New password is required');
+      return;
+    }
+
+    if (!passwordStrength) {
+      toast.error('New password must be at least 8 characters long');
+      return;
+    }
+
+    if (!passwordsMatch) {
+      toast.error('New passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      console.log('🔐 Sending password change request...');
+      console.log('Request payload:', {
+        currentPassword: '***',
+        newPassword: '***',
+        confirmNewPassword: '***'
+      });
+      
+      // Check if user is authenticated and token exists
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('You are not authenticated. Please login again.');
+        navigate('/signin');
+        return;
+      }
+      
+      console.log('Token exists:', !!token);
+
+      // Call change-password API directly
+      const response = await api.put('/api/auth/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        confirmNewPassword: passwordData.confirmPassword
+      });
+
+      console.log('🔐 Password change response:', response.data);
+      console.log('Response status:', response.status);
+
+      // Backend returns { message: "..." } on success, not { success: true }
+      if (response.data.message && response.status === 200) {
+        console.log('✅ Password changed successfully!');
+        setShowPasswordModal(false);
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        toast.success('Password changed successfully!');
+      } else {
+        console.log('❌ Password change failed:', response.data.message);
+        toast.error(response.data.message || 'Failed to change password');
+      }
+    } catch (error: any) {
+      console.error('🔐 Error changing password:', error);
+      console.error('Error response:', error.response);
+      console.error('Error status:', error.response?.status);
+      console.error('Error data:', error.response?.data);
+      console.error('Error message:', error.message);
+      console.error('Full error object:', error);
+      
+      if (error.response?.status === 400) {
+        const errorMessage = error.response?.data?.message || 'Current password is incorrect';
+        console.log('🔐 400 error message:', errorMessage);
+        toast.error(errorMessage);
+      } else if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please login again.');
+      } else if (error.response?.status === 404) {
+        toast.error('Password change endpoint not found. Please contact administrator.');
+      } else if (error.response?.status === 500) {
+        toast.error('Server error. Please try again later.');
+      } else {
+        const errorMessage = error.response?.data?.message || 'Failed to change password. Please try again.';
+        console.log('🔐 Generic error message:', errorMessage);
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement password change logic
-    setShowPasswordModal(false);
-  };
+  return (
+    <div className="min-h-screen relative">
+      {/* Background Image with Blur */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url('https://i.etsystatic.com/20425521/r/il/c79b33/2968319597/il_570xN.2968319597_a6v0.jpg')`,
+        }}
+      >
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      </div>
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          avatar: reader.result as string
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+      {/* Back Button */}
+      <button
+        onClick={() => navigate(getBackPath())}
+        className="absolute top-6 left-6 z-10 flex items-center text-white hover:text-gray-200 transition-colors"
+      >
+        <ArrowLeft className="h-5 w-5 mr-2" />
+        <span>Back to {user?.role === 'admin' ? 'Admin' : user?.role === 'staff' ? 'Staff' : user?.role === 'manager' ? 'Manager' : 'Home'}</span>
+      </button>
 
-  const tabs = [
-    { id: 'history', label: 'Transaction History', icon: History },
-    { id: 'profile', label: 'Personal Information', icon: User },
-    { id: 'notifications', label: 'Notifications', icon: Bell }
-  ];
-
-  const renderPasswordModal = () => {
-    const passwordStrength = getPasswordStrength(passwordData.newPassword);
-
-    return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
-          <button
-            onClick={() => setShowPasswordModal(false)}
-            className="text-gray-400 hover:text-gray-500"
-            title="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <form onSubmit={handlePasswordSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="password"
-                name="currentPassword"
-                value={passwordData.currentPassword}
-                onChange={handlePasswordChange}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type={showNewPassword ? "text" : "password"}
-                name="newPassword"
-                value={passwordData.newPassword}
-                onChange={handlePasswordChange}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {/* Password Strength Indicator */}
-            {passwordData.newPassword && (
-              <div className="mt-2">
-                <div className="flex space-x-1">
-                  {[...Array(4)].map((_, index) => (
-                    <div
-                      key={index}
-                      className={`h-1 flex-1 rounded-full ${
-                        index < passwordStrength
-                          ? index < 2
-                            ? 'bg-red-500'
-                            : index < 3
-                            ? 'bg-yellow-500'
-                            : 'bg-green-500'
-                          : 'bg-gray-200'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <p className={`text-sm mt-1 ${
-                  passwordStrength < 2
-                    ? 'text-red-600'
-                    : passwordStrength < 3
-                    ? 'text-yellow-600'
-                    : 'text-green-600'
-                }`}>
-                  {getPasswordStrengthText(passwordStrength)}
-                </p>
+      {/* Main Content */}
+      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+        <div className="w-full max-w-2xl">
+          {/* Profile Card */}
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white text-center">
+              <div className="w-24 h-24 rounded-full bg-white/20 mx-auto mb-4 flex items-center justify-center">
+                <User className="h-12 w-12 text-white/80" />
               </div>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                name="confirmPassword"
-                value={passwordData.confirmPassword}
-                onChange={handlePasswordChange}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+              <h1 className="text-2xl font-bold">{user?.fullName}</h1>
+              <p className="text-blue-100">{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}</p>
             </div>
-            {/* Password Match Indicator */}
-            {passwordData.confirmPassword && (
-              <div className="flex items-center mt-2 text-sm">
-                {passwordData.newPassword === passwordData.confirmPassword ? (
-                  <>
-                    <Check className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-green-600">Passwords match</span>
-                  </>
+
+            {/* Profile Form */}
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Personal Information</h2>
+                {!isEditing ? (
+                  <button
+                    onClick={handleEditClick}
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit Profile
+                  </button>
                 ) : (
-                  <>
-                    <X className="h-4 w-4 text-red-500 mr-1" />
-                    <span className="text-red-600">Passwords do not match</span>
-                  </>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleCancelEdit}
+                      className="flex items-center px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </button>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-          <div className="flex justify-end space-x-3 mt-6">
-            <button
-              type="button"
-              onClick={() => setShowPasswordModal(false)}
-              className="px-4 py-2 text-gray-700 hover:text-gray-900"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Update Password
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )};
 
-  const renderConfirmDialog = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <div className="flex items-center gap-3 mb-4">
-          <AlertTriangle className="w-6 h-6 text-yellow-500" />
-          <h3 className="text-lg font-semibold">Discard Changes?</h3>
-        </div>
-        <p className="text-gray-600 mb-6">
-          Are you sure you want to cancel? All unsaved changes will be lost.
-        </p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={() => setShowConfirmDialog(false)}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            Keep Editing
-          </button>
-          <button
-            onClick={handleCancelEdit}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-          >
-            Discard Changes
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Full Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={isEditing ? formData.fullName : (user?.fullName || '')}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                        isEditing 
+                          ? 'bg-white border-gray-300' 
+                          : 'bg-gray-50 border-gray-200 text-gray-600'
+                      } ${formErrors.fullName ? 'border-red-500' : ''}`}
+                      placeholder="Enter your full name"
+                    />
+                  </div>
+                  {formErrors.fullName && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.fullName}</p>
+                  )}
+                </div>
 
-  const renderProfileContent = () => (
-    <div className="bg-white rounded-lg shadow-sm p-8 transition-all duration-300">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex justify-end mb-8">
-          <button
-            type="button"
-            onClick={handleEditClick}
-            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all duration-300 transform hover:scale-105"
-            title={isEditing ? "Cancel editing" : "Edit profile"}
-          >
-            <Edit2 className="w-4 h-4" />
-            <span>{isEditing ? 'Cancel' : 'Edit'}</span>
-          </button>
-        </div>
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="email"
+                      name="email"
+                      value={isEditing ? formData.email : (user?.email || '')}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                        isEditing 
+                          ? 'bg-white border-gray-300' 
+                          : 'bg-gray-50 border-gray-200 text-gray-600'
+                      } ${formErrors.email ? 'border-red-500' : ''}`}
+                      placeholder="Enter your email"
+                    />
+                  </div>
+                  {formErrors.email && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+                  )}
+                </div>
 
-        {/* Profile Picture */}
-        <div className="flex justify-center mb-12">
-          <div className="relative group">
-            <img
-              src={formData.avatar}
-              alt="Profile"
-              className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg transition-all duration-300 group-hover:scale-105"
-            />
-            {isEditing && (
-              <label 
-                className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg cursor-pointer hover:bg-gray-50 transition-all duration-300 transform hover:scale-110"
-                title="Change profile picture"
-              >
-                <Camera className="w-5 h-5 text-gray-600" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
-              </label>
-            )}
-          </div>
-        </div>
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Phone className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={isEditing ? formData.phone : (user?.phone || '')}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                        isEditing 
+                          ? 'bg-white border-gray-300' 
+                          : 'bg-gray-50 border-gray-200 text-gray-600'
+                      } ${formErrors.phone ? 'border-red-500' : ''}`}
+                      placeholder="Enter your phone number"
+                    />
+                  </div>
+                  {formErrors.phone && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
+                  )}
+                </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-            <div className="group">
-              <label className="block text-sm font-medium text-gray-600 mb-2">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
-                <input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-300 ${
-                    formErrors.fullName ? 'border-red-500' : 'border-gray-200'
-                  }`}
-                  placeholder="Enter your full name"
-                />
-                {formErrors.fullName && (
-                  <p className="mt-1 text-sm text-red-500">{formErrors.fullName}</p>
+                {/* Save Changes Button - Inside form */}
+                {isEditing && (
+                  <div className="flex justify-end pt-4">
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Save Changes
+                    </button>
+                  </div>
                 )}
-              </div>
-            </div>
+              </form>
 
-            <div className="group">
-              <label className="block text-sm font-medium text-gray-600 mb-2">Date of Birth</label>
-              <input
-                type="date"
-                name="birthday"
-                value={formData.birthday}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className={`w-full px-4 py-2.5 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-300 ${
-                  formErrors.birthday ? 'border-red-500' : 'border-gray-200'
-                }`}
-              />
-              {formErrors.birthday && (
-                <p className="mt-1 text-sm text-red-500">{formErrors.birthday}</p>
-              )}
-            </div>
-
-            <div className="group">
-              <label className="block text-sm font-medium text-gray-600 mb-2">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-300 ${
-                    formErrors.email ? 'border-red-500' : 'border-gray-200'
-                  }`}
-                  placeholder="Enter your email"
-                />
-                {formErrors.email && (
-                  <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="group">
-              <label className="block text-sm font-medium text-gray-600 mb-2">Phone Number</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-300 ${
-                    formErrors.phone ? 'border-red-500' : 'border-gray-200'
-                  }`}
-                  placeholder="Enter your phone number"
-                />
-                {formErrors.phone && (
-                  <p className="mt-1 text-sm text-red-500">{formErrors.phone}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="col-span-full group">
-              <label className="block text-sm font-medium text-gray-600 mb-2">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
-                <input
-                  type="password"
-                  disabled
-                  value="••••••••"
-                  className="w-full pl-10 pr-24 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-500"
-                />
+              {/* Change Password Button */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
                 <button
-                  type="button"
                   onClick={() => setShowPasswordModal(true)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                  title="Change password"
+                  className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  Change
+                  <Lock className="h-4 w-4 mr-2" />
+                  Change Password
                 </button>
               </div>
             </div>
           </div>
-
-          {isEditing && (
-            <div className="flex justify-end mt-8">
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 disabled:bg-blue-400 disabled:transform-none"
-                title="Save changes"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Updating...</span>
-                  </>
-                ) : (
-                  <span>Update</span>
-                )}
-              </button>
-            </div>
-          )}
-        </form>
-      </div>
-    </div>
-  );
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'profile':
-        return renderProfileContent();
-      case 'history':
-        return <div className="bg-white rounded-lg shadow-sm p-8">Transaction history will be displayed here</div>;
-      case 'notifications':
-        return <div className="bg-white rounded-lg shadow-sm p-8">Notifications will be displayed here</div>;
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200 mb-6">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as TabType)}
-                className={`flex items-center justify-center gap-2 flex-1 px-8 py-4 text-sm font-medium transition-all duration-300 ${
-                  activeTab === tab.id
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-b-2 border-transparent'
-                }`}
-              >
-                <tab.icon className={`w-5 h-5 transition-colors duration-300 ${
-                  activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'
-                }`} />
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Content */}
-          {renderContent()}
         </div>
       </div>
 
-      {/* Confirmation Dialog */}
-      {showConfirmDialog && renderConfirmDialog()}
-
       {/* Password Change Modal */}
-      {showPasswordModal && renderPasswordModal()}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handlePasswordSubmit} className="p-6 space-y-4">
+              {/* Current Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Current Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    name="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={handlePasswordChange}
+                    className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter current password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
 
-      {/* Toast Container */}
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="colored"
-      />
+              {/* New Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    className={`w-full pl-10 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      passwordData.newPassword !== '' 
+                        ? passwordStrength 
+                          ? 'border-green-500 bg-green-50' 
+                          : 'border-yellow-500 bg-yellow-50'
+                        : 'border-gray-300'
+                    }`}
+                    placeholder="Enter new password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                {/* Password strength indicator */}
+                {passwordData.newPassword !== '' && (
+                  <div className="flex items-center mt-2 text-sm">
+                    {passwordStrength ? (
+                      <>
+                        <Check className="h-4 w-4 text-green-500 mr-1" />
+                        <span className="text-green-600">Password is strong enough (8+ characters)</span>
+                      </>
+                    ) : (
+                      <>
+                        <X className="h-4 w-4 text-yellow-500 mr-1" />
+                        <span className="text-yellow-600">Password must be at least 8 characters</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm New Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    className={`w-full pl-10 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      passwordData.confirmPassword !== '' 
+                        ? passwordsMatch 
+                          ? 'border-green-500 bg-green-50' 
+                          : 'border-red-500 bg-red-50'
+                        : 'border-gray-300'
+                    }`}
+                    placeholder="Confirm new password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+                {/* Password match indicator */}
+                {passwordData.confirmPassword !== '' && (
+                  <div className="flex items-center mt-2 text-sm">
+                    {passwordsMatch ? (
+                      <>
+                        <Check className="h-4 w-4 text-green-500 mr-1" />
+                        <span className="text-green-600">Passwords match</span>
+                      </>
+                    ) : (
+                      <>
+                        <X className="h-4 w-4 text-red-500 mr-1" />
+                        <span className="text-red-600">Passwords do not match</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-2" />
+                  )}
+                  Change Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <ToastContainer position="top-right" />
     </div>
   );
 };

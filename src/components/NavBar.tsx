@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Film, ChevronDown, User, LogOut, Ticket, Star } from 'lucide-react';
-import { Movie, getMovies } from '../utils/movie';
+import { Movie } from '../utils/movie';
 
 interface MovieSection {
   title: string;
@@ -21,33 +21,15 @@ const NavBar: React.FC = () => {
   const navigate = useNavigate();
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [movies, setMovies] = useState<Movie[]>([]);
-
-  useEffect(() => {
-    const fetchMovies = async () => {
-      try {
-        const data = await getMovies();
-        setMovies(data || []);
-      } catch (error) {
-        console.error('Error fetching movies:', error);
-        setMovies([]);
-      }
-    };
-
-    fetchMovies();
-  }, []);
 
   const handleLogout = () => {
     logout();
     navigate('/signin');
   };
 
-  if (user?.role === 'admin' || user?.role === 'staff') {
+  if (user?.role === 'admin' || user?.role === 'staff' || user?.role === 'manager') {
     return null;
   }
-
-  const nowShowing = movies.filter(movie => movie.showingStatus === 'now-showing');
-  const comingSoon = movies.filter(movie => movie.showingStatus === 'coming-soon');
 
   const navItems: NavItem[] = [
     {
@@ -56,11 +38,11 @@ const NavBar: React.FC = () => {
       items: [
         {
           title: 'NOW SHOWING',
-          movies: nowShowing.slice(0, 4)
+          movies: []
         },
         {
           title: 'COMING SOON',
-          movies: comingSoon.slice(0, 4)
+          movies: []
         }
       ]
     },
@@ -211,22 +193,29 @@ const NavBar: React.FC = () => {
                 
                 {isUserDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl py-2 z-50">
-                    <Link 
-                      to="/profile" 
-                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsUserDropdownOpen(false)}
+                    <button
+                      onClick={() => {
+                        console.log('Profile link clicked!');
+                        console.log('User:', user);
+                        console.log('Is authenticated:', isAuthenticated);
+                        navigate('/profile');
+                        setIsUserDropdownOpen(false);
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100"
                     >
                       <User className="w-4 h-4 mr-2" />
                       <span>Profile</span>
-                    </Link>
-                    <Link 
-                      to="/bookings" 
-                      className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsUserDropdownOpen(false)}
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate('/bookings');
+                        setIsUserDropdownOpen(false);
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-gray-700 hover:bg-gray-100"
                     >
                       <Ticket className="w-4 h-4 mr-2" />
                       <span>My Bookings</span>
-                    </Link>
+                    </button>
                     <hr className="my-2 border-gray-200" />
                     <button
                       onClick={() => {
