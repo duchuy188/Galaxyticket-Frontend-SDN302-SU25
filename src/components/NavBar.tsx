@@ -295,7 +295,7 @@ const NavBar: React.FC = () => {
                       onClick={() => setIsUserDropdownOpen(false)}
                     >
                       <Ticket className="w-4 h-4 mr-2" />
-                      <span>My Bookings</span>
+                      <span>Vé của tôi</span>
                     </Link>
                     <hr className="my-2 border-gray-200" />
                     <button

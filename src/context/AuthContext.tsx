@@ -1,14 +1,13 @@
-
-
 import React, { useEffect, useState, createContext, useContext } from 'react';
 import axios from 'axios';
 
 type User = {
   id: string;
+  _id: string;
   fullName: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'manager' | 'staff' | 'user';
+  role: 'admin' | 'manager' | 'staff' | 'member';
   avatar?: string;
 };
 
@@ -17,7 +16,7 @@ type AuthContextType = {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (
-    userData: Omit<User, 'id' | 'role'> & { password: string }
+    userData: Omit<User, 'id' | '_id' | 'role'> & { password: string }
   ) => Promise<boolean>;
   logout: () => void;
 };
@@ -70,20 +69,36 @@ export const AuthProvider: React.FC<{
         password,
       });
 
-      if (res.data.success) {
+      console.log('Login response:', res.data);
+
+      if (res.data.success && res.data.user) {
+        const userData = res.data.user;
+        
+        const userId = userData._id || userData.id;
+        
+        if (!userId) {
+          console.error('No user ID found in response:', userData);
+          return false;
+        }
+
         const userInfo: User = {
-          id: res.data.user.id,
-          fullName: res.data.user.fullName,
-          email: res.data.user.email,
-          phone: res.data.user.phone,
-          role: res.data.user.role,
+          id: userId,
+          _id: userId,
+          fullName: userData.fullName || userData.name,
+          email: userData.email,
+          phone: userData.phone,
+          role: userData.role,
+          avatar: userData.avatar
         };
+
+        console.log('Storing user info:', userInfo);
 
         setUser(userInfo);
         localStorage.setItem('user', JSON.stringify(userInfo));
         localStorage.setItem('token', res.data.token);
         return true;
       } else {
+        console.error('Login failed - Invalid response format:', res.data);
         return false;
       }
     } catch (err) {
@@ -120,7 +135,7 @@ export const AuthProvider: React.FC<{
   // };
 
   const register = async (
-  userData: Omit<User, 'id' | 'role'> & { password: string }
+  userData: Omit<User, 'id' | '_id' | 'role'> & { password: string }
 ): Promise<boolean> => {
   try {
     const res = await axios.post('http://localhost:5000/api/auth/register', {
@@ -133,7 +148,8 @@ export const AuthProvider: React.FC<{
 
     if (res.data.success && res.data.user) {
       const userInfo: User = {
-        id: res.data.user.id,
+        id: res.data.user._id,
+        _id: res.data.user._id,
         fullName: res.data.user.name, // lấy lại theo cách BE trả về
         email: res.data.user.email,
         phone: res.data.user.phone,

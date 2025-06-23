@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import SeatGrid from '../components/SeatGrid';
 import { getTheaterById } from '../utils/theater';
-import { createBooking, cancelBooking } from '../utils/booking';
+import { createBooking, updateBooking, cancelBooking } from '../utils/booking';
 import { getScreeningById, Screening } from '../utils/screening';
 import { validatePromotionCode } from '../utils/promotion';
+import { useAuth } from '../context/AuthContext';
 
 const SeatSelection: React.FC = () => {
+  const { user } = useAuth();
   const {
     id
   } = useParams<{
@@ -19,7 +21,6 @@ const SeatSelection: React.FC = () => {
   const theater = searchParams.get('theater') || '';
   const screeningId = searchParams.get('screeningId') || '';
   const movieTitle = searchParams.get('movieTitle') || '';
-  const userId = searchParams.get('userId') || '';
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [totalPrice, setTotalPrice] = useState(0);
@@ -32,7 +33,25 @@ const SeatSelection: React.FC = () => {
   const [theaterName, setTheaterName] = useState('');
   const [showTimer, setShowTimer] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [isUpdateMode, setIsUpdateMode] = useState(false);
   const isProceedingToCheckout = React.useRef(false);
+
+  useEffect(() => {
+    // Check for update mode when component mounts
+    const isUpdating = sessionStorage.getItem('isUpdatingBooking');
+    if (isUpdating === 'true') {
+      const storedDetails = sessionStorage.getItem('bookingDetails');
+      const currentBookingId = sessionStorage.getItem('currentBookingId');
+      if (storedDetails && currentBookingId) {
+        setIsUpdateMode(true);
+        const parsedDetails = JSON.parse(storedDetails);
+        setSelectedSeats(parsedDetails.seats || []);
+        setBookingId(currentBookingId);
+      }
+      // Clean up the flag
+      sessionStorage.removeItem('isUpdatingBooking');
+    }
+  }, []);
 
   useEffect(() => {
     const fetchScreeningDetails = async () => {
@@ -55,7 +74,7 @@ const SeatSelection: React.FC = () => {
 
   useEffect(() => {
     if (screeningDetails) {
-      let newTotalPrice = Number(screeningDetails.ticketPrice) * selectedSeats.length;
+      const newTotalPrice = Number(screeningDetails.ticketPrice) * selectedSeats.length;
 
       if (appliedPromoCode && selectedSeats.length > 0) {
         setPromoMessage(null);
@@ -142,7 +161,90 @@ const SeatSelection: React.FC = () => {
     }
   };
 
+  const handleUpdateAndReturnToCheckout = async () => {
+    if (!bookingId) {
+      setError('Không tìm thấy mã đặt vé để cập nhật.');
+      return;
+    }
+    if (selectedSeats.length === 0) {
+      setError('Vui lòng chọn ít nhất một ghế.');
+      return;
+    }
+
+    if (isProceedingToCheckout.current) return;
+    isProceedingToCheckout.current = true;
+    setError(null);
+
+    try {
+      const finalCalculatedTotal = totalPrice;
+      const originalPriceBeforeDiscount = (screeningDetails?.ticketPrice || 0) * selectedSeats.length;
+      const discountAmountCalculated = appliedPromoCode ? (originalPriceBeforeDiscount - finalCalculatedTotal) : 0;
+
+      const updateData = {
+        seatNumbers: selectedSeats,
+        code: appliedPromoCode || undefined,
+        totalPrice: finalCalculatedTotal,
+        discount: discountAmountCalculated,
+        basePrice: screeningDetails?.ticketPrice || 0,
+      };
+      
+      await updateBooking(bookingId, updateData);
+
+      const bookingDetails = {
+        movieId: id || '',
+        movieTitle: movieTitle,
+        date: date,
+        time: time,
+        theater: theater,
+        room: screeningDetails?.roomId.name || '',
+        seats: selectedSeats,
+        basePrice: screeningDetails?.ticketPrice || 0,
+        discount: discountAmountCalculated,
+        total: finalCalculatedTotal,
+        screeningId: screeningId,
+        userId: user.id,
+        bookingId: bookingId,
+      };
+
+      sessionStorage.setItem('bookingDetails', JSON.stringify(bookingDetails));
+      sessionStorage.setItem('bookingUpdateSuccess', 'true');
+
+      navigate('/checkout');
+
+    } catch (error: any) {
+      console.error('Error updating booking:', error);
+      setError(error.message || 'Không thể cập nhật đặt vé.');
+    } finally {
+      isProceedingToCheckout.current = false;
+    }
+  };
+
   const handleProceedToCheckout = async () => {
+    console.log('Current user:', user); // Log user info
+    console.log('Current screeningId:', screeningId); // Log screeningId
+    console.log('Selected seats:', selectedSeats); // Log selected seats
+
+    if (!user) {
+      setError('Vui lòng đăng nhập để đặt vé');
+      navigate('/signin');
+      return;
+    }
+
+    // Get user ID from either id or _id field
+    const userId = user._id || user.id;
+    console.log('User ID being used:', userId);
+
+    if (!userId) {
+      setError('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+      navigate('/signin');
+      return;
+    }
+
+    if (!screeningId) {
+      setError('Không tìm thấy thông tin suất chiếu');
+      return;
+    }
+
     if (selectedSeats.length === 0) {
       setError('Vui lòng chọn ít nhất một ghế');
       return;
@@ -157,6 +259,21 @@ const SeatSelection: React.FC = () => {
     setError(null);
 
     try {
+      // Validate current user
+      if (!userId || !user) {
+        throw new Error('Vui lòng đăng nhập để đặt vé.');
+      }
+
+      // Validate screening
+      if (!screeningId || !screeningDetails) {
+        throw new Error('Không tìm thấy thông tin suất chiếu.');
+      }
+
+      // Validate selected seats
+      if (!selectedSeats || selectedSeats.length === 0) {
+        throw new Error('Vui lòng chọn ít nhất một ghế.');
+      }
+
       const bookingData = {
         userId: userId,
         screeningId: screeningId,
@@ -164,40 +281,62 @@ const SeatSelection: React.FC = () => {
         code: appliedPromoCode || undefined,
       };
 
-      const response = await createBooking(bookingData);
+      console.log('Creating booking with data:', bookingData);
 
-      if (!response.success || !response.data?._id) {
-        throw new Error('Không thể tạo booking ban đầu hoặc lấy ID booking.');
+      try {
+        const response = await createBooking(bookingData);
+
+        if (!response.success || !response.data?._id) {
+          throw new Error('Không thể tạo đơn đặt vé. Vui lòng thử lại sau.');
+        }
+
+        const bookingId = response.data._id as string;
+        setBookingId(bookingId);
+        sessionStorage.setItem('currentBookingId', bookingId);
+
+        const finalCalculatedTotal = totalPrice;
+        const originalPriceBeforeDiscount = Number(screeningDetails?.ticketPrice) * selectedSeats.length;
+        const discountAmountCalculated = appliedPromoCode ? (originalPriceBeforeDiscount - finalCalculatedTotal) : 0;
+
+        const bookingDetails = {
+          movieId: id || '',
+          movieTitle: movieTitle,
+          date: date,
+          time: time,
+          theater: theater,
+          room: screeningDetails?.roomId.name || '',
+          seats: selectedSeats,
+          basePrice: screeningDetails?.ticketPrice || 0,
+          discount: discountAmountCalculated,
+          total: finalCalculatedTotal,
+          screeningId: screeningId,
+          userId: userId,
+          bookingId: bookingId,
+        };
+
+        console.log('Booking Details prepared:', bookingDetails);
+        sessionStorage.setItem('bookingDetails', JSON.stringify(bookingDetails));
+
+        navigate('/checkout');
+
+      } catch (error) {
+        setShowTimer(false);
+        const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi đặt vé. Vui lòng thử lại.';
+        
+        if (errorMessage.includes('already booked')) {
+          setError('Một số ghế đã được đặt bởi người khác. Vui lòng chọn ghế khác.');
+          setSelectedSeats([]);
+          if (appliedPromoCode) {
+            setAppliedPromoCode(null);
+            setPromoCode('');
+          }
+        } else {
+          setError(errorMessage);
+        }
+        
+        // Release the seats if booking failed
+        // await releasePendingSeats();
       }
-
-      setBookingId(response.data._id as string);
-      sessionStorage.setItem('currentBookingId', response.data._id as string);
-
-      const finalCalculatedTotal = totalPrice;
-      const originalPriceBeforeDiscount = Number(screeningDetails?.ticketPrice) * selectedSeats.length;
-      const discountAmountCalculated = appliedPromoCode ? (originalPriceBeforeDiscount - finalCalculatedTotal) : 0;
-
-      const bookingDetails = {
-        movieId: id || '',
-        movieTitle: movieTitle,
-        date: date,
-        time: time,
-        theater: theater,
-        room: screeningDetails?.roomId.name || '',
-        seats: selectedSeats,
-        basePrice: screeningDetails?.ticketPrice || 0,
-        discount: discountAmountCalculated,
-        total: finalCalculatedTotal,
-        screeningId: screeningId,
-        userId: userId,
-        bookingId: response.data._id as string,
-      };
-
-      console.log('Booking Details prepared in SeatSelection (before sessionStorage):', bookingDetails);
-      sessionStorage.setItem('bookingDetails', JSON.stringify(bookingDetails));
-
-      navigate('/checkout');
-
     } catch (error: any) {
       setShowTimer(false);
       console.error('Error creating or proceeding with booking:', error);
@@ -308,9 +447,23 @@ const SeatSelection: React.FC = () => {
               <span>{Math.round(totalPrice)} VND</span>
             </div>
           </div>
-          <button className={`w-full py-3 rounded-md font-medium ${selectedSeats.length > 0 ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`} onClick={handleProceedToCheckout} disabled={selectedSeats.length === 0}>
-            Tiến hành thanh toán
-          </button>
+          {isUpdateMode ? (
+            <button
+              className={`w-full py-3 rounded-md font-medium ${selectedSeats.length > 0 ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+              onClick={handleUpdateAndReturnToCheckout}
+              disabled={selectedSeats.length === 0 || isProceedingToCheckout.current}
+            >
+              Cập nhật vé
+            </button>
+          ) : (
+            <button
+              className={`w-full py-3 rounded-md font-medium ${selectedSeats.length > 0 ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+              onClick={handleProceedToCheckout}
+              disabled={selectedSeats.length === 0 || isProceedingToCheckout.current}
+            >
+              Tiến hành thanh toán
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -44,10 +44,10 @@ export const AppRoutes = () => {
                 <Route path="checkout" element={<Checkout />} />
                 <Route path="confirmation" element={<BookingConfirmation />} />
                 <Route path="theater/:id" element={<TheaterDetail />} />
-                <Route path="bookings" element={<PrivateRoute allowedRoles={['user']}>
+                <Route path="bookings" element={<PrivateRoute allowedRoles={['user', 'member']}>
                     <BookingHistory />
                 </PrivateRoute>} />
-                <Route path="profile" element={<PrivateRoute allowedRoles={['user']}>
+                <Route path="profile" element={<PrivateRoute allowedRoles={['user', 'member']}>
                     <Profile />
                 </PrivateRoute>} />
             </Route>

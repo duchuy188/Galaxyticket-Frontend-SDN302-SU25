@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 type PrivateRouteProps = {
   children: React.ReactNode;
-  allowedRoles: Array<'admin' | 'manager' | 'staff' | 'user'>;
+  allowedRoles: Array<'admin' | 'manager' | 'staff' | 'member'>;
 };
 const PrivateRoute: React.FC<PrivateRouteProps> = ({
   children,
