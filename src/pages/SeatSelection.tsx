@@ -5,8 +5,10 @@ import { getTheaterById } from '../utils/theater';
 import { createBooking, updateBooking, cancelBooking } from '../utils/booking';
 import { getScreeningById, Screening } from '../utils/screening';
 import { validatePromotionCode } from '../utils/promotion';
+import { useAuth } from '../context/AuthContext';
 
 const SeatSelection: React.FC = () => {
+  const { user } = useAuth();
   const {
     id
   } = useParams<{
@@ -19,7 +21,6 @@ const SeatSelection: React.FC = () => {
   const theater = searchParams.get('theater') || '';
   const screeningId = searchParams.get('screeningId') || '';
   const movieTitle = searchParams.get('movieTitle') || '';
-  const userId = searchParams.get('userId') || '';
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [promoCode, setPromoCode] = useState('');
   const [totalPrice, setTotalPrice] = useState(0);
@@ -73,7 +74,7 @@ const SeatSelection: React.FC = () => {
 
   useEffect(() => {
     if (screeningDetails) {
-      let newTotalPrice = Number(screeningDetails.ticketPrice) * selectedSeats.length;
+      const newTotalPrice = Number(screeningDetails.ticketPrice) * selectedSeats.length;
 
       if (appliedPromoCode && selectedSeats.length > 0) {
         setPromoMessage(null);
@@ -201,7 +202,7 @@ const SeatSelection: React.FC = () => {
         discount: discountAmountCalculated,
         total: finalCalculatedTotal,
         screeningId: screeningId,
-        userId: userId,
+        userId: user.id,
         bookingId: bookingId,
       };
 
@@ -219,6 +220,31 @@ const SeatSelection: React.FC = () => {
   };
 
   const handleProceedToCheckout = async () => {
+    console.log('Current user:', user); // Log user info
+    console.log('Current screeningId:', screeningId); // Log screeningId
+    console.log('Selected seats:', selectedSeats); // Log selected seats
+
+    if (!user) {
+      setError('Vui lòng đăng nhập để đặt vé');
+      navigate('/signin');
+      return;
+    }
+
+    // Get user ID from either id or _id field
+    const userId = user._id || user.id;
+    console.log('User ID being used:', userId);
+
+    if (!userId) {
+      setError('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+      navigate('/signin');
+      return;
+    }
+
+    if (!screeningId) {
+      setError('Không tìm thấy thông tin suất chiếu');
+      return;
+    }
+
     if (selectedSeats.length === 0) {
       setError('Vui lòng chọn ít nhất một ghế');
       return;
@@ -233,6 +259,21 @@ const SeatSelection: React.FC = () => {
     setError(null);
 
     try {
+      // Validate current user
+      if (!userId || !user) {
+        throw new Error('Vui lòng đăng nhập để đặt vé.');
+      }
+
+      // Validate screening
+      if (!screeningId || !screeningDetails) {
+        throw new Error('Không tìm thấy thông tin suất chiếu.');
+      }
+
+      // Validate selected seats
+      if (!selectedSeats || selectedSeats.length === 0) {
+        throw new Error('Vui lòng chọn ít nhất một ghế.');
+      }
+
       const bookingData = {
         userId: userId,
         screeningId: screeningId,
@@ -240,40 +281,62 @@ const SeatSelection: React.FC = () => {
         code: appliedPromoCode || undefined,
       };
 
-      const response = await createBooking(bookingData);
+      console.log('Creating booking with data:', bookingData);
 
-      if (!response.success || !response.data?._id) {
-        throw new Error('Không thể tạo booking ban đầu hoặc lấy ID booking.');
+      try {
+        const response = await createBooking(bookingData);
+
+        if (!response.success || !response.data?._id) {
+          throw new Error('Không thể tạo đơn đặt vé. Vui lòng thử lại sau.');
+        }
+
+        const bookingId = response.data._id as string;
+        setBookingId(bookingId);
+        sessionStorage.setItem('currentBookingId', bookingId);
+
+        const finalCalculatedTotal = totalPrice;
+        const originalPriceBeforeDiscount = Number(screeningDetails?.ticketPrice) * selectedSeats.length;
+        const discountAmountCalculated = appliedPromoCode ? (originalPriceBeforeDiscount - finalCalculatedTotal) : 0;
+
+        const bookingDetails = {
+          movieId: id || '',
+          movieTitle: movieTitle,
+          date: date,
+          time: time,
+          theater: theater,
+          room: screeningDetails?.roomId.name || '',
+          seats: selectedSeats,
+          basePrice: screeningDetails?.ticketPrice || 0,
+          discount: discountAmountCalculated,
+          total: finalCalculatedTotal,
+          screeningId: screeningId,
+          userId: userId,
+          bookingId: bookingId,
+        };
+
+        console.log('Booking Details prepared:', bookingDetails);
+        sessionStorage.setItem('bookingDetails', JSON.stringify(bookingDetails));
+
+        navigate('/checkout');
+
+      } catch (error) {
+        setShowTimer(false);
+        const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi đặt vé. Vui lòng thử lại.';
+        
+        if (errorMessage.includes('already booked')) {
+          setError('Một số ghế đã được đặt bởi người khác. Vui lòng chọn ghế khác.');
+          setSelectedSeats([]);
+          if (appliedPromoCode) {
+            setAppliedPromoCode(null);
+            setPromoCode('');
+          }
+        } else {
+          setError(errorMessage);
+        }
+        
+        // Release the seats if booking failed
+        // await releasePendingSeats();
       }
-
-      setBookingId(response.data._id as string);
-      sessionStorage.setItem('currentBookingId', response.data._id as string);
-
-      const finalCalculatedTotal = totalPrice;
-      const originalPriceBeforeDiscount = Number(screeningDetails?.ticketPrice) * selectedSeats.length;
-      const discountAmountCalculated = appliedPromoCode ? (originalPriceBeforeDiscount - finalCalculatedTotal) : 0;
-
-      const bookingDetails = {
-        movieId: id || '',
-        movieTitle: movieTitle,
-        date: date,
-        time: time,
-        theater: theater,
-        room: screeningDetails?.roomId.name || '',
-        seats: selectedSeats,
-        basePrice: screeningDetails?.ticketPrice || 0,
-        discount: discountAmountCalculated,
-        total: finalCalculatedTotal,
-        screeningId: screeningId,
-        userId: userId,
-        bookingId: response.data._id as string,
-      };
-
-      console.log('Booking Details prepared in SeatSelection (before sessionStorage):', bookingDetails);
-      sessionStorage.setItem('bookingDetails', JSON.stringify(bookingDetails));
-
-      navigate('/checkout');
-
     } catch (error: any) {
       setShowTimer(false);
       console.error('Error creating or proceeding with booking:', error);

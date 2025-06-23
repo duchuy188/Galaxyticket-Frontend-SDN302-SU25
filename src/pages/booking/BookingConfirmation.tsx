@@ -132,11 +132,9 @@ const BookingConfirmation: React.FC = () => {
         month: 'long',
         day: 'numeric'
       });
-      const formattedTime = date.toLocaleTimeString('vi-VN', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-      });
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const formattedTime = `${hours}:${minutes}`;
       return `${formattedDate} ${formattedTime}`;
     } catch (error) {
       console.error('Lỗi định dạng ngày:', error);

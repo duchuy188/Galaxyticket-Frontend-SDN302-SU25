@@ -78,6 +78,16 @@ export interface BookingResponse {
     data?: any;
 }
 
+interface ApiError extends Error {
+    response?: {
+        data?: {
+            message?: string;
+            error?: string;
+        };
+        status?: number;
+    };
+}
+
 export const getBookings = async (filters: BookingFilters): Promise<BookingResponse> => {
     try {
         const response = await api.get('/api/bookings', { params: filters });
@@ -96,21 +106,67 @@ export const getBookings = async (filters: BookingFilters): Promise<BookingRespo
 export const createBooking = async (bookingData: CreateBookingData): Promise<BookingResponse> => {
     try {
         // Validate required fields
-        if (!bookingData.userId || !bookingData.screeningId || !bookingData.seatNumbers) {
-            throw new Error('Missing required fields');
+        if (!bookingData.userId) {
+            throw new Error('User ID is required');
+        }
+        if (!bookingData.screeningId) {
+            throw new Error('Screening ID is required');
+        }
+        if (!Array.isArray(bookingData.seatNumbers) || bookingData.seatNumbers.length === 0) {
+            throw new Error('At least one seat must be selected');
         }
 
-        const response = await api.post('/api/bookings', bookingData);
-        return {
-            success: response.data.success,
-            message: response.data.message,
-            data: response.data.data
+        // Clean up the booking data
+        const cleanBookingData = {
+            userId: bookingData.userId,
+            screeningId: bookingData.screeningId,
+            seatNumbers: bookingData.seatNumbers,
+            ...(bookingData.code && { code: bookingData.code })
         };
-    } catch (error: any) {
-        if (error.response) {
-            throw new Error(error.response.data.message || 'Error creating booking');
+
+        // Attempt to create the booking
+        const response = await api.post('/api/bookings', cleanBookingData);
+        
+        // Validate response
+        if (!response.data) {
+            throw new Error('No response data received from server');
         }
-        throw error;
+        
+        if (!response.data.success) {
+            throw new Error(response.data.message || 'Booking creation failed');
+        }
+        
+        return response.data;
+    } catch (error) {
+        const apiError = error as ApiError;
+        
+        // Log detailed error for debugging
+        console.error('Booking creation error:', {
+            error: apiError,
+            response: apiError.response?.data,
+            status: apiError.response?.status,
+            requestData: bookingData
+        });
+        
+        // Handle specific error cases
+        if (apiError.response?.status === 500) {
+            throw new Error('Lỗi máy chủ. Vui lòng thử lại sau.');
+        }
+        
+        if (apiError.response?.status === 409) {
+            throw new Error('Ghế đã được đặt. Vui lòng chọn ghế khác.');
+        }
+        
+        if (apiError.response?.status === 400) {
+            throw new Error(apiError.response.data?.message || 'Thông tin đặt vé không hợp lệ.');
+        }
+        
+        // Default error message
+        throw new Error(
+            apiError.response?.data?.message || 
+            apiError.message || 
+            'Có lỗi xảy ra khi đặt vé. Vui lòng thử lại.'
+        );
     }
 };
 
@@ -192,11 +248,11 @@ export const getUserBookings = async (): Promise<BookingResponse> => {
                     const qrContent = [
                         `Mã đặt vé: ${booking._id.toString()}`,
                         `Phim: ${booking.screeningId.movieId?.title || 'N/A'}`,
-                        `Thời gian chiếu phim: Ngày: ${new Date(booking.screeningId.startTime).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })} vào lúc: ${new Date(booking.screeningId.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Ho_Chi_Minh' })}`,
+                        `Thời gian chiếu phim: ${booking.screeningId.startTime ? new Date(booking.screeningId.startTime).toLocaleString('vi-VN') : 'N/A'}`,
                         `Phòng: ${booking.screeningId.roomId?.name || 'N/A'}`,
-                        `Ghế: ${booking.seatNumbers?.join(', ') || 'N/A'}`,
-                        `Tổng tiền: ${booking.totalPrice?.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) || '0 VND'}`,
-                        `Ngày đặt: Ngày: ${new Date(booking.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })} vào lúc: ${new Date(booking.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Ho_Chi_Minh' })}`
+                        `Ghế: ${booking.seatNumbers.join(', ')}`,
+                        `Tổng tiền: ${(booking.totalPrice || 0).toLocaleString('vi-VN')} VND`,
+                        `Ngày đặt: Ngày: ${new Date(booking.createdAt).toLocaleDateString('vi-VN')} vào lúc: ${new Date(booking.createdAt).getHours().toString().padStart(2, '0')}:${new Date(booking.createdAt).getMinutes().toString().padStart(2, '0')}`
                     ].join('\n');
                     const qrCodeDataUrl = await QRCode.toDataURL(qrContent);
 
