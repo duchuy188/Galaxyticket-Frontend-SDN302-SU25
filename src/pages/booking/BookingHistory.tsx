@@ -145,7 +145,7 @@ const BookingHistory: React.FC = () => {
                         </p>
                       </div>
                       <div>
-                        <p className="text-gray-600 text-sm mb-1">Rạp chiếu</p>
+                        <p className="text-gray-600 text-sm mb-1">Phòng chiếu</p>
                         <p className="font-medium">{booking.screeningId?.roomId?.name || booking.roomName || 'N/A'}</p>
                       </div>
                       <div>
