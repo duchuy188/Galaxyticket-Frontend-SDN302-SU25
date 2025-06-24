@@ -189,15 +189,15 @@ const StaffDashboard: React.FC = () => {
     setEditingMovie({
       title: '',
       description: '',
-      genre: 'Action',
+      genre: 'Phim Hành Động',
       duration: 90,
       posterUrl: '',
       trailerUrl: '',
       releaseDate: new Date().toISOString(),
       country: '',
       producer: '',
-      directors: [], // Bắt đầu với một mảng rỗng, không phải null hoặc undefined
-      actors: [],    // Bắt đầu với một mảng rỗng
+      directors: [],
+      actors: [],
       showingStatus: 'coming-soon'
     });
     // Reset các state phụ

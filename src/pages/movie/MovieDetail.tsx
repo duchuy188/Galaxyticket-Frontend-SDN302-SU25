@@ -168,6 +168,32 @@ const MovieDetail: React.FC = () => {
     navigate(navigatePath);
   };
 
+  // Thêm hàm này vào component MovieDetail
+  const parsePersonList = (data: any): string[] => {
+    if (!data) return [];
+    
+    // Nếu là mảng, trả về mảng đã xử lý
+    if (Array.isArray(data)) {
+      return data.map(item => typeof item === 'string' ? item.trim() : String(item)).filter(Boolean);
+    }
+    
+    // Nếu là chuỗi
+    if (typeof data === 'string') {
+      // Xóa tất cả dấu ngoặc vuông và ngoặc kép
+      const cleanedString = data.replace(/^\[|\]$|"/g, '');
+      
+      // Nếu chuỗi rỗng sau khi xóa
+      if (!cleanedString.trim()) return [];
+      
+      // Tách theo dấu phẩy và loại bỏ khoảng trắng
+      return cleanedString.split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+    
+    return [];
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -331,14 +357,17 @@ const MovieDetail: React.FC = () => {
                     <span className="text-gray-500">Đạo diễn:</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {(movie.directors?.join(',') || 'Pae Arak Amornsupasiri,Wutthiphong Sukanin').split(',').map((director, index) => (
+                    {parsePersonList(movie.directors).map((director, index) => (
                       <span
                         key={index}
                         className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
                       >
-                        {director.trim()}
+                        {director}
                       </span>
                     ))}
+                    {parsePersonList(movie.directors).length === 0 && (
+                      <span className="text-sm text-gray-500">Không có thông tin</span>
+                    )}
                   </div>
                 </div>
 
@@ -349,14 +378,17 @@ const MovieDetail: React.FC = () => {
                     <span className="text-gray-500">Diễn viên:</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {(movie.actors?.join(',') || 'Pae Arak Amornsupasiri,Kittikun Chattongkum,Paween Purijitpanya').split(',').map((actor, index) => (
+                    {parsePersonList(movie.actors).map((actor, index) => (
                       <span
                         key={index}
                         className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
                       >
-                        {actor.trim()}
+                        {actor}
                       </span>
                     ))}
+                    {parsePersonList(movie.actors).length === 0 && (
+                      <span className="text-sm text-gray-500">Không có thông tin</span>
+                    )}
                   </div>
                 </div>
               </div>
