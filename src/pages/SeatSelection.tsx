@@ -438,7 +438,7 @@ const SeatSelection: React.FC = () => {
             </div>
             {appliedPromoCode && discountAmount > 0 && (
               <div className="flex justify-between text-green-600">
-                <span>Giảm giá  ({100 - (totalPrice / originalPrice * 100)}%)</span>
+                Giảm giá ({Math.round(100 - (totalPrice / originalPrice * 100))}%)
                 <span>-{Math.round(discountAmount)} VND</span>
               </div>
             )}
