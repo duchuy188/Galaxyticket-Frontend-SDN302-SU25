@@ -5,6 +5,7 @@ import { getTheaterById } from '../../utils/theater';
 import { getRoomById } from '../../utils/room';
 import { getScreeningById } from '../../utils/screening';
 import { createBooking, cancelBooking, updateBooking } from '../../utils/booking';
+import { createPaymentUrl, processPaymentReturn } from '../../utils/vnpay';
 
 type BookingDetails = {
   movieId: string;
@@ -29,6 +30,7 @@ const Checkout: React.FC = () => {
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'vnpay'>('vnpay');
   const navigate = useNavigate();
   const [theaterName, setTheaterName] = useState('');
   const [roomName, setRoomName] = useState('');
@@ -43,6 +45,15 @@ const Checkout: React.FC = () => {
       setUpdateMessage('Cập nhật vé thành công!');
       sessionStorage.removeItem('bookingUpdateSuccess');
       setTimeout(() => setUpdateMessage(null), 4000); // Hide after 4 seconds
+    }
+
+    // Check for VNPay return
+    const urlParams = new URLSearchParams(window.location.search);
+    const vnp_ResponseCode = urlParams.get('vnp_ResponseCode');
+    const vnp_TransactionStatus = urlParams.get('vnp_TransactionStatus');
+
+    if (vnp_ResponseCode || vnp_TransactionStatus) {
+      handleVNPayReturn();
     }
 
     const loadBookingDetails = async () => {
@@ -94,6 +105,42 @@ const Checkout: React.FC = () => {
     loadBookingDetails();
   }, []);
 
+  const handleVNPayReturn = async () => {
+    try {
+      const queryParams = Object.fromEntries(new URLSearchParams(window.location.search));
+      const response = await processPaymentReturn(queryParams);
+
+      if (response.code === '00') {
+        // Payment successful
+        const confirmationDetails = {
+          bookingId: bookingDetails?.bookingId || '',
+          movieTitle: bookingDetails?.movieTitle,
+          moviePoster: '',
+          screeningTime: `${bookingDetails?.date} at ${bookingDetails?.time}`,
+          roomName: roomName,
+          seatNumbers: bookingDetails?.seats || [],
+          totalPrice: bookingDetails?.total || 0,
+          paymentStatus: 'paid',
+          createdAt: new Date().toISOString(),
+        };
+
+        sessionStorage.setItem('confirmationDetails', JSON.stringify(confirmationDetails));
+        navigate('/confirmation');
+      } else {
+        // Payment failed
+        setError('Thanh toán thất bại: ' + (response.message || 'Vui lòng thử lại'));
+        
+        // Update booking status to failed
+        if (bookingDetails?.bookingId) {
+          await updateBooking(bookingDetails.bookingId, { paymentStatus: 'failed' });
+        }
+      }
+    } catch (error: any) {
+      console.error('Error processing VNPay return:', error);
+      setError('Lỗi xử lý thanh toán: ' + error.message);
+    }
+  };
+
   const handlePayment = async () => {
     if (!bookingDetails) {
       setError('Không có thông tin đặt vé');
@@ -114,22 +161,48 @@ const Checkout: React.FC = () => {
         throw new Error('Không tìm thấy ID booking. Vui lòng quay lại và thử lại.');
       }
 
-      const confirmationDetails = {
-        bookingId: bookingIdToUse,
-        movieTitle: bookingDetails.movieTitle,
-        moviePoster: '', // Placeholder for now, as it's not directly in bookingDetails
-        screeningTime: `${bookingDetails.date} at ${bookingDetails.time}`,
-        roomName: roomName, // Use the state variable roomName
-        seatNumbers: bookingDetails.seats,
-        totalPrice: bookingDetails.total,
-        paymentStatus: 'pending', // Default to pending as payment is being initiated
-        createdAt: new Date().toISOString(),
-        qrCodeDataUrl: undefined, // Will be populated by BookingConfirmation from API response
-      };
+      if (paymentMethod === 'vnpay') {
+        // Create VNPay payment URL
+        const paymentUrl = await createPaymentUrl(
+          bookingDetails.total,
+          bookingIdToUse,
+          bookingDetails.userId
+        );
 
-      sessionStorage.setItem('confirmationDetails', JSON.stringify(confirmationDetails));
+        // Store confirmation details before redirecting
+        const confirmationDetails = {
+          bookingId: bookingIdToUse,
+          movieTitle: bookingDetails.movieTitle,
+          moviePoster: '',
+          screeningTime: `${bookingDetails.date} at ${bookingDetails.time}`,
+          roomName: roomName,
+          seatNumbers: bookingDetails.seats,
+          totalPrice: bookingDetails.total,
+          paymentStatus: 'pending',
+          createdAt: new Date().toISOString(),
+        };
 
-      navigate('/confirmation');
+        sessionStorage.setItem('confirmationDetails', JSON.stringify(confirmationDetails));
+
+        // Redirect to VNPay
+        window.location.href = paymentUrl;
+      } else {
+        // Handle card payment (your existing logic)
+        const confirmationDetails = {
+          bookingId: bookingIdToUse,
+          movieTitle: bookingDetails.movieTitle,
+          moviePoster: '',
+          screeningTime: `${bookingDetails.date} at ${bookingDetails.time}`,
+          roomName: roomName,
+          seatNumbers: bookingDetails.seats,
+          totalPrice: bookingDetails.total,
+          paymentStatus: 'pending',
+          createdAt: new Date().toISOString(),
+        };
+
+        sessionStorage.setItem('confirmationDetails', JSON.stringify(confirmationDetails));
+        navigate('/confirmation');
+      }
     } catch (error: any) {
       console.error('Lỗi xử lý thanh toán:', error);
       if (error.message?.includes('already booked')) {
@@ -148,8 +221,6 @@ const Checkout: React.FC = () => {
       return;
     }
 
-    // Set a flag in sessionStorage to let SeatSelection know it's an update.
-    // The details are already in sessionStorage, so we just need to navigate.
     sessionStorage.setItem('isUpdatingBooking', 'true');
 
     const seatSelectionUrl = `/seats/${bookingDetails.movieId}?date=${bookingDetails.date}&time=${bookingDetails.time}&theater=${bookingDetails.theater}&screeningId=${bookingDetails.screeningId}&movieTitle=${encodeURIComponent(bookingDetails.movieTitle)}&userId=${bookingDetails.userId}`;
@@ -176,12 +247,10 @@ const Checkout: React.FC = () => {
       if (response.booking) {
         alert('Hủy đặt vé thành công!');
 
-        // Xóa thông tin booking khỏi sessionStorage
         sessionStorage.removeItem('bookingDetails');
         sessionStorage.removeItem('currentBookingId');
         sessionStorage.removeItem('isUpdatingBooking');
 
-        // Chuyển hướng về trang chủ và đảm bảo trang được refresh
         window.location.href = '/';
       } else {
         throw new Error(response.message || 'Không thể hủy đặt vé');
@@ -234,7 +303,8 @@ const Checkout: React.FC = () => {
             <p>{updateMessage}</p>
           </div>
         )}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        
+        <div className="bg-white rounded-lg shadow-md p-6">
           <h1 className="text-2xl font-bold mb-6">Thanh Toán Đơn Hàng</h1>
           <div className="border-b border-gray-200 pb-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Tóm Tắt Đặt Vé</h2>
@@ -263,42 +333,75 @@ const Checkout: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="border-b border-gray-200 pb-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Thông Tin Thanh Toán</h2>
-            <div className="bg-gray-50 p-4 rounded-lg mb-6">
-              <div className="flex justify-between mb-2">
-                <span>
-                  Vé ({bookingDetails.seats.length} x {bookingDetails.basePrice.toLocaleString('vi-VN')} VND)
-                </span>
-                <span>
-                  {(bookingDetails.basePrice * bookingDetails.seats.length).toLocaleString('vi-VN')} VND
-                </span>
-              </div>
-              {bookingDetails.discount > 0 && (
-                <div className="flex justify-between text-green-600 mb-2">
-                  <span>
-                    Giảm giá ({(() => {
-                      const totalBeforeDiscount = bookingDetails.basePrice * bookingDetails.seats.length;
-                      if (totalBeforeDiscount === 0 || !bookingDetails.discount) return '0%';
-                      const percentage = (bookingDetails.discount / totalBeforeDiscount) * 100;
-                      return `${Math.round(percentage)}%`;
-                    })()})
-                  </span>
-                  <span>
-                    -{(bookingDetails.discount || 0).toLocaleString('vi-VN')} VND
-                  </span>
-                </div>
-              )}
-              <div className="border-t border-gray-300 pt-2 mt-2 flex justify-between font-bold">
-                <span>Tổng cộng</span>
-                <span>{(bookingDetails.total || 0).toLocaleString('vi-VN')} VND</span>
-              </div>
+          
+          <h2 className="text-xl font-semibold mb-4">Thông Tin Thanh Toán</h2>
+          <div className="bg-gray-50 p-4 rounded-lg mb-6">
+            <div className="flex justify-between mb-2">
+              <span>
+                Vé ({bookingDetails.seats.length} x {bookingDetails.basePrice.toLocaleString('vi-VN')} VND)
+              </span>
+              <span>
+                {(bookingDetails.basePrice * bookingDetails.seats.length).toLocaleString('vi-VN')} VND
+              </span>
             </div>
-            <div className="border border-gray-300 rounded-lg p-4">
-              <div className="flex items-center mb-4">
-                <CreditCardIcon className="mr-2" size={20} />
-                <span className="font-medium">Thanh Toán Bằng Thẻ</span>
+            {bookingDetails.discount > 0 && (
+              <div className="flex justify-between text-green-600 mb-2">
+                <span>
+                  Giảm giá ({(() => {
+                    const totalBeforeDiscount = bookingDetails.basePrice * bookingDetails.seats.length;
+                    if (totalBeforeDiscount === 0 || !bookingDetails.discount) return '0%';
+                    const percentage = (bookingDetails.discount / totalBeforeDiscount) * 100;
+                    return `${Math.round(percentage)}%`;
+                  })()})
+                </span>
+                <span>
+                  -{(bookingDetails.discount || 0).toLocaleString('vi-VN')} VND
+                </span>
               </div>
+            )}
+            <div className="border-t border-gray-300 pt-2 mt-2 flex justify-between font-bold">
+              <span>Tổng cộng</span>
+              <span>{(bookingDetails.total || 0).toLocaleString('vi-VN')} VND</span>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h3 className="font-medium mb-4">Chọn phương thức thanh toán</h3>
+            <div className="space-y-3">
+              <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="vnpay"
+                  checked={paymentMethod === 'vnpay'}
+                  onChange={(e) => setPaymentMethod('vnpay')}
+                  className="mr-3"
+                />
+                <div>
+                  <p className="font-medium">VNPay</p>
+                  <p className="text-sm text-gray-500">Thanh toán an toàn qua VNPay</p>
+                </div>
+              </label>
+
+              <label className="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="card"
+                  checked={paymentMethod === 'card'}
+                  onChange={(e) => setPaymentMethod('card')}
+                  className="mr-3"
+                />
+                <div>
+                  <p className="font-medium">Thẻ tín dụng/ghi nợ</p>
+                  <p className="text-sm text-gray-500">Thanh toán bằng thẻ Visa, Mastercard, JCB</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {paymentMethod === 'card' && (
+            <div className="mb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-gray-700 text-sm font-medium mb-1">
@@ -345,31 +448,28 @@ const Checkout: React.FC = () => {
                   />
                 </div>
               </div>
-              <div className="mt-4 flex items-center text-green-600">
-                <CheckCircleIcon className="mr-2" size={16} />
-                <span className="text-sm">
-                  Đây là phiên bản demo - không có giao dịch thực tế
-                </span>
-              </div>
             </div>
-          </div>
+          )}
+
           <button
-            className={`w-full py-3 rounded-md font-medium ${isPaymentProcessing ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
-              } text-white mb-4`}
+            className={`w-full py-3 rounded-md font-medium ${
+              isPaymentProcessing ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+            } text-white mb-4`}
             onClick={handlePayment}
             disabled={isPaymentProcessing}
           >
             {isPaymentProcessing ? 'Đang Xử Lý Thanh Toán...' : 'Thanh Toán Ngay'}
           </button>
 
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex gap-4 mt-4">
             <button
               onClick={handleUpdateBooking}
               disabled={isUpdating}
-              className={`flex-1 flex items-center justify-center py-2 px-4 border border-blue-300 rounded-md ${isUpdating
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                }`}
+              className={`flex-1 flex items-center justify-center py-2 px-4 border border-blue-300 rounded-md ${
+                isUpdating
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+              }`}
             >
               <EditIcon size={18} className="mr-2" />
               {isUpdating ? 'Đang cập nhật...' : 'Cập nhật vé'}
@@ -378,10 +478,11 @@ const Checkout: React.FC = () => {
             <button
               onClick={handleCancelBooking}
               disabled={isCancelling}
-              className={`flex-1 flex items-center justify-center py-2 px-4 border border-red-300 rounded-md ${isCancelling
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-red-50 text-red-700 hover:bg-red-100'
-                }`}
+              className={`flex-1 flex items-center justify-center py-2 px-4 border border-red-300 rounded-md ${
+                isCancelling
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-red-50 text-red-700 hover:bg-red-100'
+              }`}
             >
               <XCircleIcon size={18} className="mr-2" />
               {isCancelling ? 'Đang hủy...' : 'Hủy đặt vé'}
