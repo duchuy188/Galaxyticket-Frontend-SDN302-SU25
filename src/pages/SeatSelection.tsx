@@ -379,7 +379,17 @@ const SeatSelection: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold">{movieTitle}</h1>
           <p className="text-gray-600">
-            {date} | {time} | {theaterName}
+            {date ? (() => {
+              const d = new Date(date);
+              if (!isNaN(d.getTime())) {
+                return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+              } else if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                // fallback for string date
+                const [y, m, d2] = date.split('-');
+                return `${parseInt(d2, 10)}/${parseInt(m, 10)}/${y}`;
+              }
+              return date;
+            })() : ''} | {time} | {theaterName}
           </p>
         </div>
         <div className="mt-4 md:mt-0">

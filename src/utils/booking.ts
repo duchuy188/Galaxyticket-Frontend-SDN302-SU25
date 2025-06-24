@@ -248,7 +248,14 @@ export const getUserBookings = async (): Promise<BookingResponse> => {
                     const qrContent = [
                         `Mã đặt vé: ${booking._id.toString()}`,
                         `Phim: ${booking.screeningId.movieId?.title || 'N/A'}`,
-                        `Thời gian chiếu phim: ${booking.screeningId.startTime ? new Date(booking.screeningId.startTime).toLocaleString('vi-VN') : 'N/A'}`,
+                        `Thời gian chiếu phim: ${booking.screeningId.startTime ? (() => {
+                            const d = new Date(booking.screeningId.startTime);
+                            if (isNaN(d.getTime())) return 'N/A';
+                            const vnDate = new Date(d.getTime() - (7 * 60 * 60 * 1000));
+                            const day = vnDate.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+                            const time = vnDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Ho_Chi_Minh' });
+                            return `Ngày: ${day} vào lúc: ${time}`;
+                        })() : 'N/A'}`,
                         `Phòng: ${booking.screeningId.roomId?.name || 'N/A'}`,
                         `Ghế: ${booking.seatNumbers.join(', ')}`,
                         `Tổng tiền: ${(booking.totalPrice || 0).toLocaleString('vi-VN')} VND`,

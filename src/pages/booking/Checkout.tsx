@@ -23,6 +23,11 @@ type BookingDetails = {
   bookingId?: string;
 };
 
+const formatDateVN = (dateStr: string) => {
+  const [year, month, day] = dateStr.split('-');
+  return `${day}/${month}/${year}`;
+};
+
 const Checkout: React.FC = () => {
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
   const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
@@ -316,7 +321,7 @@ const Checkout: React.FC = () => {
               <div>
                 <p className="text-gray-600">Ngày & Giờ</p>
                 <p className="font-medium">
-                  {bookingDetails.date} lúc {bookingDetails.time}
+                  {formatDateVN(bookingDetails.date)} lúc {bookingDetails.time}
                 </p>
               </div>
               <div>

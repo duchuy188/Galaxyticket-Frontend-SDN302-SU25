@@ -160,6 +160,16 @@ const BookingConfirmation: React.FC = () => {
     }
   };
 
+  const formatDateVN = (dateString: string) => {
+    if (!dateString) return 'Ngày không hợp lệ';
+    // Hỗ trợ cả dạng có T và không có T
+    const [datePart, timePart] = dateString.split(/[T ]/);
+    if (!datePart || !timePart) return 'Ngày không hợp lệ';
+    const [year, month, day] = datePart.split('-');
+    const [hour, minute] = timePart.split(':');
+    return `${parseInt(day)}/${parseInt(month)}/${year} lúc ${hour}:${minute}`;
+  };
+
   const handleEmailTicket = async () => {
     try {
       if (!confirmationDetails?.bookingId) {
@@ -217,7 +227,7 @@ const BookingConfirmation: React.FC = () => {
                 <p className="text-gray-600 text-sm">Ngày & Giờ</p>
                 <p className="font-medium">
                   {confirmationDetails.screeningTime
-                    ? `${confirmationDetails.screeningTime.slice(0, 10)} lúc ${confirmationDetails.screeningTime.slice(11, 16)}`
+                    ? formatDateVN(confirmationDetails.screeningTime)
                     : 'N/A'}
                 </p>
               </div>
@@ -268,7 +278,7 @@ const BookingConfirmation: React.FC = () => {
                   </h4>
                   <p className="text-sm">
                     {confirmationDetails.screeningTime
-                      ? `${confirmationDetails.screeningTime.slice(0, 10)} lúc ${confirmationDetails.screeningTime.slice(11, 16)}`
+                      ? formatDateVN(confirmationDetails.screeningTime)
                       : 'N/A'}
                   </p>
                 </div>
