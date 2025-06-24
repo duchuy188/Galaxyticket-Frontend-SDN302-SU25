@@ -96,13 +96,19 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
   const handleApprove = async (requestId: string) => {
     try {
       setIsLoading(true);
-      await updateApprovalRequest(requestId, 'approved');
+      // Đảm bảo API trả về dữ liệu phim đã cập nhật đầy đủ
+      const updatedData = await updateApprovalRequest(requestId, 'approved');
       
-      // Cập nhật trạng thái trong state local
+      // Cập nhật state với dữ liệu đầy đủ từ API
       setRequests(prevRequests => 
         prevRequests.map(req => 
           req._id === requestId 
-            ? {...req, status: 'approved', managerId: { _id: 'currentUser', name: 'Current Manager' }} 
+            ? {
+                ...req, 
+                status: 'approved',
+                managerId: { _id: 'currentUser', name: 'Current Manager' },
+                requestData: updatedData.requestData // Cập nhật dữ liệu mới
+              } 
             : req
         )
       );
