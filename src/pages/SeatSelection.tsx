@@ -202,7 +202,7 @@ const SeatSelection: React.FC = () => {
         discount: discountAmountCalculated,
         total: finalCalculatedTotal,
         screeningId: screeningId,
-        userId: user.id,
+        userId: user?.id,
         bookingId: bookingId,
       };
 
@@ -310,7 +310,7 @@ const SeatSelection: React.FC = () => {
           discount: discountAmountCalculated,
           total: finalCalculatedTotal,
           screeningId: screeningId,
-          userId: userId,
+          userId: user?.id,
           bookingId: bookingId,
         };
 
