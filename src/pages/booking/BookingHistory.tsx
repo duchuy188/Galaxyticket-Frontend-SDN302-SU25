@@ -6,6 +6,12 @@ import { getUserBookings, Booking } from '../../utils/booking';
 
 const ITEMS_PER_PAGE = 5;
 
+function formatDateDMY(dateString: string) {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'N/A';
+  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+}
+
 const BookingHistory: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -97,6 +103,13 @@ const BookingHistory: React.FC = () => {
               {currentBookings.map((booking) => (
                 <div key={booking._id} className="bg-white rounded-lg shadow-md overflow-hidden">
                   <div className="p-6">
+                    {/* Mã vé */}
+                    <div className="flex justify-end mb-2">
+                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-mono select-all">
+                        {booking._id}
+                      </span>
+                    </div>
+                    {/* Trạng thái thanh toán */}
                     <div className="flex justify-end mb-4">
                       <div className={`px-3 py-1 rounded-full text-sm font-medium ${
                         booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 
@@ -115,25 +128,44 @@ const BookingHistory: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+                    {/* Thông tin chi tiết vé */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                       <div>
-                        <p className="text-gray-600 text-sm mb-1">Thời Gian Chiếu</p>
-                        <p className="font-medium">
-                          {booking.screeningTime 
-                            ? `${booking.screeningTime.slice(0, 10)} lúc ${booking.screeningTime.slice(11, 16)}`
-                            : 'N/A'
-                          }
+                        <p className="text-gray-600 text-sm mb-1">Phim</p>
+                        <p className="font-semibold text-lg">{booking.screeningId?.movieId?.title || booking.movieTitle || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm mb-1">Ngày & Giờ</p>
+                        <p className="font-semibold text-lg">
+                          {booking.screeningId?.startTime
+                            ? `${formatDateDMY(booking.screeningId.startTime)} lúc ${booking.screeningId.startTime.slice(11, 16)}`
+                            : booking.screeningTime
+                              ? `${formatDateDMY(booking.screeningTime)} lúc ${booking.screeningTime.slice(11, 16)}`
+                              : 'N/A'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-gray-600 text-sm mb-1">Phòng & Ghế</p>
-                        <p className="font-medium">{booking.roomName} - {booking.seatNumbers.join(', ')}</p>
+                        <p className="text-gray-600 text-sm mb-1">Rạp chiếu</p>
+                        <p className="font-medium">{booking.screeningId?.roomId?.name || booking.roomName || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-gray-600 text-sm mb-1">Số Tiền Đã Thanh Toán</p>
-                        <p className="font-medium">{booking.totalPrice.toLocaleString('vi-VN')} đ</p>
+                        <p className="text-gray-600 text-sm mb-1">Ghế</p>
+                        <p className="font-medium">{booking.seatNumbers.join(', ')}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm mb-1">Tổng tiền</p>
+                        <p className="font-bold text-lg">{booking.totalPrice?.toLocaleString('vi-VN') || 'N/A'} VND</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm mb-1">Ngày đặt chỗ</p>
+                        <p className="font-medium">
+                          {booking.createdAt
+                            ? `${new Date(booking.createdAt).toLocaleDateString('vi-VN')} ${new Date(booking.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
+                            : 'N/A'}
+                        </p>
                       </div>
                     </div>
+                    {/* QR code */}
                     <div className="mt-6 flex justify-center">
                       {booking.qrCodeDataUrl && (
                         <img src={booking.qrCodeDataUrl} alt="Mã QR Vé" className="w-40 h-40" />

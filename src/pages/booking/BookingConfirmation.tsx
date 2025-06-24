@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { CheckCircleIcon, PrinterIcon, MailIcon } from 'lucide-react';
-import { updateBookingStatus, sendTicketEmail, Booking, BookingResponse } from '../../utils/booking';
+import { updateBookingStatus, sendTicketEmail, Booking, BookingResponse, updateBooking } from '../../utils/booking';
 
 type ConfirmationDetails = {
   bookingId: string;
@@ -23,13 +23,27 @@ const BookingConfirmation: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Lấy vnp_ResponseCode từ URL
+  const query = new URLSearchParams(location.search);
+  const responseCode = query.get('vnp_ResponseCode');
+
+  let message = '';
+  let isSuccess = false;
+  if (responseCode === '00') {
+    message = 'Thanh toán thành công! Cảm ơn bạn đã đặt vé.';
+    isSuccess = true;
+  } else if (responseCode) {
+    message = 'Thanh toán thất bại hoặc bị hủy. Vui lòng thử lại.';
+    isSuccess = false;
+  }
 
   useEffect(() => {
     const handleBookingConfirmation = async () => {
       try {
         setIsLoading(true);
         const storedDetails = sessionStorage.getItem('confirmationDetails');
-        console.log('Chi tiết lưu trữ từ sessionStorage:', storedDetails);
         let bookingId: string | undefined;
         let storedConfirmationDetails: any = null;
 
@@ -38,26 +52,24 @@ const BookingConfirmation: React.FC = () => {
           bookingId = storedConfirmationDetails.bookingId;
         }
 
-        console.log('ID đặt chỗ đã trích xuất:', bookingId);
-
         if (!bookingId) {
-          navigate('/'); // Chuyển hướng nếu không tìm thấy ID đặt chỗ
+          navigate('/');
           return;
         }
 
-        // Cập nhật trạng thái đặt chỗ thành đã xác nhận bằng endpoint POST
-        const updatedBookingResponse = await updateBookingStatus(bookingId) as BookingResponse;
-        console.log('Phản hồi từ updateBookingStatus:', updatedBookingResponse);
+        // Nếu thanh toán thất bại hoặc bị hủy, cập nhật trạng thái booking
+        if (responseCode && responseCode !== '00') {
+          await updateBooking(bookingId, { paymentStatus: 'failed', status: 'cancelled' } as any);
+          setIsLoading(false);
+          return;
+        }
 
+        // Nếu thanh toán thành công, cập nhật trạng thái như cũ
+        const updatedBookingResponse = await updateBookingStatus(bookingId) as BookingResponse;
         if (!updatedBookingResponse || !updatedBookingResponse.booking) {
           throw new Error('Không tìm thấy chi tiết đặt chỗ trong phản hồi.');
         }
-
         const updatedBooking = updatedBookingResponse.booking;
-
-        console.log('Đối tượng Đặt chỗ đã cập nhật từ API:', updatedBooking);
-
-        // Ánh xạ updatedBooking sang kiểu ConfirmationDetails, giữ lại thông tin giảm giá từ sessionStorage
         const confirmedDetails: ConfirmationDetails = {
           bookingId: updatedBooking._id,
           movieTitle: updatedBooking.movieTitle || storedConfirmationDetails?.movieTitle,
@@ -73,22 +85,16 @@ const BookingConfirmation: React.FC = () => {
           qrCodeDataUrl: updatedBooking.qrCodeDataUrl
         };
         setConfirmationDetails(confirmedDetails);
-        console.log('Chi tiết xác nhận cuối cùng đã đặt trong state:', confirmedDetails);
-
-        // Xóa ID đặt chỗ hiện tại khỏi sessionStorage sau khi xác nhận thành công
         sessionStorage.removeItem('currentBookingId');
         sessionStorage.removeItem('confirmationDetails');
-
       } catch (err) {
         setError('Không thể xác nhận đặt chỗ. Vui lòng thử lại.');
-        console.error('Lỗi xác nhận đặt chỗ:', err);
       } finally {
         setIsLoading(false);
       }
     };
-
     handleBookingConfirmation();
-  }, [navigate]);
+  }, [navigate, responseCode]);
 
   if (isLoading) {
     return (
@@ -103,6 +109,18 @@ const BookingConfirmation: React.FC = () => {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h2 className="text-2xl font-bold text-red-600">{error}</h2>
+        <Link to="/" className="text-blue-600 hover:text-blue-800 mt-4 inline-block">
+          Quay lại Trang chủ
+        </Link>
+      </div>
+    );
+  }
+
+  // Nếu thanh toán thất bại hoặc bị hủy, chỉ hiển thị thông báo lỗi
+  if (responseCode && responseCode !== '00') {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <h2 className="text-2xl font-bold text-red-600">{message}</h2>
         <Link to="/" className="text-blue-600 hover:text-blue-800 mt-4 inline-block">
           Quay lại Trang chủ
         </Link>
@@ -142,6 +160,16 @@ const BookingConfirmation: React.FC = () => {
     }
   };
 
+  const formatDateVN = (dateString: string) => {
+    if (!dateString) return 'Ngày không hợp lệ';
+    // Hỗ trợ cả dạng có T và không có T
+    const [datePart, timePart] = dateString.split(/[T ]/);
+    if (!datePart || !timePart) return 'Ngày không hợp lệ';
+    const [year, month, day] = datePart.split('-');
+    const [hour, minute] = timePart.split(':');
+    return `${parseInt(day)}/${parseInt(month)}/${year} lúc ${hour}:${minute}`;
+  };
+
   const handleEmailTicket = async () => {
     try {
       if (!confirmationDetails?.bookingId) {
@@ -178,7 +206,7 @@ const BookingConfirmation: React.FC = () => {
               Đặt chỗ thành công!
             </h1>
             <p className="text-gray-600 mt-2">
-              Vé của bạn đã được đặt thành công.
+              {message}
             </p>
           </div>
 
@@ -199,7 +227,7 @@ const BookingConfirmation: React.FC = () => {
                 <p className="text-gray-600 text-sm">Ngày & Giờ</p>
                 <p className="font-medium">
                   {confirmationDetails.screeningTime
-                    ? `${confirmationDetails.screeningTime.slice(0, 10)} lúc ${confirmationDetails.screeningTime.slice(11, 16)}`
+                    ? formatDateVN(confirmationDetails.screeningTime)
                     : 'N/A'}
                 </p>
               </div>
@@ -250,7 +278,7 @@ const BookingConfirmation: React.FC = () => {
                   </h4>
                   <p className="text-sm">
                     {confirmationDetails.screeningTime
-                      ? `${confirmationDetails.screeningTime.slice(0, 10)} lúc ${confirmationDetails.screeningTime.slice(11, 16)}`
+                      ? formatDateVN(confirmationDetails.screeningTime)
                       : 'N/A'}
                   </p>
                 </div>

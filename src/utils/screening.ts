@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000';
+import api from './api';
 
 export interface Screening {
     _id: string;
@@ -65,7 +63,7 @@ export interface ApiResponse<T> {
 export const getScreenings = async (status?: 'pending' | 'approved' | 'rejected'): Promise<Screening[]> => {
     try {
         const params = status ? { status } : {};
-        const response = await axios.get<ApiResponse<Screening[]>>(`${API_URL}/api/screenings`, { params });
+        const response = await api.get<ApiResponse<Screening[]>>(`/api/screenings`, { params });
         return response.data.data || [];
     } catch (error) {
         console.error('Error fetching screenings:', error);
@@ -75,7 +73,7 @@ export const getScreenings = async (status?: 'pending' | 'approved' | 'rejected'
 
 export const getScreeningById = async (id: string): Promise<Screening> => {
     try {
-        const response = await axios.get<ApiResponse<Screening>>(`${API_URL}/api/screenings/${id}`);
+        const response = await api.get<ApiResponse<Screening>>(`/api/screenings/${id}`);
         if (!response.data.success) {
             throw new Error(response.data.message);
         }
@@ -95,7 +93,7 @@ export const createScreening = async (screeningData: {
     ticketPrice?: number;
 }): Promise<Screening> => {
     try {
-        const response = await axios.post<ApiResponse<Screening>>(`${API_URL}/api/screenings`, screeningData);
+        const response = await api.post<ApiResponse<Screening>>(`/api/screenings`, screeningData);
         if (!response.data.success) {
             throw new Error(response.data.message);
         }
@@ -119,7 +117,7 @@ export const updateScreening = async (id: string, screeningData: {
     isActive?: boolean;
 }): Promise<Screening> => {
     try {
-        const response = await axios.put<ApiResponse<Screening>>(`${API_URL}/api/screenings/${id}`, screeningData);
+        const response = await api.put<ApiResponse<Screening>>(`/api/screenings/${id}`, screeningData);
         if (!response.data.success) {
             throw new Error(response.data.message);
         }
@@ -132,7 +130,7 @@ export const updateScreening = async (id: string, screeningData: {
 
 export const deleteScreening = async (id: string): Promise<{ message: string }> => {
     try {
-        const response = await axios.delete<ApiResponse<null>>(`${API_URL}/api/screenings/${id}`);
+        const response = await api.delete<ApiResponse<null>>(`/api/screenings/${id}`);
         if (!response.data.success) {
             throw new Error(response.data.message);
         }
@@ -145,22 +143,97 @@ export const deleteScreening = async (id: string): Promise<{ message: string }> 
 
 export const getScreeningsByMovie = async (movieId: string): Promise<Screening[]> => {
     try {
-        const response = await axios.get<Screening[]>(`${API_URL}/api/screenings/movie/${movieId}`);
-        return response.data;
-    } catch (error) {
+        const response = await api.get<ApiResponse<Screening[]>>(`/api/screenings/movie/${movieId}`);
+        if (response.data.success && Array.isArray(response.data.data)) {
+            return response.data.data;
+        } else {
+            return [];
+        }
+    } catch (error: any) {
+        if (error.response && error.response.status === 404) {
+            return [];
+        }
         console.error(`Error fetching screenings for movie ${movieId}:`, error);
+        return [];
+    }
+};
+
+export const getScreeningsByStatus = async (status: 'pending' | 'approved' | 'rejected'): Promise<Screening[]> => {
+    try {
+        const response = await api.get<ApiResponse<Screening[]>>(`/api/screenings/status/${status}`);
+        if (response.data.success && Array.isArray(response.data.data)) {
+            return response.data.data;
+        } else {
+            return [];
+        }
+    } catch (error) {
+        console.error(`Error fetching screenings by status ${status}:`, error);
+        return [];
+    }
+};
+
+export const getScreeningsByTheater = async (theaterId: string): Promise<Screening[]> => {
+    try {
+        const response = await api.get<ApiResponse<Screening[]>>(`/api/screenings/theater/${theaterId}`);
+        if (response.data.success && Array.isArray(response.data.data)) {
+            return response.data.data;
+        } else {
+            return [];
+        }
+    } catch (error) {
+        console.error(`Error fetching screenings for theater ${theaterId}:`, error);
         return [];
     }
 };
 
 export const getScheduleByTheater = async (date: string): Promise<TheaterSchedule[]> => {
     try {
-        const response = await axios.get<ApiResponse<TheaterSchedule[]>>(`${API_URL}/api/screenings/schedule`, {
+        const response = await api.get<ApiResponse<TheaterSchedule[]>>(`/api/screenings/schedule`, {
             params: { date }
         });
         return response.data.data || [];
     } catch (error) {
         console.error(`Error fetching schedule for date ${date}:`, error);
         return [];
+    }
+};
+
+export const getMemberScreeningById = async (id: string): Promise<Screening> => {
+    try {
+        const response = await api.get<ApiResponse<Screening>>(`/api/screenings/member/${id}`);
+        if (!response.data.success) {
+            throw new Error(response.data.message);
+        }
+        return response.data.data!;
+    } catch (error) {
+        console.error(`Error fetching member screening with id ${id}:`, error);
+        throw error;
+    }
+};
+
+export const getPublicScreenings = async (): Promise<Screening[]> => {
+    try {
+        const response = await api.get<ApiResponse<Screening[]>>(`/api/screenings/public`);
+        if (response.data.success && Array.isArray(response.data.data)) {
+            return response.data.data;
+        } else {
+            return [];
+        }
+    } catch (error) {
+        console.error('Error fetching public screenings:', error);
+        return [];
+    }
+};
+
+export const getPublicScreeningById = async (id: string): Promise<Screening> => {
+    try {
+        const response = await api.get<ApiResponse<Screening>>(`/api/screenings/public/${id}`);
+        if (!response.data.success) {
+            throw new Error(response.data.message);
+        }
+        return response.data.data!;
+    } catch (error) {
+        console.error(`Error fetching public screening with id ${id}:`, error);
+        throw error;
     }
 };

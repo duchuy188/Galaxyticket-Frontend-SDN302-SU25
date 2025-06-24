@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Movie, getMovieById } from '../../utils/movie';
-import { Screening, getScreeningsByMovie } from '../../utils/screening';
+import { Screening, getPublicScreenings } from '../../utils/screening';
 import { getTheaters, Theater } from '../../utils/theater';
 import { getRooms, Room } from '../../utils/room';
 import { Calendar, Clock, Tag, Star, Film, MapPin, Flag, Building2, User, Loader2 } from 'lucide-react';
@@ -50,11 +50,15 @@ const MovieDetail: React.FC = () => {
   // Fetch screenings for the movie
   useEffect(() => {
     const fetchScreenings = async () => {
-      if (!id) return;
       setScreeningsLoading(true);
       try {
-        const data = await getScreeningsByMovie(id);
-        setScreenings(data);
+        const data = await getPublicScreenings();
+        // Filter screenings by movieId
+        const filtered = id ? data.filter(s => {
+          const movieId = typeof s.movieId === 'string' ? s.movieId : s.movieId?._id;
+          return movieId === id;
+        }) : [];
+        setScreenings(filtered);
       } catch (err) {
         console.error('Error fetching screenings:', err);
         setError('Failed to load screening times. Please try again later.');

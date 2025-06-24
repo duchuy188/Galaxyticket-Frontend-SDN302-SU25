@@ -134,19 +134,19 @@ const SeatGrid: React.FC<SeatGridProps> = ({
     <div className="mt-8 flex justify-center space-x-8">
       <div className="flex items-center">
         <div className="w-6 h-6 bg-gray-200 rounded mr-2"></div>
-        <span>Available</span>
+        <span>Ghế trống</span>
       </div>
       <div className="flex items-center">
         <div className="w-6 h-6 bg-blue-500 rounded mr-2"></div>
-        <span>Selected</span>
+        <span>Ghế chọn</span>
       </div>
       <div className="flex items-center">
         <div className="w-6 h-6 bg-yellow-600 rounded mr-2"></div>
-        <span>Reserved</span>
+        <span>Ghế đang đặt</span>
       </div>
       <div className="flex items-center">
         <div className="w-6 h-6 bg-red-600 rounded mr-2"></div>
-        <span>Booked</span>
+        <span>Ghế đã thanh toán</span>
       </div>
     </div>
   </div>;
