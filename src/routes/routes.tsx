@@ -17,10 +17,10 @@ import ManagerDashboard from '../pages/dashboard/ManagerDashboard';
 import PrivateRoute from '../components/PrivateRoute';
 import { PublicRouteGuard, AuthRouteGuard } from './auth';
 import Profile from '../pages/user/Profile';
-import TheaterDetail from '../pages/theater/TheaterDetail';
-import TheaterManagement from '../pages/dashboard/TheaterManagement';
-import StaffRoutes from './StaffRoutes';
-import ManagerRoutes from './ManagerRoutes';
+import UserManagement from '../pages/dashboard/UserManagement';
+import RevenueReports from '../pages/dashboard/RevenueReports';
+
+console.log('Profile component imported:', Profile);
 
 export const AppRoutes = () => {
     return (
@@ -43,33 +43,50 @@ export const AppRoutes = () => {
                 <Route path="seats/:id" element={<SeatSelection />} />
                 <Route path="checkout" element={<Checkout />} />
                 <Route path="confirmation" element={<BookingConfirmation />} />
-                <Route path="theater/:id" element={<TheaterDetail />} />
-                <Route path="bookings" element={<PrivateRoute allowedRoles={['user', 'member']}>
+                <Route path="bookings" element={<PrivateRoute allowedRoles={['admin', 'staff', 'manager', 'member']}>
                     <BookingHistory />
                 </PrivateRoute>} />
-                <Route path="profile" element={<PrivateRoute allowedRoles={['user', 'member']}>
+                <Route path="profile" element={<PrivateRoute allowedRoles={['admin', 'staff', 'manager', 'member']}>
                     <Profile />
                 </PrivateRoute>} />
+                <Route path="test-profile" element={<div>Test Profile Page - Working!</div>} />
             </Route>
 
             {/* Admin Dashboard Routes */}
             <Route path="admin/*" element={<PrivateRoute allowedRoles={['admin']}>
                 <DashboardLayout>
-                    <AdminDashboard />
-                </DashboardLayout>
-            </PrivateRoute>} />
-
-            {/* Manager Dashboard Routes */}
-            <Route path="manager/*" element={<PrivateRoute allowedRoles={['manager']}>
-                <DashboardLayout>
-                    <ManagerRoutes />
+                    <Routes>
+                        <Route index element={<AdminDashboard />} />
+                        <Route path="users" element={<UserManagement/>} />
+                        <Route path="reports" element={<RevenueReports/>} />
+                        <Route path="profile" element={<Profile />} />
+                    </Routes>
                 </DashboardLayout>
             </PrivateRoute>} />
 
             {/* Staff Dashboard Routes */}
             <Route path="staff/*" element={<PrivateRoute allowedRoles={['staff']}>
                 <DashboardLayout>
-                    <StaffRoutes />
+                    <Routes>
+                        <Route index element={<StaffDashboard />} />
+                        <Route path="movies" element={<div>Movie Management</div>} />
+                        <Route path="screenings" element={<div>Screening Management</div>} />
+                        <Route path="payments" element={<div>Payment Issues</div>} />
+                        <Route path="profile" element={<Profile />} />
+                    </Routes>
+                </DashboardLayout>
+            </PrivateRoute>} />
+            {/* Manager Dashboard Routes */}
+            <Route path="manager/*" element={<PrivateRoute allowedRoles={['manager']}>
+                <DashboardLayout>
+                    <Routes>
+                        <Route index element={<ManagerDashboard />} />
+                        <Route path="movies" element={<div>Movie Requests</div>} />
+                        <Route path="promotions" element={<div>Promotion Requests</div>} />
+                        <Route path="showtimes" element={<div>Showtime Requests</div>} />
+                        <Route path="seatmaps" element={<div>Seat Map Requests</div>} />
+                        <Route path="profile" element={<Profile />} />
+                    </Routes>
                 </DashboardLayout>
             </PrivateRoute>} />
 

@@ -19,6 +19,7 @@ type AuthContextType = {
     userData: Omit<User, 'id' | '_id' | 'role'> & { password: string }
   ) => Promise<boolean>;
   logout: () => void;
+  updateProfile: (userData: Partial<User> & { name?: string }) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -69,26 +70,42 @@ export const AuthProvider: React.FC<{
         password,
       });
 
-      console.log('Login response:', res.data);
-
-      if (res.data.success && res.data.user) {
-        const userData = res.data.user;
+      if (res.data.success) {
+        // Map role from backend to frontend
+        let mappedRole: 'admin' | 'staff' | 'manager' | 'member';
+        const backendRole = res.data.user.role;
         
-        const userId = userData._id || userData.id;
+        console.log('Backend role received:', backendRole);
         
-        if (!userId) {
-          console.error('No user ID found in response:', userData);
-          return false;
+        switch (backendRole?.toLowerCase()) {
+          case 'admin':
+            mappedRole = 'admin';
+            break;
+          case 'staff':
+            mappedRole = 'staff';
+            break;
+          case 'manager':
+            mappedRole = 'manager';
+            break;
+          case 'member':
+          case 'claimer':
+          case 'user':
+            mappedRole = 'member';
+            break;
+          default:
+            console.warn('Unknown role from backend:', backendRole, 'defaulting to member');
+            mappedRole = 'member';
         }
 
+        console.log('Backend role:', backendRole);
+        console.log('Mapped role:', mappedRole);
+
         const userInfo: User = {
-          id: userId,
-          _id: userId,
-          fullName: userData.fullName || userData.name,
-          email: userData.email,
-          phone: userData.phone,
-          role: userData.role,
-          avatar: userData.avatar
+          id: res.data.user.id,
+          fullName: res.data.user.fullName,
+          email: res.data.user.email,
+          phone: res.data.user.phone,
+          role: mappedRole,
         };
 
         console.log('Storing user info:', userInfo);
@@ -146,19 +163,8 @@ export const AuthProvider: React.FC<{
       
     });
 
-    if (res.data.success && res.data.user) {
-      const userInfo: User = {
-        id: res.data.user._id,
-        _id: res.data.user._id,
-        fullName: res.data.user.name, // lấy lại theo cách BE trả về
-        email: res.data.user.email,
-        phone: res.data.user.phone,
-        role: res.data.user.role,
-      };
-
-      setUser(userInfo);
-      localStorage.setItem('user', JSON.stringify(userInfo));
-      localStorage.setItem('token', res.data.token);
+    if (res.data.success) {
+      // Chỉ đăng ký thành công, không tự động đăng nhập
       return true;
     }
 
@@ -175,6 +181,20 @@ export const AuthProvider: React.FC<{
     localStorage.removeItem('token');
   };
 
+  const updateProfile = (userData: Partial<User> & { name?: string }) => {
+    if (user) {
+      // Handle the case where backend returns 'name' instead of 'fullName'
+      const updatedUserData = {
+        ...userData,
+        fullName: userData.fullName || userData.name || user.fullName
+      };
+      
+      const updatedUser = { ...user, ...updatedUserData };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -183,6 +203,7 @@ export const AuthProvider: React.FC<{
         login,
         register,
         logout,
+        updateProfile,
       }}
     >
       {children}

@@ -32,14 +32,11 @@ const SignIn: React.FC = () => {
     try {
       const success = await login(formData.email, formData.password);
       if (success) {
-        // Get the latest user state after login
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        // Redirect based on user role
-        if (currentUser.role === 'admin') {
+        const loggedInUser = JSON.parse(localStorage.getItem('user') || 'null');
+
+        if (loggedInUser?.role === 'admin') {
           navigate('/admin');
-        } else if (currentUser.role === 'manager') {
-          navigate('/manager');
-        } else if (currentUser.role === 'staff') {
+        } else if (loggedInUser?.role === 'staff') {
           navigate('/staff');
         } else {
           navigate('/');
@@ -52,6 +49,10 @@ const SignIn: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const quickLogin = (email: string, password: string) => {
+    setFormData({ email, password });
   };
 
   return (
@@ -172,6 +173,33 @@ const SignIn: React.FC = () => {
               'Sign in'
             )}
           </button>
+
+          <div>
+            <div className="text-center text-gray-400 mb-4">Quick Login Options</div>
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => quickLogin('admin@example.com', '123')}
+                className="bg-blue-900/50 border border-blue-700 text-blue-200 hover:bg-blue-800/50 px-4 py-2.5 rounded-lg text-sm transition-all duration-200"
+              >
+                Admin Login
+              </button>
+              <button
+                type="button"
+                onClick={() => quickLogin('staff@example.com', '123')}
+                className="bg-green-900/50 border border-green-700 text-green-200 hover:bg-green-800/50 px-4 py-2.5 rounded-lg text-sm transition-all duration-200"
+              >
+                Staff Login
+              </button>
+              <button
+                type="button"
+                onClick={() => quickLogin('manager@example.com', '123')}
+                className="bg-yellow-900/50 border border-yellow-700 text-yellow-200 hover:bg-yellow-800/50 px-4 py-2.5 rounded-lg text-sm transition-all duration-200"
+              >
+                Manager Login
+              </button>
+            </div>
+          </div>
         </form>
 
         <div className="text-center mt-6">
