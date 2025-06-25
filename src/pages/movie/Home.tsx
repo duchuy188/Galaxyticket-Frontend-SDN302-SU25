@@ -5,23 +5,33 @@ import { Movie, getMovies } from '../../utils/movie';
 
 // Constants
 const GENRES = [
-  "All Genres",
-  "Action",
-  "Adventure",
-  "Animation",
-  "Comedy",
-  "Crime",
-  "Drama",
-  "Horror",
-  "Romance",
-  "Sci-Fi",
-  "Thriller"
+  "Tất Cả Thể Loại",
+  "Phim Cao Bồi", 
+  "Phim Chiến Tranh", 
+  "Phim Gia Đình", 
+  "Phim Giả Tưởng", 
+  "Phim Giật Gân", 
+  "Phim Hài", 
+  "Phim Hành Động", 
+  "Phim Hình Sự", 
+  "Phim Hoạt Hình", 
+  "Phim Kinh Dị", 
+  "Phim Lãng Mạn", 
+  "Phim Lịch Sử",
+  "Phim Bí Ẩn", 
+  "Phim Âm Nhạc", 
+  "Phim Phiêu Lưu", 
+  "Phim Tài Liệu", 
+  "Phim Chính Kịch", 
+  "Phim Thần Thoại", 
+  "Phim Thể Thao", 
+  "Phim Tiểu Sử"
 ] as const;
 
 const SORT_OPTIONS = {
-  RATING: 'rating',
-  TITLE: 'title',
-  DURATION: 'duration'
+  RATING: 'đánh giá',
+  TITLE: 'tên phim',
+  DURATION: 'thời lượng'
 } as const;
 
 // Types
@@ -35,7 +45,7 @@ const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'now-showing' | 'coming-soon'>('now-showing');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGenre, setSelectedGenre] = useState('All Genres');
+  const [selectedGenre, setSelectedGenre] = useState('Tất Cả Thể Loại');
   const [sortBy, setSortBy] = useState<keyof typeof SORT_OPTIONS>('RATING');
 
   useEffect(() => {
@@ -57,7 +67,28 @@ const Home: React.FC = () => {
   const nowShowing = Array.isArray(movies) ? movies.filter(movie => movie.showingStatus === 'now-showing') : [];
   const comingSoon = Array.isArray(movies) ? movies.filter(movie => movie.showingStatus === 'coming-soon') : [];
 
-  const sortedMovies = [...(activeTab === 'now-showing' ? nowShowing : comingSoon)].sort((a, b) => {
+
+  const filteredMovies = [...(activeTab === 'now-showing' ? nowShowing : comingSoon)].filter(movie => {
+    
+    if (selectedGenre !== 'Tất Cả Thể Loại') {
+      if (movie.genre !== selectedGenre) {
+        return false;
+      }
+    }
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const title = movie.title.toLowerCase();
+      const vietnameseTitle = movie.vietnameseTitle?.toLowerCase() || '';
+      
+      return title.includes(query) || vietnameseTitle.includes(query);
+    }
+    
+    return true;
+  });
+
+ 
+  const sortedMovies = [...filteredMovies].sort((a, b) => {
     switch (sortBy) {
       case 'RATING':
         return (b.rating || 0) - (a.rating || 0);
@@ -72,7 +103,7 @@ const Home: React.FC = () => {
 
   if (loading) {
     return <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <div className="text-xl">Loading...</div>
+      <div className="text-xl">Đang tải...</div>
     </div>;
   }
 
@@ -83,23 +114,21 @@ const Home: React.FC = () => {
         <div className="flex space-x-4 mb-8">
           <button
             onClick={() => setActiveTab('now-showing')}
-            className={`px-6 py-2.5 rounded-lg transition duration-300 text-lg font-medium ${
-              activeTab === 'now-showing'
+            className={`px-6 py-2.5 rounded-lg transition duration-300 text-lg font-medium ${activeTab === 'now-showing'
                 ? 'bg-red-600 text-white shadow-lg shadow-red-600/30'
                 : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-            }`}
+              }`}
           >
-            Now Showing
+            Đang Chiếu
           </button>
           <button
             onClick={() => setActiveTab('coming-soon')}
-            className={`px-6 py-2.5 rounded-lg transition duration-300 text-lg font-medium ${
-              activeTab === 'coming-soon'
+            className={`px-6 py-2.5 rounded-lg transition duration-300 text-lg font-medium ${activeTab === 'coming-soon'
                 ? 'bg-red-600 text-white shadow-lg shadow-red-600/30'
                 : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-            }`}
+              }`}
           >
-            Coming Soon
+            Sắp Chiếu
           </button>
         </div>
 
@@ -109,7 +138,7 @@ const Home: React.FC = () => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Search movies..."
+              placeholder="Tìm kiếm phim..."
               className="w-full pl-12 pr-4 py-3 rounded-lg bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -129,20 +158,20 @@ const Home: React.FC = () => {
             onChange={(e) => setSortBy(e.target.value as keyof typeof SORT_OPTIONS)}
             className="px-4 py-3 rounded-lg bg-white border border-gray-200 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"
           >
-            <option value="RATING">Top Rated</option>
+            <option value="RATING">Đánh Giá Cao Nhất</option>
             <option value="TITLE">A-Z</option>
-            <option value="DURATION">Duration</option>
+            <option value="DURATION">Thời Lượng</option>
           </select>
         </div>
 
         {/* Active Filters */}
-        {(searchQuery || selectedGenre !== 'All Genres') && (
+        {(searchQuery || selectedGenre !== 'Tất Cả Thể Loại') && (
           <div className="flex items-center gap-3 mb-8 text-gray-600">
             <Filter className="w-5 h-5" />
             <div className="flex flex-wrap gap-2">
               {searchQuery && (
                 <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-white border border-gray-200">
-                  Search: {searchQuery}
+                  Tìm kiếm: {searchQuery}
                   <button
                     onClick={() => setSearchQuery('')}
                     className="ml-2 hover:text-red-600 transition-colors"
@@ -151,11 +180,11 @@ const Home: React.FC = () => {
                   </button>
                 </span>
               )}
-              {selectedGenre !== 'All Genres' && (
+              {selectedGenre !== 'Tất Cả Thể Loại' && (
                 <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-white border border-gray-200">
-                  Genre: {selectedGenre}
+                  Thể loại: {selectedGenre}
                   <button
-                    onClick={() => setSelectedGenre('All Genres')}
+                    onClick={() => setSelectedGenre('Tất Cả Thể Loại')}
                     className="ml-2 hover:text-red-600 transition-colors"
                   >
                     ×
@@ -179,16 +208,16 @@ const Home: React.FC = () => {
           </div>
         ) : (
           <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
-            <p className="text-gray-600 text-lg mb-4">No movies found matching your criteria.</p>
+            <p className="text-gray-600 text-lg mb-4">Không tìm thấy phim phù hợp với tiêu chí của bạn.</p>
             <button
               onClick={() => {
                 setSearchQuery('');
-                setSelectedGenre('All Genres');
+                setSelectedGenre('Tất Cả Thể Loại');
                 setSortBy('RATING');
               }}
               className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-300 shadow-lg shadow-red-600/30"
             >
-              Clear Filters
+              Xóa Bộ Lọc
             </button>
           </div>
         )}
@@ -205,7 +234,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isComingSoon }) => {
   };
 
   return (
-    <div 
+    <div
       className="group bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer"
       onClick={handleCardClick}
     >
@@ -242,7 +271,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isComingSoon }) => {
         </div>
         {isComingSoon && (
           <div className="absolute top-4 right-4 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-            Coming Soon
+            Sắp Chiếu
           </div>
         )}
       </div>
@@ -253,15 +282,9 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isComingSoon }) => {
           <h3 className="font-bold text-lg line-clamp-1 group-hover:text-red-600 transition-colors">
             {movie.title}
           </h3>
-          <span className={`px-2 py-0.5 text-xs rounded ${
-            movie.ageRating === 'T18' ? 'bg-red-100 text-red-800' :
-            movie.ageRating === 'T16' ? 'bg-orange-100 text-orange-800' :
-            'bg-green-100 text-green-800'
-          }`}>
-            {movie.ageRating || 'P'}
-          </span>
+       
         </div>
-        
+
         <div className="flex items-center gap-4 text-sm text-gray-600">
           <div className="flex items-center gap-1">
             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />

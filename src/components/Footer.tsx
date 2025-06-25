@@ -13,45 +13,45 @@ const Footer: React.FC = () => {
               <h3 className="text-xl font-bold text-white">Galaxy Cinema</h3>
             </div>
             <p className="text-gray-300">
-              Your premier destination for the latest movies and unforgettable cinema experiences.
+              Điểm đến hàng đầu của bạn với những bộ phim mới nhất và trải nghiệm điện ảnh đáng nhớ.
             </p>
           </div>
           <div>
-            <h4 className="font-semibold text-white mb-4">Quick Links</h4>
+            <h4 className="font-semibold text-white mb-4">Truy Cập Nhanh</h4>
             <ul className="space-y-2">
               <li>
-                <Link to="/" className="text-gray-300 hover:text-white">Home</Link>
+                <Link to="/" className="text-gray-300 hover:text-white">Trang Chủ</Link>
               </li>
               <li>
-                <Link to="/movies" className="text-gray-300 hover:text-white">Movies</Link>
+                <Link to="/movies" className="text-gray-300 hover:text-white">Phim</Link>
               </li>
               <li>
-                <Link to="/theaters" className="text-gray-300 hover:text-white">Theaters</Link>
+                <Link to="/theaters" className="text-gray-300 hover:text-white">Rạp Chiếu</Link>
               </li>
               <li>
-                <Link to="/bookings" className="text-gray-300 hover:text-white">My Bookings</Link>
+                <Link to="/bookings" className="text-gray-300 hover:text-white">Vé Của Tôi</Link>
               </li>
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold text-white mb-4">Support</h4>
+            <h4 className="font-semibold text-white mb-4">Hỗ Trợ</h4>
             <ul className="space-y-2">
               <li>
-                <Link to="/help" className="text-gray-300 hover:text-white">Help Center</Link>
+                <Link to="/help" className="text-gray-300 hover:text-white">Trung Tâm Hỗ Trợ</Link>
               </li>
               <li>
-                <Link to="/contact" className="text-gray-300 hover:text-white">Contact Us</Link>
+                <Link to="/contact" className="text-gray-300 hover:text-white">Liên Hệ</Link>
               </li>
               <li>
-                <Link to="/terms" className="text-gray-300 hover:text-white">Terms of Service</Link>
+                <Link to="/terms" className="text-gray-300 hover:text-white">Điều Khoản Dịch Vụ</Link>
               </li>
               <li>
-                <Link to="/privacy" className="text-gray-300 hover:text-white">Privacy Policy</Link>
+                <Link to="/privacy" className="text-gray-300 hover:text-white">Chính Sách Bảo Mật</Link>
               </li>
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold text-white mb-4">Connect</h4>
+            <h4 className="font-semibold text-white mb-4">Kết Nối</h4>
             <ul className="space-y-2">
               <li>
                 <a href="#" className="text-gray-300 hover:text-white">Facebook</a>
@@ -69,7 +69,7 @@ const Footer: React.FC = () => {
           </div>
         </div>
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-300">
-          <p>&copy; {new Date().getFullYear()} Galaxy Cinema. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Galaxy Cinema. Đã đăng ký bản quyền.</p>
         </div>
       </div>
     </footer>

@@ -1,461 +1,587 @@
-import React, { useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import {
-  CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon,
-  EyeIcon,
-  ArrowUpIcon,
-} from 'lucide-react'
-// Mock data for requests
-const mockRequests = {
-  movies: [
-    {
-      id: '1',
-      type: 'movie',
-      action: 'add',
-      status: 'pending',
-      date: '2023-11-15',
-      requestedBy: 'Staff User',
-      details: {
-        title: 'The Matrix Resurrections',
-        genre: 'Sci-Fi',
-        duration: '148 min',
-      },
-    },
-    {
-      id: '2',
-      type: 'movie',
-      action: 'edit',
-      status: 'approved',
-      date: '2023-11-14',
-      requestedBy: 'Staff User',
-      details: {
-        title: 'Inception',
-        changes: ['Updated description', 'Changed release date'],
-      },
-    },
-  ],
-  promotions: [
-    {
-      id: '3',
-      type: 'promotion',
-      action: 'add',
-      status: 'pending',
-      date: '2023-11-15',
-      requestedBy: 'Staff User',
-      details: {
-        name: 'Holiday Special',
-        discount: '20%',
-        validUntil: '2023-12-31',
-      },
-    },
-  ],
-  showtimes: [
-    {
-      id: '4',
-      type: 'showtime',
-      action: 'cancel',
-      status: 'pending',
-      date: '2023-11-15',
-      requestedBy: 'Staff User',
-      details: {
-        movie: 'Inception',
-        datetime: '2023-11-20 15:30',
-        reason: 'Technical maintenance',
-      },
-    },
-  ],
-  seatMaps: [
-    {
-      id: '5',
-      type: 'seatMap',
-      action: 'edit',
-      status: 'rejected',
-      date: '2023-11-14',
-      requestedBy: 'Staff User',
-      details: {
-        theater: 'Theater 1',
-        changes: ['Blocked seats A1-A3 for maintenance'],
-      },
-    },
-  ],
+import React, { useState, useEffect, CSSProperties } from 'react';
+import { useLocation } from 'react-router-dom';
+import { CheckCircleIcon, XCircleIcon, ClockIcon, EyeIcon } from 'lucide-react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { getApprovalRequests, updateApprovalRequest, ApprovalRequest } from '../../utils/approval';
+
+interface ManagerDashboardProps {
+  filterType?: 'movie' | 'promotion' | 'screening';
 }
-type Request = {
-  id: string
-  type: string
-  action: string
-  status: 'pending' | 'approved' | 'rejected'
-  date: string
-  requestedBy: string
-  details: any
-}
-type RequestDetailModalProps = {
-  request: Request | null
-  onClose: () => void
-  onApprove: (id: string, comment: string) => void
-  onReject: (id: string, comment: string) => void
-}
-const RequestDetailModal: React.FC<RequestDetailModalProps> = ({
-  request,
-  onClose,
-  onApprove,
-  onReject,
-}) => {
-  const [comment, setComment] = useState('')
-  if (!request) return null
+
+const videoResponsiveStyle: CSSProperties = {
+  position: 'relative',
+  paddingBottom: '56.25%', /* Tỷ lệ 16:9 */
+  height: 0,
+  overflow: 'hidden',
+  borderRadius: '0.375rem',
+  marginTop: '0.5rem',
+};
+
+const videoIframeStyle: CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  border: 0,
+};
+
+const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
+  const location = useLocation();
+  const [requests, setRequests] = useState<ApprovalRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<ApprovalRequest | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  
+  // Thêm state cho việc lọc cục bộ
+  const [localFiltered, setLocalFiltered] = useState<ApprovalRequest[]>([]);
+
+  // Nếu có filterType được truyền vào thông qua prop, sử dụng nó
+  const [filterTypeState, setFilterTypeState] = useState<string>(filterType || 'all');
+
+  // Fetch dữ liệu chỉ một lần khi component mount
+  useEffect(() => {
+    if (filterType) {
+      setFilterTypeState(filterType);
+    }
+    
+    // Chỉ fetch dữ liệu một lần khi component được tạo
+    // hoặc khi filterType thay đổi (không phải khi route thay đổi)
+    fetchApprovalRequests();
+  }, [filterType]); // Chỉ phụ thuộc vào filterType
+  
+  // Áp dụng bộ lọc cho dữ liệu local
+  useEffect(() => {
+    let filtered = [...requests];
+    
+    if (filterTypeState !== 'all') {
+      filtered = filtered.filter(req => req.type === filterTypeState);
+    }
+    
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(req => req.status === filterStatus);
+    }
+    
+    setLocalFiltered(filtered);
+  }, [requests, filterTypeState, filterStatus]);
+
+  // Sửa hàm fetchApprovalRequests để không hiển thị loading khi không cần thiết
+  const fetchApprovalRequests = async (showLoading = false) => {
+    try {
+      if (showLoading) {
+        setIsLoading(true);
+      }
+      setError(null);
+      
+      const params = filterType ? { type: filterType } : filterTypeState !== 'all' ? { type: filterTypeState } : {};
+      
+      const data = await getApprovalRequests(params);
+      
+      setRequests(data);
+      setLocalFiltered(data);
+    } catch (err) {
+      console.error('Error fetching approval requests:', err);
+      setError('Failed to fetch approval requests');
+      toast.error('Không thể tải danh sách yêu cầu phê duyệt');
+    } finally {
+      if (showLoading) {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const handleApprove = async (requestId: string) => {
+    try {
+      setIsLoading(true);
+      // Đảm bảo API trả về dữ liệu phim đã cập nhật đầy đủ
+      const updatedData = await updateApprovalRequest(requestId, 'approved');
+      
+      // Cập nhật state với dữ liệu đầy đủ từ API
+      setRequests(prevRequests => 
+        prevRequests.map(req => 
+          req._id === requestId 
+            ? {
+                ...req, 
+                status: 'approved',
+                managerId: { _id: 'currentUser', name: 'Current Manager' },
+                requestData: updatedData.requestData // Cập nhật dữ liệu mới
+              } 
+            : req
+        )
+      );
+      
+      toast.success('Yêu cầu đã được phê duyệt thành công!');
+      setSelectedRequest(null);
+    } catch (err) {
+      toast.error('Có lỗi xảy ra khi phê duyệt yêu cầu!');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReject = async (requestId: string) => {
+    if (!rejectionReason.trim()) {
+      toast.error('Vui lòng nhập lý do từ chối!');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await updateApprovalRequest(requestId, 'rejected', rejectionReason);
+      
+      // Cập nhật trạng thái trong state local
+      setRequests(prevRequests => 
+        prevRequests.map(req => 
+          req._id === requestId 
+            ? {...req, 
+               status: 'rejected', 
+               rejectionReason: rejectionReason,
+               managerId: { _id: 'currentUser', name: 'Current Manager' }} 
+            : req
+        )
+      );
+      
+      toast.success('Đã từ chối yêu cầu thành công!');
+      setSelectedRequest(null);
+      setRejectionReason('');
+    } catch (err) {
+      toast.error('Có lỗi xảy ra khi từ chối yêu cầu!');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'approved': return 'bg-green-100 text-green-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending': return <ClockIcon className="h-5 w-5 text-yellow-500" />;
+      case 'approved': return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+      case 'rejected': return <XCircleIcon className="h-5 w-5 text-red-500" />;
+      default: return null;
+    }
+  };
+
+  const getRequestTypeLabel = (type: string) => {
+    switch (type) {
+      case 'movie': return 'Phim';
+      case 'promotion': return 'Khuyến Mãi';
+      case 'screening': return 'Lịch Chiếu';
+      default: return type;
+    }
+  };
+
+  // Format date to Vietnamese locale
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+  };
+
+  const getYoutubeIdFromUrl = (url: string): string => {
+    if (!url) return '';
+    
+    // Xử lý URLs dạng youtu.be
+    if (url.includes('youtu.be/')) {
+      return url.split('youtu.be/')[1].split('?')[0];
+    }
+    
+    // Xử lý URLs dạng youtube.com/watch?v=
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    
+    return (match && match[2].length === 11) ? match[2] : '';
+  };
+
+  const parsePersonList = (data: any): string[] => {
+    if (!data) return [];
+    
+    // Nếu là mảng, trả về mảng đã được xử lý
+    if (Array.isArray(data)) {
+      return data.map(item => typeof item === 'string' ? item.trim() : String(item)).filter(Boolean);
+    }
+    
+    // Nếu là chuỗi
+    if (typeof data === 'string') {
+      // Xóa tất cả dấu ngoặc vuông và ngoặc kép
+      const cleanedString = data.replace(/^\[|\]$|"/g, '');
+      
+      // Nếu chuỗi rỗng sau khi xóa
+      if (!cleanedString.trim()) return [];
+      
+      // Tách theo dấu phẩy và loại bỏ khoảng trắng
+      return cleanedString.split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+    }
+    
+    return [];
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+    <div className="p-6">
+      <ToastContainer />
+      <h1 className="text-3xl font-bold mb-6">Quản Lý Phê Duyệt</h1>
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-lg font-bold">Request Details</h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-500"
-            >
-              <XCircleIcon size={24} />
-            </button>
-          </div>
-          <div className="mb-6">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <p className="text-sm text-gray-500">Type</p>
-                <p className="font-medium">
-                  {request.type.charAt(0).toUpperCase() + request.type.slice(1)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Action</p>
-                <p className="font-medium">
-                  {request.action.charAt(0).toUpperCase() +
-                    request.action.slice(1)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Requested By</p>
-                <p className="font-medium">{request.requestedBy}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Date</p>
-                <p className="font-medium">{request.date}</p>
-              </div>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold">Danh Sách Yêu Cầu</h2>
+            <div className="flex items-center space-x-4">
+              {/* Bộ lọc theo loại - ẩn khi đã có filterType */}
+              {!filterType && (
+                <select
+                  value={filterTypeState}
+                  onChange={(e) => setFilterTypeState(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="all">Tất Cả Loại</option>
+                  <option value="movie">Phim</option>
+                  <option value="promotion">Khuyến Mãi</option>
+                  <option value="screening">Lịch Chiếu</option>
+                </select>
+              )}
+              
+              {/* Bộ lọc theo trạng thái - vẫn giữ lại */}
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="all">Tất Cả Trạng Thái</option>
+                <option value="pending">Chờ Duyệt</option>
+                <option value="approved">Đã Duyệt</option>
+                <option value="rejected">Từ Chối</option>
+              </select>
+              
+              <button
+                onClick={() => fetchApprovalRequests(true)}
+                className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"
+              >
+                Cập Nhật Dữ Liệu
+              </button>
             </div>
-            <div className="mb-4">
-              <p className="text-sm text-gray-500 mb-2">Details</p>
-              <div className="bg-gray-50 rounded-lg p-4">
-                {Object.entries(request.details).map(([key, value]) => (
-                  <div key={key} className="mb-2 last:mb-0">
-                    <span className="font-medium">
-                      {key.charAt(0).toUpperCase() + key.slice(1)}:{' '}
-                    </span>
-                    <span>
-                      {Array.isArray(value)
-                        ? value.join(', ')
-                        : value.toString()}
+          </div>
+
+          <div className="overflow-x-auto relative">
+            {/* {isLoading && !selectedRequest && (
+              <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            )} */}
+            
+            {isLoading && !selectedRequest && (
+              <div className="text-center py-1 text-sm text-blue-600">
+                Đang cập nhật...
+              </div>
+            )}
+            
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Loại Yêu Cầu
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Người Yêu Cầu
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Trạng Thái
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ngày Tạo
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Thao Tác
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {localFiltered.length > 0 ? (
+                  localFiltered.map((request) => (
+                    <tr key={request._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {getRequestTypeLabel(request.type)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {request.staffId?.name || 'Không xác định'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {getStatusIcon(request.status)}
+                          <span className={`ml-2 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
+                            {request.status === 'pending' ? 'Chờ Duyệt' :
+                             request.status === 'approved' ? 'Đã Duyệt' :
+                             'Từ Chối'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">
+                          {formatDate(request.createdAt)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="relative inline-block group">
+                          <button
+                            onClick={() => setSelectedRequest(request)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            <EyeIcon className="h-5 w-5" />
+                          </button>
+                          <div className="absolute right-0 top-0 transform -translate-y-full mt-[-5px] bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                            Xem chi tiết
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                      {isLoading ? 'Đang tải...' : 'Không tìm thấy yêu cầu nào'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Request Detail Modal */}
+      {selectedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">
+                  Chi Tiết Yêu Cầu
+                </h3>
+                <button
+                  onClick={() => setSelectedRequest(null)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Tabs for different sections */}
+              <div className="border-b border-gray-200 mb-4">
+                <div className="flex">
+                  <button className="px-4 py-2 border-b-2 border-blue-500 text-blue-600 font-medium">
+                    Thông Tin
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Trạng Thái</label>
+                  <div className="mt-1 flex items-center">
+                    {getStatusIcon(selectedRequest.status)}
+                    <span className={`ml-2 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedRequest.status)}`}>
+                      {selectedRequest.status === 'pending' ? 'Chờ Duyệt' :
+                       selectedRequest.status === 'approved' ? 'Đã Duyệt' :
+                       'Từ Chối'}
                     </span>
                   </div>
-                ))}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Thời Gian Yêu Cầu</label>
+                  <p className="mt-1 text-sm text-gray-900">{formatDate(selectedRequest.createdAt)}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Người Yêu Cầu</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedRequest.staffId?.name || 'Không xác định'}</p>
+                </div>
               </div>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Comment
-              </label>
-              <textarea
-                className="w-full p-2 border border-gray-300 rounded-md"
-                rows={3}
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Add a comment..."
-              />
-            </div>
-          </div>
-          <div className="flex justify-end space-x-2">
-            <button
-              onClick={() => {
-                onReject(request.id, comment)
-                onClose()
-              }}
-              className="px-4 py-2 border border-red-300 text-red-600 rounded-md hover:bg-red-50"
-            >
-              Reject
-            </button>
-            <button
-              onClick={() => {
-                onApprove(request.id, comment)
-                onClose()
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              Approve
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-const ApprovalList: React.FC<{
-  requests: Request[]
-  onViewRequest: (request: Request) => void
-}> = ({ requests, onViewRequest }) => {
-  return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >
-              Date
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >
-              Action
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >
-              Requested By
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >
-              Status
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-            >
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {requests.map((request) => (
-            <tr key={request.id}>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {request.date}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-gray-900">
-                  {request.action.charAt(0).toUpperCase() +
-                    request.action.slice(1)}
+
+              {/* Nội dung yêu cầu - hiển thị theo loại */}
+              <div className="mb-4">
+                <h4 className="text-md font-medium text-gray-700 mb-2">Nội Dung Yêu Cầu</h4>
+                
+                {selectedRequest.type === 'movie' && selectedRequest.requestData && (
+                  <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h5 className="font-medium text-gray-700">Thông Tin Cơ Bản</h5>
+                        <div className="mt-2 space-y-2">
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Tiêu đề:</span>
+                            <span className="text-sm ml-2">{selectedRequest.requestData.title}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Thể loại:</span>
+                            <span className="text-sm ml-2">{selectedRequest.requestData.genre}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Thời lượng:</span>
+                            <span className="text-sm ml-2">{selectedRequest.requestData.duration} phút</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Ngày phát hành:</span>
+                            <span className="text-sm ml-2">{new Date(selectedRequest.requestData.releaseDate).toLocaleDateString('vi-VN')}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Quốc gia:</span>
+                            <span className="text-sm ml-2">{selectedRequest.requestData.country}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Trạng thái chiếu:</span>
+                            <span className="text-sm ml-2">
+                              {selectedRequest.requestData.showingStatus === 'coming-soon' ? 'Sắp chiếu' : 
+                               selectedRequest.requestData.showingStatus === 'now-showing' ? 'Đang chiếu' : 'Đã kết thúc'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Nhà sản xuất:</span>
+                            <span className="text-sm ml-2">{selectedRequest.requestData.producer}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h5 className="font-medium text-gray-700">Ảnh Poster</h5>
+                        {selectedRequest.requestData.posterUrl && (
+                          <div className="mt-2">
+                            <img 
+                              src={selectedRequest.requestData.posterUrl} 
+                              alt="Poster" 
+                              className="w-full max-h-40 object-contain rounded-md"
+                            />
+                          </div>
+                        )}
+                        
+                        <h5 className="font-medium text-gray-700 mt-4">Trailer</h5>
+                        {selectedRequest.requestData.trailerUrl && (
+                          <div className="mt-2">
+                            <div style={videoResponsiveStyle}>
+                              <iframe
+                                style={videoIframeStyle}
+                                src={`https://www.youtube.com/embed/${getYoutubeIdFromUrl(selectedRequest.requestData.trailerUrl)}`}
+                                title="YouTube video player"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              ></iframe>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <h5 className="font-medium text-gray-700">Mô Tả</h5>
+                      <p className="text-sm mt-2">{selectedRequest.requestData.description}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <h5 className="font-medium text-gray-700">Đạo Diễn</h5>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {parsePersonList(selectedRequest.requestData.directors).map((director, index) => (
+                            <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+                              {director}
+                            </span>
+                          ))}
+                          {parsePersonList(selectedRequest.requestData.directors).length === 0 && (
+                            <span className="text-sm text-gray-500">Không có thông tin</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h5 className="font-medium text-gray-700">Diễn Viên</h5>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {parsePersonList(selectedRequest.requestData.actors).map((actor, index) => (
+                            <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+                              {actor}
+                            </span>
+                          ))}
+                          {parsePersonList(selectedRequest.requestData.actors).length === 0 && (
+                            <span className="text-sm text-gray-500">Không có thông tin</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedRequest.type !== 'movie' && (
+                  <pre className="p-4 bg-gray-50 rounded-md text-sm text-gray-900 overflow-auto">
+                    {JSON.stringify(selectedRequest.requestData, null, 2)}
+                  </pre>
+                )}
+              </div>
+
+              {selectedRequest.status === 'rejected' && selectedRequest.rejectionReason && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700">Lý Do Từ Chối</label>
+                  <p className="mt-1 p-2 bg-red-50 text-sm text-red-600 rounded-md">{selectedRequest.rejectionReason}</p>
                 </div>
-                <div className="text-sm text-gray-500">
-                  {Object.values(request.details)[0]?.toString()}
+              )}
+
+              {selectedRequest.status === 'pending' && (
+                <div className="space-y-4 pt-4 border-t">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Lý Do Từ Chối</label>
+                    <textarea
+                      rows={3}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="Nhập lý do từ chối (bắt buộc khi từ chối yêu cầu)"
+                    />
+                  </div>
+
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      onClick={() => handleApprove(selectedRequest._id)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                      Phê Duyệt
+                    </button>
+                    <button
+                      onClick={() => handleReject(selectedRequest._id)}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      Từ Chối
+                    </button>
+                  </div>
                 </div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {request.requestedBy}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <span
-                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : request.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
-                >
-                  {request.status.charAt(0).toUpperCase() +
-                    request.status.slice(1)}
-                </span>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button
-                  onClick={() => onViewRequest(request)}
-                  className="text-blue-600 hover:text-blue-900"
-                >
-                  <EyeIcon size={18} />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-const ManagerDashboard: React.FC = () => {
-  const location = useLocation()
-  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null)
-  const [requests, setRequests] = useState(mockRequests)
-  // Check which section we're on
-  const isMainDashboard = location.pathname === '/manager'
-  const isMovieRequests = location.pathname === '/manager/movies'
-  const isPromotionRequests = location.pathname === '/manager/promotions'
-  const isShowtimeRequests = location.pathname === '/manager/showtimes'
-  const isSeatMapRequests = location.pathname === '/manager/seatmaps'
-  const handleApprove = (id: string, comment: string) => {
-    // Update request status
-    const newRequests = {
-      ...requests,
-    }
-    Object.keys(newRequests).forEach((key) => {
-      const typedKey = key as keyof typeof requests
-      newRequests[typedKey] = newRequests[typedKey].map((request) =>
-        request.id === id
-          ? {
-              ...request,
-              status: 'approved',
-            }
-          : request,
-      )
-    })
-    setRequests(newRequests)
-  }
-  const handleReject = (id: string, comment: string) => {
-    // Update request status
-    const newRequests = {
-      ...requests,
-    }
-    Object.keys(newRequests).forEach((key) => {
-      const typedKey = key as keyof typeof requests
-      newRequests[typedKey] = newRequests[typedKey].map((request) =>
-        request.id === id
-          ? {
-              ...request,
-              status: 'rejected',
-            }
-          : request,
-      )
-    })
-    setRequests(newRequests)
-  }
-  const getPendingCount = (type: keyof typeof requests) => {
-    return requests[type].filter((request) => request.status === 'pending')
-      .length
-  }
-  const renderMainDashboard = () => (
-    <div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-2">Movie Requests</h3>
-          <p className="text-3xl font-bold">{getPendingCount('movies')}</p>
-          <div className="mt-2 text-sm text-gray-500">
-            <span className="text-green-500 flex items-center">
-              <ArrowUpIcon size={16} className="mr-1" />
-              New requests
-            </span>
+              )}
+            </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-2">Promotion Requests</h3>
-          <p className="text-3xl font-bold">{getPendingCount('promotions')}</p>
-          <div className="mt-2 text-sm text-gray-500">
-            <span className="text-green-500 flex items-center">
-              <ArrowUpIcon size={16} className="mr-1" />
-              Pending review
-            </span>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-2">Showtime Requests</h3>
-          <p className="text-3xl font-bold">{getPendingCount('showtimes')}</p>
-          <div className="mt-2 text-sm text-gray-500">
-            <span className="text-green-500 flex items-center">
-              <ArrowUpIcon size={16} className="mr-1" />
-              Needs attention
-            </span>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-2">Seat Map Changes</h3>
-          <p className="text-3xl font-bold">{getPendingCount('seatMaps')}</p>
-          <div className="mt-2 text-sm text-gray-500">
-            <span className="text-green-500 flex items-center">
-              <ArrowUpIcon size={16} className="mr-1" />
-              Layout updates
-            </span>
-          </div>
-        </div>
-      </div>
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-lg font-semibold mb-4">Recent Requests</h3>
-        <ApprovalList
-          requests={[
-            ...requests.movies,
-            ...requests.promotions,
-            ...requests.showtimes,
-            ...requests.seatMaps,
-          ]
-            .sort(
-              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-            )
-            .slice(0, 5)}
-          onViewRequest={setSelectedRequest}
-        />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-4">Pending Movies</h3>
-          <ApprovalList
-            requests={requests.movies.filter((r) => r.status === 'pending')}
-            onViewRequest={setSelectedRequest}
-          />
-        </div>
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-4">Pending Promotions</h3>
-          <ApprovalList
-            requests={requests.promotions.filter((r) => r.status === 'pending')}
-            onViewRequest={setSelectedRequest}
-          />
-        </div>
-      </div>
-    </div>
-  )
-  const renderRequestSection = (type: keyof typeof requests, title: string) => (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold">{title}</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Review and manage {type} requests
-        </p>
-      </div>
-      <div className="space-y-4">
-        <div className="flex space-x-2">
-          <button className="px-3 py-1 rounded-md text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200">
-            All
-          </button>
-          <button className="px-3 py-1 rounded-md text-sm font-medium hover:bg-gray-100">
-            Pending
-          </button>
-          <button className="px-3 py-1 rounded-md text-sm font-medium hover:bg-gray-100">
-            Approved
-          </button>
-          <button className="px-3 py-1 rounded-md text-sm font-medium hover:bg-gray-100">
-            Rejected
-          </button>
-        </div>
-        <ApprovalList
-          requests={requests[type]}
-          onViewRequest={setSelectedRequest}
-        />
-      </div>
-    </div>
-  )
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Manager Dashboard</h1>
-      {isMainDashboard && renderMainDashboard()}
-      {isMovieRequests && renderRequestSection('movies', 'Movie Requests')}
-      {isPromotionRequests &&
-        renderRequestSection('promotions', 'Promotion Requests')}
-      {isShowtimeRequests &&
-        renderRequestSection('showtimes', 'Showtime Requests')}
-      {isSeatMapRequests &&
-        renderRequestSection('seatMaps', 'Seat Map Requests')}
-      {selectedRequest && (
-        <RequestDetailModal
-          request={selectedRequest}
-          onClose={() => setSelectedRequest(null)}
-          onApprove={handleApprove}
-          onReject={handleReject}
-        />
       )}
     </div>
-  )
-}
-export default ManagerDashboard
+  );
+};
+
+export default React.memo(ManagerDashboard); 

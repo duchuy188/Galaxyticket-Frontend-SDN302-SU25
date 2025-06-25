@@ -3,10 +3,12 @@ import axios from 'axios';
 
 type User = {
   id: string;
+  _id: string;
   fullName: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'staff' | 'manager' | 'member';
+  role: 'admin' | 'manager' | 'staff' | 'member';
+  avatar?: string;
 };
 
 type AuthContextType = {
@@ -14,15 +16,44 @@ type AuthContextType = {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (
-    userData: Omit<User, 'id' | 'role'> & { password: string }
+    userData: Omit<User, 'id' | '_id' | 'role'> & { password: string }
   ) => Promise<boolean>;
   logout: () => void;
   updateProfile: (userData: Partial<User> & { name?: string }) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Mock users for demonstration
+const mockUsers = [{
+  id: '1',
+  username: 'admin',
+  password: '123',
+  fullName: 'Admin User',
+  email: 'admin@cinema.com',
+  phone: '123-456-7890',
+  role: 'admin' as const
+}, {
+  id: '2',
+  username: 'manager',
+  password: '123',
+  fullName: 'Manager User',
+  email: 'manager@cinema.com',
+  phone: '123-456-7892',
+  role: 'manager' as const
+}, {
+  id: '3',
+  username: 'staff',
+  password: '123',
+  fullName: 'Staff User',
+  email: 'staff@cinema.com',
+  phone: '123-456-7891',
+  role: 'staff' as const
+}];
+export const AuthProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({
+  children
+}) => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -77,11 +108,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: mappedRole,
         };
 
+        console.log('Storing user info:', userInfo);
+
         setUser(userInfo);
         localStorage.setItem('user', JSON.stringify(userInfo));
         localStorage.setItem('token', res.data.token);
         return true;
       } else {
+        console.error('Login failed - Invalid response format:', res.data);
         return false;
       }
     } catch (err) {
@@ -118,7 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // };
 
   const register = async (
-  userData: Omit<User, 'id' | 'role'> & { password: string }
+  userData: Omit<User, 'id' | '_id' | 'role'> & { password: string }
 ): Promise<boolean> => {
   try {
     const res = await axios.post('http://localhost:5000/api/auth/register', {

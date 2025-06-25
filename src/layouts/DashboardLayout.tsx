@@ -77,13 +77,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   ]
   const managerNavItems = [
     {
-      label: 'Dashboard',
-      path: `${basePath}`,
-      icon: <LayoutDashboardIcon size={20} />,
-    },
-    {
       label: 'Movie Requests',
-      path: `${basePath}/movies`,
+      path: `${basePath}`,
       icon: <FilmIcon size={20} />,
     },
     {

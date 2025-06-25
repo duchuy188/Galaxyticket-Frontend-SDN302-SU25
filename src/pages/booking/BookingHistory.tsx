@@ -1,99 +1,228 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { bookings as mockBookings } from '../../utils/mockData';
-import { movies } from '../../utils/mockData';
 import { Link } from 'react-router-dom';
 import { CheckCircleIcon, XCircleIcon } from 'lucide-react';
-type Booking = {
-  id: string;
-  userId: string;
-  movieId: string;
-  showtimeId: string;
-  seats: string[];
-  totalPrice: number;
-  date: string;
-  status: string;
-};
+import { useAuth } from '../../context/AuthContext';
+import { getUserBookings, Booking } from '../../utils/booking';
+
+const ITEMS_PER_PAGE = 5;
+
+function formatDateDMY(dateString: string) {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'N/A';
+  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+}
+
 const BookingHistory: React.FC = () => {
-  const {
-    user
-  } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
   useEffect(() => {
-    // In a real app, you would fetch the user's bookings from an API
-    // For this demo, we'll use the mock data and filter by user ID
-    if (user) {
-      // Get bookings from local storage if available
-      const storedBookings = JSON.parse(localStorage.getItem('userBookings') || '[]');
-      // Combine with mock bookings
-      const allBookings = [...mockBookings, ...storedBookings].filter(booking => booking.userId === user.id);
-      setBookings(allBookings);
-    }
-  }, [user]);
-  const getMovieTitle = (movieId: string) => {
-    const movie = movies.find(m => m.id === movieId);
-    return movie ? movie.title : 'Unknown Movie';
-  };
-  if (!user) {
-    return <div className="container mx-auto px-4 py-12 text-center">
-        <h2 className="text-2xl font-bold">
-          Please sign in to view your bookings
-        </h2>
+    const fetchBookings = async () => {
+      if (!isAuthenticated || !user) {
+        setError('Vui lòng đăng nhập để xem vé của bạn');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await getUserBookings();
+        if (response.bookings) {
+          setBookings(response.bookings);
+          setError(null);
+        } else {
+          setError('Không thể tải danh sách vé');
+        }
+      } catch (err: any) {
+        console.error('Error fetching bookings:', err);
+        setError(err.message || 'Không thể tải danh sách vé');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, [isAuthenticated, user]);
+
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <h2 className="text-2xl font-bold">Vui lòng đăng nhập để xem vé của bạn</h2>
         <Link to="/signin" className="mt-4 inline-block bg-blue-600 text-white px-4 py-2 rounded-md">
-          Sign In
+          Đăng Nhập
         </Link>
-      </div>;
+      </div>
+    );
   }
-  return <div className="container mx-auto px-4 py-8">
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <h2 className="text-2xl font-bold">Đang tải danh sách vé...</h2>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <h2 className="text-2xl font-bold text-red-600">Lỗi: {error}</h2>
+      </div>
+    );
+  }
+
+  // Tính toán số trang
+  const totalPages = Math.ceil(bookings.length / ITEMS_PER_PAGE);
+  
+  // Lấy bookings cho trang hiện tại
+  const currentBookings = bookings.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  return (
+    <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">My Bookings</h1>
-        {bookings.length === 0 ? <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <p className="text-xl text-gray-600 mb-4">
-              You have no booking history yet.
-            </p>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Vé Của Tôi</h1>
+        </div>
+
+        {currentBookings.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <p className="text-xl text-gray-600 mb-4">Bạn chưa có vé nào.</p>
             <Link to="/" className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-              Book a Movie
+              Đặt Vé Ngay
             </Link>
-          </div> : <div className="space-y-6">
-            {bookings.map(booking => <div key={booking.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="p-6">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                    <h2 className="text-xl font-bold">
-                      {getMovieTitle(booking.movieId)}
-                    </h2>
-                    <div className={`mt-2 sm:mt-0 px-3 py-1 rounded-full text-sm font-medium ${booking.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                      {booking.status === 'completed' ? <div className="flex items-center">
-                          <CheckCircleIcon size={16} className="mr-1" />
-                          Completed
-                        </div> : <div className="flex items-center">
-                          <XCircleIcon size={16} className="mr-1" />
-                          {booking.status}
-                        </div>}
+          </div>
+        ) : (
+          <>
+            <div className="space-y-6">
+              {currentBookings.map((booking) => (
+                <div key={booking._id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                  <div className="p-6">
+                    {/* Mã vé */}
+                    <div className="flex justify-end mb-2">
+                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-mono select-all">
+                        {booking._id}
+                      </span>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-                    <div>
-                      <p className="text-gray-600 text-sm">Date</p>
-                      <p>{booking.date}</p>
+                    {/* Trạng thái thanh toán */}
+                    <div className="flex justify-end mb-4">
+                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 
+                        booking.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        <div className="flex items-center">
+                          {booking.paymentStatus === 'paid' ? (
+                            <CheckCircleIcon size={16} className="mr-1" />
+                          ) : (
+                            <XCircleIcon size={16} className="mr-1" />
+                          )}
+                          {booking.paymentStatus === 'paid' ? 'Đã Thanh Toán' :
+                           booking.paymentStatus === 'pending' ? 'Chờ Thanh Toán' :
+                           booking.paymentStatus === 'cancelled' ? 'Đã Hủy' : 'Thất Bại'}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-gray-600 text-sm">Seats</p>
-                      <p>{booking.seats.join(', ')}</p>
+                    {/* Thông tin chi tiết vé */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                      <div>
+                        <p className="text-gray-600 text-sm mb-1">Phim</p>
+                        <p className="font-semibold text-lg">{booking.screeningId?.movieId?.title || booking.movieTitle || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm mb-1">Ngày & Giờ</p>
+                        <p className="font-semibold text-lg">
+                          {booking.screeningId?.startTime
+                            ? `${formatDateDMY(booking.screeningId.startTime)} lúc ${booking.screeningId.startTime.slice(11, 16)}`
+                            : booking.screeningTime
+                              ? `${formatDateDMY(booking.screeningTime)} lúc ${booking.screeningTime.slice(11, 16)}`
+                              : 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm mb-1">Rạp chiếu</p>
+                        <p className="font-medium">{booking.screeningId?.roomId?.name || booking.roomName || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm mb-1">Ghế</p>
+                        <p className="font-medium">{booking.seatNumbers.join(', ')}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm mb-1">Tổng tiền</p>
+                        <p className="font-bold text-lg">{booking.totalPrice?.toLocaleString('vi-VN') || 'N/A'} VND</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm mb-1">Ngày đặt chỗ</p>
+                        <p className="font-medium">
+                          {booking.createdAt
+                            ? `${new Date(booking.createdAt).toLocaleDateString('vi-VN')} ${new Date(booking.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`
+                            : 'N/A'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-gray-600 text-sm">Amount Paid</p>
-                      <p>${booking.totalPrice.toFixed(2)}</p>
+                    {/* QR code */}
+                    <div className="mt-6 flex justify-center">
+                      {booking.qrCodeDataUrl && (
+                        <img src={booking.qrCodeDataUrl} alt="Mã QR Vé" className="w-40 h-40" />
+                      )}
                     </div>
-                  </div>
-                  <div className="mt-4 flex justify-end">
-                    <Link to={`/movie/${booking.movieId}`} className="text-blue-600 hover:text-blue-800">
-                      Book Again
-                    </Link>
                   </div>
                 </div>
-              </div>)}
-          </div>}
+              ))}
+            </div>
+
+            {/* Phân trang */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-8 gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={`px-4 py-2 rounded-md ${
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  Trước
+                </button>
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-4 py-2 rounded-md ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className={`px-4 py-2 rounded-md ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  Sau
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default BookingHistory;

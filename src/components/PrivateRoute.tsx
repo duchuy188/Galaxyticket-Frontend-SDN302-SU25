@@ -28,8 +28,9 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({
     console.log('Access denied for role:', user?.role);
     // Redirect based on role
     if (user?.role === 'admin') return <Navigate to="/admin" replace />;
-    if (user?.role === 'staff') return <Navigate to="/staff" replace />;
     if (user?.role === 'manager') return <Navigate to="/manager" replace />;
+    if (user?.role === 'staff') return <Navigate to="/staff" replace />;
+    
     if (user?.role === 'member') return <Navigate to="/" replace />;
     return <Navigate to="/" replace />;
   }
