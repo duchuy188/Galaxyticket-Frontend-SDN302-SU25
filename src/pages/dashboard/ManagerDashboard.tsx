@@ -533,7 +533,61 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                   </div>
                 )}
                 
-                {selectedRequest.type !== 'movie' && (
+                {selectedRequest.type === 'screening' && selectedRequest.requestData && (
+                  <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Phim:</span>
+                          <span className="ml-2">{selectedRequest.requestData.movieId?.title || selectedRequest.requestData.movieId}</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Phòng:</span>
+                          <span className="ml-2">{selectedRequest.requestData.roomId?.name || selectedRequest.requestData.roomId}</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Rạp:</span>
+                          <span className="ml-2">{selectedRequest.requestData.theaterId?.name || selectedRequest.requestData.theaterId}</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Thời gian bắt đầu:</span>
+                          <span className="ml-2">{new Date(selectedRequest.requestData.startTime).toLocaleString('vi-VN')}</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Thời gian kết thúc:</span>
+                          <span className="ml-2">{new Date(selectedRequest.requestData.endTime).toLocaleString('vi-VN')}</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Giá vé:</span>
+                          <span className="ml-2">{selectedRequest.requestData.ticketPrice?.toLocaleString('vi-VN')} đ</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Trạng thái:</span>
+                          <span className="ml-2 capitalize">{selectedRequest.requestData.status}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Người tạo:</span>
+                          <span className="ml-2">{selectedRequest.requestData.createdBy?.name || selectedRequest.requestData.createdBy}</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Người duyệt:</span>
+                          <span className="ml-2">{selectedRequest.requestData.approvedBy?.name || 'Chưa duyệt'}</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Ngày tạo:</span>
+                          <span className="ml-2">{new Date(selectedRequest.requestData.createdAt).toLocaleString('vi-VN')}</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Ngày cập nhật:</span>
+                          <span className="ml-2">{new Date(selectedRequest.requestData.updatedAt).toLocaleString('vi-VN')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {selectedRequest.type !== 'movie' && selectedRequest.type !== 'screening' && (
                   <pre className="p-4 bg-gray-50 rounded-md text-sm text-gray-900 overflow-auto">
                     {JSON.stringify(selectedRequest.requestData, null, 2)}
                   </pre>
