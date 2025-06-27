@@ -569,7 +569,12 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                       <div>
                         <div className="mb-2">
                           <span className="font-medium text-gray-500">Người tạo:</span>
-                          <span className="ml-2">{selectedRequest.requestData.createdBy?.name || selectedRequest.requestData.createdBy}</span>
+                          <span className="ml-2">
+                            {selectedRequest.requestData.createdByName ||
+                             selectedRequest.requestData.createdBy?.name ||
+                             selectedRequest.requestData.createdBy ||
+                             'Không xác định'}
+                          </span>
                         </div>
                         <div className="mb-2">
                           <span className="font-medium text-gray-500">Người duyệt:</span>
