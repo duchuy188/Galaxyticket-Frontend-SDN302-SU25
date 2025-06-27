@@ -42,6 +42,8 @@ const Checkout: React.FC = () => {
   const isCreatingBooking = React.useRef(false);
   const bookingIdRef = React.useRef<string | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
+  const [timeLeft, setTimeLeft] = useState(120); // 2 phút = 120 giây
+  const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
     // Check for update success message
@@ -109,6 +111,26 @@ const Checkout: React.FC = () => {
 
     loadBookingDetails();
   }, []);
+
+  useEffect(() => {
+    // Đếm ngược thời gian giữ ghế
+    if (isExpired) return;
+    if (timeLeft <= 0) {
+      setIsExpired(true);
+      return;
+    }
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setIsExpired(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft, isExpired]);
 
   const handleVNPayReturn = async () => {
     try {
@@ -227,6 +249,11 @@ const Checkout: React.FC = () => {
     }
 
     sessionStorage.setItem('isUpdatingBooking', 'true');
+    // Lưu thời gian hết hạn giữ ghế (epoch milliseconds)
+    if (!isExpired) {
+      const expireAt = Date.now() + timeLeft * 1000;
+      sessionStorage.setItem('bookingExpireAt', expireAt.toString());
+    }
 
     const seatSelectionUrl = `/seats/${bookingDetails.movieId}?date=${bookingDetails.date}&time=${bookingDetails.time}&theater=${bookingDetails.theater}&screeningId=${bookingDetails.screeningId}&movieTitle=${encodeURIComponent(bookingDetails.movieTitle)}&userId=${bookingDetails.userId}`;
 
@@ -287,9 +314,26 @@ const Checkout: React.FC = () => {
     );
   }
 
+  // Format mm:ss
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto">
+        {/* Đồng hồ đếm ngược giữ ghế */}
+        <div className="flex items-center justify-center mb-6">
+          <div className={`text-lg font-bold px-4 py-2 rounded-lg border ${isExpired ? 'bg-red-100 text-red-600 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}> 
+            {isExpired ? (
+              <span>Hết thời gian giữ ghế, vui lòng chọn lại!</span>
+            ) : (
+              <span>Thời gian giữ ghế còn lại: {formatTime(timeLeft)}</span>
+            )}
+          </div>
+        </div>
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             <p className="mb-2">{error}</p>
@@ -458,41 +502,53 @@ const Checkout: React.FC = () => {
 
           <button
             className={`w-full py-3 rounded-md font-medium ${
-              isPaymentProcessing ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+              isPaymentProcessing || isExpired ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
             } text-white mb-4`}
             onClick={handlePayment}
-            disabled={isPaymentProcessing}
+            disabled={isPaymentProcessing || isExpired}
           >
-            {isPaymentProcessing ? 'Đang Xử Lý Thanh Toán...' : 'Thanh Toán Ngay'}
+            {isExpired ? 'Hết thời gian giữ ghế' : (isPaymentProcessing ? 'Đang Xử Lý Thanh Toán...' : 'Thanh Toán Ngay')}
           </button>
 
-          <div className="flex gap-4 mt-4">
-            <button
-              onClick={handleUpdateBooking}
-              disabled={isUpdating}
-              className={`flex-1 flex items-center justify-center py-2 px-4 border border-blue-300 rounded-md ${
-                isUpdating
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-              }`}
-            >
-              <EditIcon size={18} className="mr-2" />
-              {isUpdating ? 'Đang cập nhật...' : 'Cập nhật vé'}
-            </button>
+          {/* Khi hết thời gian giữ ghế, chỉ hiện nút quay về trang chủ */}
+          {isExpired ? (
+            <div className="flex gap-4 mt-4">
+              <button
+                onClick={() => window.location.href = '/'}
+                className="flex-1 flex items-center justify-center py-2 px-4 border border-blue-300 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium"
+              >
+                Quay về trang chủ
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-4 mt-4">
+              <button
+                onClick={handleUpdateBooking}
+                disabled={isUpdating}
+                className={`flex-1 flex items-center justify-center py-2 px-4 border border-blue-300 rounded-md ${
+                  isUpdating
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                }`}
+              >
+                <EditIcon size={18} className="mr-2" />
+                {isUpdating ? 'Đang cập nhật...' : 'Cập nhật vé'}
+              </button>
 
-            <button
-              onClick={handleCancelBooking}
-              disabled={isCancelling}
-              className={`flex-1 flex items-center justify-center py-2 px-4 border border-red-300 rounded-md ${
-                isCancelling
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-red-50 text-red-700 hover:bg-red-100'
-              }`}
-            >
-              <XCircleIcon size={18} className="mr-2" />
-              {isCancelling ? 'Đang hủy...' : 'Hủy đặt vé'}
-            </button>
-          </div>
+              <button
+                onClick={handleCancelBooking}
+                disabled={isCancelling}
+                className={`flex-1 flex items-center justify-center py-2 px-4 border border-red-300 rounded-md ${
+                  isCancelling
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-red-50 text-red-700 hover:bg-red-100'
+                }`}
+              >
+                <XCircleIcon size={18} className="mr-2" />
+                {isCancelling ? 'Đang hủy...' : 'Hủy đặt vé'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

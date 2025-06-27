@@ -34,6 +34,9 @@ const SeatSelection: React.FC = () => {
   const [showTimer, setShowTimer] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [isUpdateMode, setIsUpdateMode] = useState(false);
+  const [expireAt, setExpireAt] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
   const isProceedingToCheckout = React.useRef(false);
 
   useEffect(() => {
@@ -48,10 +51,46 @@ const SeatSelection: React.FC = () => {
         setSelectedSeats(parsedDetails.seats || []);
         setBookingId(currentBookingId);
       }
+      // Lấy thời gian hết hạn giữ ghế nếu có
+      const expireAtStr = sessionStorage.getItem('bookingExpireAt');
+      if (expireAtStr) {
+        const expireEpoch = parseInt(expireAtStr, 10);
+        setExpireAt(expireEpoch);
+        const now = Date.now();
+        if (expireEpoch > now) {
+          setTimeLeft(Math.floor((expireEpoch - now) / 1000));
+        } else {
+          setTimeLeft(0);
+          setIsExpired(true);
+        }
+      }
       // Clean up the flag
       sessionStorage.removeItem('isUpdatingBooking');
+      sessionStorage.removeItem('bookingExpireAt');
     }
   }, []);
+
+  // Đếm ngược thời gian giữ ghế khi cập nhật
+  useEffect(() => {
+    if (!isUpdateMode || timeLeft === null || isExpired) return;
+    if (timeLeft <= 0) {
+      setIsExpired(true);
+      setTimeLeft(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          clearInterval(timer);
+          setIsExpired(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isUpdateMode, timeLeft, isExpired]);
 
   useEffect(() => {
     const fetchScreeningDetails = async () => {
@@ -360,7 +399,26 @@ const SeatSelection: React.FC = () => {
 
   const discountAmount = Number(originalPrice) - Number(totalPrice);
 
+  // Helper để format mm:ss
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   return <div className="container mx-auto px-4 py-8">
+    {/* Hiển thị đồng hồ đếm ngược khi cập nhật vé */}
+    {isUpdateMode && (
+      <div className="flex items-center justify-center mb-6">
+        <div className={`text-lg font-bold px-4 py-2 rounded-lg border ${isExpired ? 'bg-red-100 text-red-600 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
+          {isExpired ? (
+            <span>Hết thời gian giữ ghế, vui lòng đặt lại!</span>
+          ) : (
+            <span>Thời gian giữ ghế còn lại: {formatTime(timeLeft || 0)}</span>
+          )}
+        </div>
+      </div>
+    )}
     {error && (
       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
         <p className="mb-2">{error}</p>
@@ -459,9 +517,9 @@ const SeatSelection: React.FC = () => {
           </div>
           {isUpdateMode ? (
             <button
-              className={`w-full py-3 rounded-md font-medium ${selectedSeats.length > 0 ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+              className={`w-full py-3 rounded-md font-medium ${selectedSeats.length > 0 && !isExpired ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
               onClick={handleUpdateAndReturnToCheckout}
-              disabled={selectedSeats.length === 0 || isProceedingToCheckout.current}
+              disabled={selectedSeats.length === 0 || isProceedingToCheckout.current || isExpired}
             >
               Cập nhật vé
             </button>
