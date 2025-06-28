@@ -592,10 +592,61 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                     </div>
                   </div>
                 )}
-                {selectedRequest.type !== 'movie' && selectedRequest.type !== 'screening' && (
-                  <pre className="p-4 bg-gray-50 rounded-md text-sm text-gray-900 overflow-auto">
-                    {JSON.stringify(selectedRequest.requestData, null, 2)}
-                  </pre>
+                {selectedRequest.type === 'promotion' && selectedRequest.requestData && (
+                  <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <h5 className="font-medium text-gray-700">Thông Tin Khuyến Mãi</h5>
+                        <div className="mt-2 space-y-2">
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Mã khuyến mãi:</span>
+                            <span className="text-sm ml-2">{selectedRequest.requestData.code}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Tên khuyến mãi:</span>
+                            <span className="text-sm ml-2">{selectedRequest.requestData.name}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Loại khuyến mãi:</span>
+                            <span className="text-sm ml-2">
+                              {selectedRequest.requestData.type === 'percent' ? 'Phần trăm' : 'Số tiền cố định'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Giá trị:</span>
+                            <span className="text-sm ml-2">
+                              {selectedRequest.requestData.type === 'percent' 
+                                ? `${selectedRequest.requestData.value}%` 
+                                : `${selectedRequest.requestData.value.toLocaleString('vi-VN')}đ`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h5 className="font-medium text-gray-700">Thời Gian</h5>
+                        <div className="mt-2 space-y-2">
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Ngày bắt đầu:</span>
+                            <span className="text-sm ml-2">
+                              {new Date(selectedRequest.requestData.startDate).toLocaleDateString('vi-VN')}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Ngày kết thúc:</span>
+                            <span className="text-sm ml-2">
+                              {new Date(selectedRequest.requestData.endDate).toLocaleDateString('vi-VN')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <h5 className="font-medium text-gray-700">Mô Tả</h5>
+                      <p className="text-sm mt-2">{selectedRequest.requestData.description}</p>
+                    </div>
+                  </div>
                 )}
               </div>
 
