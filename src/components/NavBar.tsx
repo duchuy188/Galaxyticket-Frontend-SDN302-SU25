@@ -78,6 +78,11 @@ const NavBar: React.FC = () => {
       name: 'Vé Của Tôi',
       path: '/bookings',
       requireAuth: true
+    },
+    {
+      name: 'Mã Giảm Giá',
+      path: '/promotions',
+      requireAuth: true
     }
   ];
 
@@ -296,6 +301,13 @@ const NavBar: React.FC = () => {
                     >
                       <Ticket className="w-4 h-4 mr-2" />
                       <span>Vé của tôi</span>
+                    </Link>
+                    <Link 
+                      to="/promotions" 
+                      className="text-gray-700 hover:bg-gray-100 px-4 py-2 text-sm flex items-center"
+                    >
+                      <span className="mr-2">🎫</span>
+                      Mã Giảm Giá
                     </Link>
                     <hr className="my-2 border-gray-200" />
                     <button

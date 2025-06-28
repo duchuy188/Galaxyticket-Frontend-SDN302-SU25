@@ -21,6 +21,8 @@ import TheaterDetail from '../pages/theater/TheaterDetail';
 import TheaterManagement from '../pages/dashboard/TheaterManagement';
 import StaffRoutes from './StaffRoutes';
 import ManagerRoutes from './ManagerRoutes';
+import UserPromotions from '../pages/user/PromotionList';
+import PromotionManager from '../pages/dashboard/PromotionManager';
 
 export const AppRoutes = () => {
     return (
@@ -50,6 +52,9 @@ export const AppRoutes = () => {
                 <Route path="profile" element={<PrivateRoute allowedRoles={['user', 'member']}>
                     <Profile />
                 </PrivateRoute>} />
+                <Route path="promotions" element={<PrivateRoute>
+                    <UserPromotions />
+                </PrivateRoute>} />
             </Route>
 
             {/* Admin Dashboard Routes */}
@@ -71,6 +76,11 @@ export const AppRoutes = () => {
                 <DashboardLayout>
                     <StaffRoutes />
                 </DashboardLayout>
+            </PrivateRoute>} />
+
+            {/* Promotion Manager Route */}
+            <Route path="dashboard/promotions" element={<PrivateRoute roles={['manager', 'admin']}>
+                <PromotionManager />
             </PrivateRoute>} />
 
             {/* Catch all route */}
