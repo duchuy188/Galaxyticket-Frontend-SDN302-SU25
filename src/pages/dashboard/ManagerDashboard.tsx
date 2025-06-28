@@ -551,11 +551,11 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                         </div>
                         <div className="mb-2">
                           <span className="font-medium text-gray-500">Thời gian bắt đầu:</span>
-                          <span className="ml-2">{new Date(selectedRequest.requestData.startTime).toLocaleString('vi-VN')}</span>
+                          <span className="ml-2">{new Date(selectedRequest.requestData.startTime).toLocaleString('en-US', { timeZone: 'UTC' })}</span>
                         </div>
                         <div className="mb-2">
                           <span className="font-medium text-gray-500">Thời gian kết thúc:</span>
-                          <span className="ml-2">{new Date(selectedRequest.requestData.endTime).toLocaleString('vi-VN')}</span>
+                          <span className="ml-2">{new Date(selectedRequest.requestData.endTime).toLocaleString('en-US', { timeZone: 'UTC' })}</span>
                         </div>
                         <div className="mb-2">
                           <span className="font-medium text-gray-500">Giá vé:</span>

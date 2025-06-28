@@ -3,6 +3,7 @@ import { getScreenings, deleteScreening, createScreening, Screening, updateScree
 import { getMovies } from '../../utils/movie';
 import { getRooms } from '../../utils/room';
 import { getTheaters } from '../../utils/theater';
+import { EditIcon, TrashIcon } from 'lucide-react';
 
 const ScreeningManagement: React.FC = () => {
   const [screenings, setScreenings] = useState<Screening[]>([]);
@@ -234,6 +235,7 @@ const ScreeningManagement: React.FC = () => {
             <thead>
               <tr>
                 <th className="border px-2 py-1">Phim</th>
+                <th className="border px-2 py-1">Rạp</th>
                 <th className="border px-2 py-1">Phòng</th>
                 <th className="border px-2 py-1">Thời gian bắt đầu</th>
                 <th className="border px-2 py-1">Thời gian kết thúc</th>
@@ -245,22 +247,29 @@ const ScreeningManagement: React.FC = () => {
               {screenings.map((s) => (
                 <tr key={s._id}>
                   <td className="border px-2 py-1">{s.movieId?.title}</td>
+                  <td className="border px-2 py-1">{s.theaterId?.name}</td>
                   <td className="border px-2 py-1">{s.roomId?.name}</td>
-                  <td className="border px-2 py-1">{new Date(s.startTime).toLocaleString()}</td>
-                  <td className="border px-2 py-1">{new Date(s.endTime).toLocaleString()}</td>
-                  <td className="border px-2 py-1">{s.status}</td>
                   <td className="border px-2 py-1">
+                    {new Date(s.startTime).toLocaleString('en-US', { timeZone: 'UTC' })}
+                  </td>
+                  <td className="border px-2 py-1">
+                    {new Date(s.endTime).toLocaleString('en-US', { timeZone: 'UTC' })}
+                  </td>
+                  <td className="border px-2 py-1">{s.status}</td>
+                  <td className="border px-3 py-2 text-center">
                     <button
-                      className="mr-2 px-2 py-1 bg-yellow-400 rounded"
+                      className="mr-2 w-9 h-9 flex items-center justify-center rounded-full bg-yellow-100 hover:bg-yellow-400 shadow transition-colors duration-150 cursor-pointer"
                       onClick={() => handleEdit(s)}
+                      title="Sửa"
                     >
-                      Sửa
+                      <EditIcon size={18} className="text-yellow-600 group-hover:text-white" />
                     </button>
                     <button
-                      className="px-2 py-1 bg-red-500 text-white rounded"
+                      className="w-9 h-9 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-500 shadow transition-colors duration-150 cursor-pointer"
                       onClick={() => handleDelete(s._id)}
+                      title="Xóa"
                     >
-                      Xóa
+                      <TrashIcon size={18} className="text-red-600 group-hover:text-white" />
                     </button>
                   </td>
                 </tr>
