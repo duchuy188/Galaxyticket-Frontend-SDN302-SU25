@@ -98,7 +98,11 @@ export const createScreening = async (screeningData: {
             throw new Error(response.data.message);
         }
         return response.data.data!;
-    } catch (error) {
+    } catch (error: any) {
+        if (error.response) {
+            console.error('Error creating screening:', error.response.data);
+            throw new Error(error.response.data.message || 'Unknown error');
+        }
         console.error('Error creating screening:', error);
         throw error;
     }
