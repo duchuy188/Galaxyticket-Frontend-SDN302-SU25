@@ -8,6 +8,7 @@ type ConfirmationDetails = {
   movieTitle?: string;
   moviePoster?: string;
   screeningTime?: string;
+  theaterName?: string; // Thêm trường này
   roomName?: string;
   seatNumbers: string[];
   totalPrice: number;
@@ -75,6 +76,7 @@ const BookingConfirmation: React.FC = () => {
           movieTitle: updatedBooking.movieTitle || storedConfirmationDetails?.movieTitle,
           moviePoster: updatedBooking.moviePoster || storedConfirmationDetails?.moviePoster,
           screeningTime: updatedBooking.screeningTime || storedConfirmationDetails?.screeningTime,
+          theaterName: updatedBooking.theaterName || storedConfirmationDetails?.theaterName,
           roomName: updatedBooking.roomName || storedConfirmationDetails?.roomName,
           seatNumbers: Array.isArray(updatedBooking.seatNumbers) ? updatedBooking.seatNumbers : [],
           totalPrice: updatedBooking.totalPrice || storedConfirmationDetails?.totalPrice || 0,
@@ -233,6 +235,10 @@ const BookingConfirmation: React.FC = () => {
               </div>
               <div>
                 <p className="text-gray-600 text-sm">Rạp chiếu</p>
+                <p className="font-medium">{confirmationDetails.theaterName || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Phòng chiếu</p>
                 <p className="font-medium">{confirmationDetails.roomName || 'N/A'}</p>
               </div>
               <div>

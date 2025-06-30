@@ -92,13 +92,26 @@ const MovieDetail: React.FC = () => {
   // Update selected screening when selections change
   useEffect(() => {
     if (selectedDate && selectedTime && selectedTheater && movie) {
-      const found = screenings.find(
-        s =>
-          s.startTime.startsWith(selectedDate) &&
-          s.startTime.includes(selectedTime) &&
-          (typeof s.theaterId === 'string' ? s.theaterId : s.theaterId?._id) === selectedTheater &&
-          (typeof s.movieId === 'string' ? s.movieId : s.movieId?._id) === movie._id
-      );
+      const found = screenings.find(s => {
+        const screeningDate = s.startTime.split('T')[0];
+        const theaterId = typeof s.theaterId === 'string' ? s.theaterId : s.theaterId?._id;
+        const movieId = typeof s.movieId === 'string' ? s.movieId : s.movieId?._id;
+
+        // Lấy giờ chiếu local giống như ở availableTimes
+        const localTime = new Date(s.startTime).toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+          timeZone: 'Asia/Ho_Chi_Minh'
+        });
+
+        return (
+          screeningDate === selectedDate &&
+          theaterId === selectedTheater &&
+          movieId === movie._id &&
+          localTime === selectedTime
+        );
+      });
       setSelectedScreening(found || null);
     } else {
       setSelectedScreening(null);
@@ -133,7 +146,14 @@ const MovieDetail: React.FC = () => {
         theaterId === selectedTheater &&
         movieId === movie._id
       ) {
-        times.add(s.startTime.split('T')[1].slice(0, 5));
+        // Chuyển sang giờ Việt Nam
+        const localTime = new Date(s.startTime).toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+          timeZone: 'Asia/Ho_Chi_Minh'
+        });
+        times.add(localTime);
       }
     });
     return Array.from(times).sort();

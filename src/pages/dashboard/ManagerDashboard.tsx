@@ -11,7 +11,7 @@ interface ManagerDashboardProps {
 
 const videoResponsiveStyle: CSSProperties = {
   position: 'relative',
-  paddingBottom: '56.25%', /* Tỷ lệ 16:9 */
+  paddingBottom: '56.25%' /* Tỷ lệ 16:9 */,
   height: 0,
   overflow: 'hidden',
   borderRadius: '0.375rem',
@@ -35,7 +35,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  
+
   // Thêm state cho việc lọc cục bộ
   const [localFiltered, setLocalFiltered] = useState<ApprovalRequest[]>([]);
 
@@ -47,24 +47,24 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
     if (filterType) {
       setFilterTypeState(filterType);
     }
-    
+
     // Chỉ fetch dữ liệu một lần khi component được tạo
     // hoặc khi filterType thay đổi (không phải khi route thay đổi)
     fetchApprovalRequests();
   }, [filterType]); // Chỉ phụ thuộc vào filterType
-  
+
   // Áp dụng bộ lọc cho dữ liệu local
   useEffect(() => {
     let filtered = [...requests];
-    
+
     if (filterTypeState !== 'all') {
       filtered = filtered.filter(req => req.type === filterTypeState);
     }
-    
+
     if (filterStatus !== 'all') {
       filtered = filtered.filter(req => req.status === filterStatus);
     }
-    
+
     setLocalFiltered(filtered);
   }, [requests, filterTypeState, filterStatus]);
 
@@ -75,11 +75,11 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
         setIsLoading(true);
       }
       setError(null);
-      
+
       const params = filterType ? { type: filterType } : filterTypeState !== 'all' ? { type: filterTypeState } : {};
-      
+
       const data = await getApprovalRequests(params);
-      
+
       setRequests(data);
       setLocalFiltered(data);
     } catch (err) {
@@ -98,21 +98,21 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
       setIsLoading(true);
       // Đảm bảo API trả về dữ liệu phim đã cập nhật đầy đủ
       const updatedData = await updateApprovalRequest(requestId, 'approved');
-      
+
       // Cập nhật state với dữ liệu đầy đủ từ API
-      setRequests(prevRequests => 
-        prevRequests.map(req => 
-          req._id === requestId 
+      setRequests(prevRequests =>
+        prevRequests.map(req =>
+          req._id === requestId
             ? {
-                ...req, 
+                ...req,
                 status: 'approved',
                 managerId: { _id: 'currentUser', name: 'Current Manager' },
                 requestData: updatedData.requestData // Cập nhật dữ liệu mới
-              } 
+              }
             : req
         )
       );
-      
+
       toast.success('Yêu cầu đã được phê duyệt thành công!');
       setSelectedRequest(null);
     } catch (err) {
@@ -131,19 +131,16 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
     try {
       setIsLoading(true);
       await updateApprovalRequest(requestId, 'rejected', rejectionReason);
-      
+
       // Cập nhật trạng thái trong state local
-      setRequests(prevRequests => 
-        prevRequests.map(req => 
-          req._id === requestId 
-            ? {...req, 
-               status: 'rejected', 
-               rejectionReason: rejectionReason,
-               managerId: { _id: 'currentUser', name: 'Current Manager' }} 
+      setRequests(prevRequests =>
+        prevRequests.map(req =>
+          req._id === requestId
+            ? { ...req, status: 'rejected', rejectionReason: rejectionReason, managerId: { _id: 'currentUser', name: 'Current Manager' } }
             : req
         )
       );
-      
+
       toast.success('Đã từ chối yêu cầu thành công!');
       setSelectedRequest(null);
       setRejectionReason('');
@@ -191,41 +188,41 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
 
   const getYoutubeIdFromUrl = (url: string): string => {
     if (!url) return '';
-    
+
     // Xử lý URLs dạng youtu.be
     if (url.includes('youtu.be/')) {
       return url.split('youtu.be/')[1].split('?')[0];
     }
-    
+
     // Xử lý URLs dạng youtube.com/watch?v=
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
-    
+
     return (match && match[2].length === 11) ? match[2] : '';
   };
 
   const parsePersonList = (data: any): string[] => {
     if (!data) return [];
-    
+
     // Nếu là mảng, trả về mảng đã được xử lý
     if (Array.isArray(data)) {
       return data.map(item => typeof item === 'string' ? item.trim() : String(item)).filter(Boolean);
     }
-    
+
     // Nếu là chuỗi
     if (typeof data === 'string') {
       // Xóa tất cả dấu ngoặc vuông và ngoặc kép
       const cleanedString = data.replace(/^\[|\]$|"/g, '');
-      
+
       // Nếu chuỗi rỗng sau khi xóa
       if (!cleanedString.trim()) return [];
-      
+
       // Tách theo dấu phẩy và loại bỏ khoảng trắng
       return cleanedString.split(',')
         .map(item => item.trim())
         .filter(Boolean);
     }
-    
+
     return [];
   };
 
@@ -258,7 +255,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                   <option value="screening">Lịch Chiếu</option>
                 </select>
               )}
-              
+
               {/* Bộ lọc theo trạng thái - vẫn giữ lại */}
               <select
                 value={filterStatus}
@@ -270,7 +267,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                 <option value="approved">Đã Duyệt</option>
                 <option value="rejected">Từ Chối</option>
               </select>
-              
+
               <button
                 onClick={() => fetchApprovalRequests(true)}
                 className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"
@@ -286,13 +283,13 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             )} */}
-            
+
             {isLoading && !selectedRequest && (
               <div className="text-center py-1 text-sm text-blue-600">
                 Đang cập nhật...
               </div>
             )}
-            
+
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -425,7 +422,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
               {/* Nội dung yêu cầu - hiển thị theo loại */}
               <div className="mb-4">
                 <h4 className="text-md font-medium text-gray-700 mb-2">Nội Dung Yêu Cầu</h4>
-                
+
                 {selectedRequest.type === 'movie' && selectedRequest.requestData && (
                   <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -455,7 +452,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                           <div>
                             <span className="text-sm font-medium text-gray-500">Trạng thái chiếu:</span>
                             <span className="text-sm ml-2">
-                              {selectedRequest.requestData.showingStatus === 'coming-soon' ? 'Sắp chiếu' : 
+                              {selectedRequest.requestData.showingStatus === 'coming-soon' ? 'Sắp chiếu' :
                                selectedRequest.requestData.showingStatus === 'now-showing' ? 'Đang chiếu' : 'Đã kết thúc'}
                             </span>
                           </div>
@@ -465,19 +462,19 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div>
                         <h5 className="font-medium text-gray-700">Ảnh Poster</h5>
                         {selectedRequest.requestData.posterUrl && (
                           <div className="mt-2">
-                            <img 
-                              src={selectedRequest.requestData.posterUrl} 
-                              alt="Poster" 
+                            <img
+                              src={selectedRequest.requestData.posterUrl}
+                              alt="Poster"
                               className="w-full max-h-40 object-contain rounded-md"
                             />
                           </div>
                         )}
-                        
+
                         <h5 className="font-medium text-gray-700 mt-4">Trailer</h5>
                         {selectedRequest.requestData.trailerUrl && (
                           <div className="mt-2">
@@ -495,12 +492,12 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="mt-4">
                       <h5 className="font-medium text-gray-700">Mô Tả</h5>
                       <p className="text-sm mt-2">{selectedRequest.requestData.description}</p>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       <div>
                         <h5 className="font-medium text-gray-700">Đạo Diễn</h5>
@@ -515,7 +512,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                           )}
                         </div>
                       </div>
-                      
+
                       <div>
                         <h5 className="font-medium text-gray-700">Diễn Viên</h5>
                         <div className="flex flex-wrap gap-2 mt-2">
@@ -532,7 +529,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                     </div>
                   </div>
                 )}
-                
+
                 {selectedRequest.type === 'screening' && selectedRequest.requestData && (
                   <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -551,11 +548,15 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                         </div>
                         <div className="mb-2">
                           <span className="font-medium text-gray-500">Thời gian bắt đầu:</span>
-                          <span className="ml-2">{new Date(selectedRequest.requestData.startTime).toLocaleString('en-US', { timeZone: 'UTC' })}</span>
+                          <span className="ml-2">
+                            {new Date(selectedRequest.requestData.startTime).toLocaleString('vi-VN', { hour12: false })}
+                          </span>
                         </div>
                         <div className="mb-2">
                           <span className="font-medium text-gray-500">Thời gian kết thúc:</span>
-                          <span className="ml-2">{new Date(selectedRequest.requestData.endTime).toLocaleString('en-US', { timeZone: 'UTC' })}</span>
+                          <span className="ml-2">
+                            {new Date(selectedRequest.requestData.endTime).toLocaleString('vi-VN', { hour12: false })}
+                          </span>
                         </div>
                         <div className="mb-2">
                           <span className="font-medium text-gray-500">Giá vé:</span>
@@ -615,14 +616,14 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                           <div>
                             <span className="text-sm font-medium text-gray-500">Giá trị:</span>
                             <span className="text-sm ml-2">
-                              {selectedRequest.requestData.type === 'percent' 
-                                ? `${selectedRequest.requestData.value}%` 
+                              {selectedRequest.requestData.type === 'percent'
+                                ? `${selectedRequest.requestData.value}%`
                                 : `${selectedRequest.requestData.value.toLocaleString('vi-VN')}đ`}
                             </span>
                           </div>
                         </div>
                       </div>
-                      
+
                       <div>
                         <h5 className="font-medium text-gray-700">Thời Gian</h5>
                         <div className="mt-2 space-y-2">
@@ -641,7 +642,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="mt-4">
                       <h5 className="font-medium text-gray-700">Mô Tả</h5>
                       <p className="text-sm mt-2">{selectedRequest.requestData.description}</p>
@@ -694,4 +695,4 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
   );
 };
 
-export default React.memo(ManagerDashboard); 
+export default React.memo(ManagerDashboard);
