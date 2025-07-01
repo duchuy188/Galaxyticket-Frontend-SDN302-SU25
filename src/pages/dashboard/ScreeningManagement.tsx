@@ -245,7 +245,10 @@ const ScreeningManagement: React.FC = () => {
               >
                 <option value="">Chọn phòng</option>
                 {rooms
-                  .filter(r => (typeof r.theaterId === 'object' ? r.theaterId._id : r.theaterId) === form.theaterId)
+                  .filter(r => {
+                    if (!r.theaterId) return false;
+                    return (typeof r.theaterId === 'object' ? r.theaterId._id : r.theaterId) === form.theaterId;
+                  })
                   .map(r => (
                     <option key={r._id} value={r._id}>{r.name}</option>
                 ))}
@@ -287,10 +290,16 @@ const ScreeningManagement: React.FC = () => {
                       selectedDate.getMonth() === now.getMonth() &&
                       selectedDate.getDate() === now.getDate()
                     ) {
-                      // Nếu là hôm nay, minTime là thời điểm hiện tại (làm tròn xuống 15 phút, nhưng không trước 8h)
+                      // Nếu là hôm nay, minTime là thời điểm hiện tại (làm tròn lên 15 phút tiếp theo, nhưng không trước 8h)
                       const min = new Date();
                       min.setSeconds(0, 0);
-                      min.setMinutes(Math.floor(min.getMinutes() / 15) * 15);
+                      const minutes = min.getMinutes();
+                      const roundedMinutes = Math.ceil(minutes / 15) * 15;
+                      if (roundedMinutes === 60) {
+                        min.setHours(min.getHours() + 1, 0, 0, 0);
+                      } else {
+                        min.setMinutes(roundedMinutes, 0, 0);
+                      }
                       if (min.getHours() < 8) min.setHours(8, 0, 0, 0);
                       return min;
                     }
