@@ -138,11 +138,19 @@ const BookingHistory: React.FC = () => {
                         <p className="text-gray-600 text-sm mb-1">Ngày & Giờ</p>
                         <p className="font-semibold text-lg">
                           {booking.screeningId?.startTime
-                            ? `${formatDateDMY(booking.screeningId.startTime)} lúc ${booking.screeningId.startTime.slice(11, 16)}`
+                            ? `${new Date(booking.screeningId.startTime).toLocaleDateString('vi-VN')} lúc ${new Date(booking.screeningId.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}`
                             : booking.screeningTime
-                              ? `${formatDateDMY(booking.screeningTime)} lúc ${booking.screeningTime.slice(11, 16)}`
+                              ? (() => {
+                                  const d = new Date(booking.screeningTime);
+                                  if (isNaN(d.getTime())) return 'N/A';
+                                  return `${d.toLocaleDateString('vi-VN')} lúc ${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+                                })()
                               : 'N/A'}
                         </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600 text-sm mb-1">Rạp chiếu</p>
+                        <p className="font-medium">{booking.screeningId?.roomId?.theaterName || booking.theaterName || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-gray-600 text-sm mb-1">Phòng chiếu</p>
@@ -154,7 +162,7 @@ const BookingHistory: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-gray-600 text-sm mb-1">Tổng tiền</p>
-                        <p className="font-bold text-lg">{booking.totalPrice?.toLocaleString('vi-VN') || 'N/A'} VND</p>
+                        <p className="font-bold text-lg">{booking.totalPrice?.toLocaleString('vi-VN') || 'N/A'} đ</p>
                       </div>
                       <div>
                         <p className="text-gray-600 text-sm mb-1">Ngày đặt chỗ</p>

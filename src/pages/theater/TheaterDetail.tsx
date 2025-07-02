@@ -242,7 +242,7 @@ const TheaterDetail: React.FC = () => {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center mb-4">
               <div className="w-1 h-6 bg-blue-600 rounded-full mr-3"></div>
-              <h2 className="text-xl font-bold text-[#2D3748]">About This Theater</h2>
+              <h2 className="text-xl font-bold text-[#2D3748]">Thông tin về rạp</h2>
             </div>
             <p className="text-gray-600 leading-relaxed">{theater.description}</p>
           </div>

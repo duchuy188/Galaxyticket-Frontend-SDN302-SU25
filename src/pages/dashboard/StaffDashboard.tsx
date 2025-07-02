@@ -157,8 +157,8 @@ const StaffDashboard: React.FC = () => {
         setMovies(data);
         setLocalMovies(data);
       } catch (err) {
-        setError('Failed to fetch movies');
-        toast.error('Failed to fetch movies');
+        setError('Không thể tải phim');
+        toast.error('Không thể tải phim');
       } finally {
         setIsLoading(false);
       }
@@ -219,15 +219,15 @@ const StaffDashboard: React.FC = () => {
   };
 
   const handleDeleteMovie = async (movieId: string) => {
-    if (!window.confirm('Are you sure you want to delete this movie?')) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa phim này không?')) return;
     
     try {
       setIsLoading(true);
       await deleteMovie(movieId);
       setMovies(movies.filter(movie => movie._id !== movieId));
-      toast.success('Movie deleted successfully!');
+      toast.success('Xóa phim thành công!');
     } catch (err) {
-      toast.error('Failed to delete movie');
+      toast.error('Xóa phim thất bại');
     } finally {
       setIsLoading(false);
     }
@@ -464,50 +464,47 @@ const StaffDashboard: React.FC = () => {
     <div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-2">Total Movies</h3>
+          <h3 className="text-lg font-semibold mb-2">Tổng phim</h3>
           <p className="text-3xl font-bold">{movies.length}</p>
           <button className="mt-4 text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center" onClick={() => navigate('/staff/movies')}>
             <PlusIcon size={16} className="mr-1" />
-            Add New Movie
+            Tạo phim mới
           </button>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-2">Active Screenings</h3>
+          <h3 className="text-lg font-semibold mb-2">Suất chiếu</h3>
           <p className="text-3xl font-bold">{showtimes.length}</p>
           <button className="mt-4 text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center" onClick={() => navigate('/staff/screenings')}>
             <PlusIcon size={16} className="mr-1" />
-            Add New Screening
+            Tạo suất chiếu mới
           </button>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-2">Active Promotions</h3>
+          <h3 className="text-lg font-semibold mb-2">Mã khuyến mãi</h3>
           <p className="text-3xl font-bold">3</p>
           <button className="mt-4 text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center" onClick={() => navigate('/staff/promotions')}>
             <TicketIcon size={16} className="mr-1" />
-            Manage Promotions
+            Tạo mã khuyến mãi mới
           </button>
         </div>
       </div>
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h3 className="text-lg font-semibold mb-4">Now Showing Movies</h3>
+        <h3 className="text-lg font-semibold mb-4">Phim Đang Chiếu</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Title
+                  Tên phim
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Genre
+                  Thể loại
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Duration
+                  Thời lượng
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Release Date
-                </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  Ngày khởi chiếu
                 </th>
               </tr>
             </thead>
@@ -543,115 +540,9 @@ const StaffDashboard: React.FC = () => {
                         {new Date(movie.releaseDate).toLocaleDateString('vi-VN')}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          className="group relative p-2 hover:bg-blue-50 rounded-full"
-                          onClick={() => handleViewMovie(movie)}
-                        >
-                          <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2">
-                            Xem chi tiết
-                          </span>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-
-                        <button 
-                          className="group relative p-2 hover:bg-blue-50 rounded-full"
-                          onClick={() => handleEditMovie(movie)}
-                        >
-                          <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2">
-                            Chỉnh sửa
-                          </span>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                          </svg>
-                        </button>
-
-                        <button 
-                          className="group relative p-2 hover:bg-red-50 rounded-full"
-                          onClick={() => handleDeleteMovie(movie._id)}
-                        >
-                          <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2">
-                            Xóa
-                          </span>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
                   </tr>)}
             </tbody>
           </table>
-        </div>
-      </div>
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Upcoming Screenings</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Movie
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Time
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Theater
-                </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {showtimes.slice(0, 5).map(showtime => {
-                const movieData = movies.find(m => m._id === showtime.movieId);
-                return <tr key={showtime.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {movieData?.title || 'Unknown Movie'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          {showtime.date}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          {showtime.time}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          {showtime.theater}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onClick={() => handleEditShowtime(showtime)} className="text-blue-600 hover:text-blue-900 mr-3">
-                          Edit
-                        </button>
-                        <button onClick={() => handleEditSeatLayout(showtime.id)} className="text-green-600 hover:text-green-900">
-                          Seats
-                        </button>
-                      </td>
-                    </tr>;
-              })}
-            </tbody>
-          </table>
-          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-            <button className="text-sm font-medium text-blue-600 hover:text-blue-500" onClick={() => navigate('/staff/screenings')}>
-              View All Screenings
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -671,7 +562,7 @@ const StaffDashboard: React.FC = () => {
       )}
 
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Movie Management</h2>
+        <h2 className="text-2xl font-bold">Quản Lý Phim</h2>
         <div className="flex items-center gap-4">
           <select 
             value={showingStatusFilter}
@@ -764,14 +655,10 @@ const StaffDashboard: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                    ${movie.showingStatus === 'now-showing' ? 'bg-green-100 text-green-800' : 
-                      movie.showingStatus === 'coming-soon' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'}`}
-                  >
+                  <div className="text-sm text-gray-500">
                     {movie.showingStatus === 'now-showing' ? 'Đang Chiếu' : 
                      movie.showingStatus === 'coming-soon' ? 'Sắp Chiếu' : 'Đã Kết Thúc'}
-                  </span>
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-2">
@@ -1148,13 +1035,13 @@ const StaffDashboard: React.FC = () => {
                             if (file) {
                               // Validate file size (5MB limit)
                               if (file.size > 5 * 1024 * 1024) {
-                                setUploadError('File size must be less than 5MB');
+                                setUploadError('Kích thước tệp phải nhỏ hơn 5MB');
                                 return;
                               }
 
                               // Validate file type
                               if (!file.type.startsWith('image/')) {
-                                setUploadError('Only image files are allowed');
+                                setUploadError('Chỉ cho phép tệp hình ảnh');
                                 return;
                               }
 
@@ -1177,7 +1064,7 @@ const StaffDashboard: React.FC = () => {
                           {uploadError ? (
                             <p className="text-xs text-red-500">{uploadError}</p>
                           ) : (
-                            <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                            <p className="text-xs text-gray-500">PNG, JPG, GIF tối đa 5MB</p>
                           )}
                         </div>
                       </div>
@@ -1560,7 +1447,8 @@ const StaffDashboard: React.FC = () => {
                 </p>
                 <p className="text-gray-700">
                   <span className="font-medium">Showtime:</span>{' '}
-                  {editingSeatLayout.date} at {editingSeatLayout.time},{' '}
+                  {editingSeatLayout.date} at {editingSeatLayout.time},
+                  {' '}
                   {editingSeatLayout.theater}
                 </p>
               </div>
@@ -1785,7 +1673,7 @@ const StaffDashboard: React.FC = () => {
 
   return <div>
       <ToastContainer />
-      <h1 className="text-3xl font-bold mb-6">Staff Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-6">Bảng Điều Khiển Nhân Viên</h1>
       {isMainDashboard && renderMainDashboard()}
       {isMovieManagement && renderMovieManagement()}
       {isScreeningManagement && renderScreeningManagement()}
@@ -1801,6 +1689,7 @@ const getYouTubeId = (url: string) => {
   return (match && match[2].length === 11) ? match[2] : null;
 };
 
+// Hàm uploadPoster để tải ảnh poster lên server
 const uploadPoster = async (file: File): Promise<string> => {
   const formData = new FormData();
   formData.append('file', file);
@@ -1811,7 +1700,7 @@ const uploadPoster = async (file: File): Promise<string> => {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to upload image');
+    throw new Error('Tải ảnh lên thất bại');
   }
 
   const data = await response.json();

@@ -28,61 +28,61 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   }
   const adminNavItems = [
     {
-      label: 'Dashboard',
+      label: 'Bảng điều khiển',
       path: `${basePath}`,
       icon: <LayoutDashboardIcon size={20} />,
     },
     {
-      label: 'User Management',
+      label: 'Quản lý người dùng',
       path: `${basePath}/users`,
       icon: <UsersIcon size={20} />,
     },
     {
-      label: 'Revenue Reports',
+      label: 'Báo cáo doanh thu',
       path: `${basePath}/reports`,
       icon: <CreditCardIcon size={20} />,
     },
   ]
   const staffNavItems = [
     {
-      label: 'Dashboard',
+      label: 'Bảng điều khiển',
       path: `${basePath}`,
       icon: <LayoutDashboardIcon size={20} />,
     },
     {
-      label: 'Movie Management',
+      label: 'Quản lý phim',
       path: `${basePath}/movies`,
       icon: <FilmIcon size={20} />,
     },
     {
-      label: 'Screening Management',
+      label: 'Quản lý suất chiếu',
       path: `${basePath}/screenings`,
       icon: <CalendarIcon size={20} />,
     },
     {
-      label: 'Theater Management',
+      label: 'Quản lý rạp',
       path: `${basePath}/theaters`,
       icon: <HomeIcon size={20} />,
     },
     {
-      label: 'Promotion Management',
+      label: 'Quản lý khuyến mãi',
       path: `${basePath}/promotions`,
       icon: <TagIcon size={20} />,
     },
   ]
   const managerNavItems = [
     {
-      label: 'Movie Requests',
+      label: 'Yêu cầu phim',
       path: `${basePath}`,
       icon: <FilmIcon size={20} />,
     },
     {
-      label: 'Promotion Requests',
+      label: 'Yêu cầu khuyến mãi',
       path: `${basePath}/promotions`,
       icon: <TagIcon size={20} />,
     },
     {
-      label: 'Showtime Requests',
+      label: 'Yêu cầu suất chiếu',
       path: `${basePath}/showtimes`,
       icon: <CalendarIcon size={20} />,
     },
@@ -94,15 +94,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       : staffNavItems
   return (
     <div className="flex h-screen">
-      {/* Sidebar */}
+      {/* Thanh bên */}
       <div className="w-64 bg-gray-800 text-white h-full flex flex-col">
         <div className="p-4 flex-1">
           <div className="mb-8">
             <h2 className="text-2xl font-bold">
-              {isAdmin ? 'Admin' : isManager ? 'Manager' : 'Staff'} Panel
+              {isAdmin ? 'Bảng quản trị viên' : isManager ? 'Bảng quản lý' : 'Bảng nhân viên'}
             </h2>
             <p className="text-gray-400 text-sm mt-1">
-              Welcome, {user?.fullName}
+              Xin chào, {user?.fullName}
             </p>
           </div>
           <nav>
@@ -127,11 +127,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             className="flex items-center space-x-2 text-gray-300 hover:text-white w-full p-2 rounded-lg hover:bg-gray-700 transition-colors"
           >
             <LogOutIcon size={20} />
-            <span>Logout</span>
+            <span>Đăng xuất</span>
           </button>
         </div>
       </div>
-      {/* Main Content */}
+      {/* Nội dung chính */}
       <div className="flex-1 overflow-auto">
         <div className="p-6 bg-gray-100 min-h-full">{children}</div>
       </div>

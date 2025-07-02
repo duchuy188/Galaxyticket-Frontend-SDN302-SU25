@@ -10,6 +10,8 @@ const TheaterManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
+  const [theaterToDelete, setTheaterToDelete] = useState<Theater | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     fetchTheaters();
@@ -42,24 +44,31 @@ const TheaterManagement: React.FC = () => {
     setEditingTheater({ ...theater });
   };
 
-  const handleDeleteTheater = async (theaterId: string) => {
-    if (!window.confirm('Bạn có chắc muốn xóa rạp này?')) return;
-    
+  const handleDeleteClick = (theater: Theater) => {
+    setTheaterToDelete(theater);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!theaterToDelete) return;
     try {
       setIsLoading(true);
-      await deleteTheater(theaterId);
-      
-      // Gọi lại API để lấy danh sách mới nhất từ server
-      // thay vì chỉ xóa trong state
+      await deleteTheater(theaterToDelete._id);
       await fetchTheaters();
-      
       toast.success('Xóa rạp thành công!');
     } catch (err) {
       toast.error('Không thể xóa rạp');
       console.error('Error deleting theater:', err);
     } finally {
       setIsLoading(false);
+      setShowDeleteModal(false);
+      setTheaterToDelete(null);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setTheaterToDelete(null);
   };
 
   const handleSaveTheater = async (e: React.FormEvent) => {
@@ -193,7 +202,7 @@ const TheaterManagement: React.FC = () => {
                     </button>
                     <button 
                       className="text-red-600 hover:text-red-900"
-                      onClick={() => handleDeleteTheater(theater._id)}
+                      onClick={() => handleDeleteClick(theater)}
                     >
                       Xóa
                     </button>
@@ -386,6 +395,32 @@ const TheaterManagement: React.FC = () => {
                   <div className="absolute inset-0 bg-gray-100 bg-opacity-40 pointer-events-auto cursor-not-allowed z-10" />
                 )}
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && theaterToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold mb-4 text-gray-900">Xác nhận xóa rạp</h3>
+            <p className="mb-6 text-gray-700">Bạn có chắc muốn xóa rạp <span className="font-semibold">{theaterToDelete.name}</span>?</p>
+            <div className="flex justify-end space-x-4">
+              <button
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                onClick={handleCancelDelete}
+                disabled={isLoading}
+              >
+                Hủy
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                onClick={handleConfirmDelete}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Đang xóa...' : 'Xóa'}
+              </button>
             </div>
           </div>
         </div>

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { CheckCircleIcon, PrinterIcon, MailIcon } from 'lucide-react';
 import { updateBookingStatus, sendTicketEmail, Booking, BookingResponse, updateBooking } from '../../utils/booking';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 type ConfirmationDetails = {
   bookingId: string;
@@ -73,12 +75,12 @@ const BookingConfirmation: React.FC = () => {
         const updatedBooking = updatedBookingResponse.booking;
         const confirmedDetails: ConfirmationDetails = {
           bookingId: updatedBooking._id,
-          movieTitle: updatedBooking.movieTitle || storedConfirmationDetails?.movieTitle,
-          moviePoster: updatedBooking.moviePoster || storedConfirmationDetails?.moviePoster,
-          screeningTime: updatedBooking.screeningTime || storedConfirmationDetails?.screeningTime,
-          theaterName: updatedBooking.theaterName || storedConfirmationDetails?.theaterName,
-          roomName: updatedBooking.roomName || storedConfirmationDetails?.roomName,
-          seatNumbers: Array.isArray(updatedBooking.seatNumbers) ? updatedBooking.seatNumbers : [],
+          movieTitle: storedConfirmationDetails?.movieTitle || updatedBooking.movieTitle,
+          moviePoster: storedConfirmationDetails?.moviePoster || updatedBooking.moviePoster,
+          screeningTime: storedConfirmationDetails?.screeningTime?.replace(' at ', ' ') || updatedBooking.screeningTime,
+          theaterName: storedConfirmationDetails?.theaterName || updatedBooking.theaterName,
+          roomName: storedConfirmationDetails?.roomName || updatedBooking.roomName,
+          seatNumbers: Array.isArray(updatedBooking.seatNumbers) ? updatedBooking.seatNumbers : (storedConfirmationDetails?.seatNumbers || []),
           totalPrice: updatedBooking.totalPrice || storedConfirmationDetails?.totalPrice || 0,
           basePrice: storedConfirmationDetails?.basePrice || updatedBooking.basePrice,
           discount: storedConfirmationDetails?.discount || updatedBooking.discount || 0,
@@ -89,6 +91,10 @@ const BookingConfirmation: React.FC = () => {
         setConfirmationDetails(confirmedDetails);
         sessionStorage.removeItem('currentBookingId');
         sessionStorage.removeItem('confirmationDetails');
+        // Hiển thị toast khi đặt chỗ thành công
+        if (responseCode === '00') {
+          toast.success('Đặt chỗ thành công!');
+        }
       } catch (err) {
         setError('Không thể xác nhận đặt chỗ. Vui lòng thử lại.');
       } finally {
@@ -164,12 +170,22 @@ const BookingConfirmation: React.FC = () => {
 
   const formatDateVN = (dateString: string) => {
     if (!dateString) return 'Ngày không hợp lệ';
-    // Hỗ trợ cả dạng có T và không có T
-    const [datePart, timePart] = dateString.split(/[T ]/);
-    if (!datePart || !timePart) return 'Ngày không hợp lệ';
-    const [year, month, day] = datePart.split('-');
-    const [hour, minute] = timePart.split(':');
-    return `${parseInt(day)}/${parseInt(month)}/${year} lúc ${hour}:${minute}`;
+    let date: Date | null = null;
+    if (dateString.includes('T')) {
+      date = new Date(dateString);
+    } else if (/^\d{4}-\d{2}-\d{2} [0-2]\d:[0-5]\d$/.test(dateString)) {
+      const [datePart, timePart] = dateString.split(' ');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute] = timePart.split(':').map(Number);
+      date = new Date(year, month - 1, day, hour, minute);
+    } else if (/^\d{2}\/\d{2}\/\d{4} lúc [0-2]\d:[0-5]\d$/.test(dateString)) {
+      const [dmy, hm] = dateString.split(' lúc ');
+      const [day, month, year] = dmy.split('/').map(Number);
+      const [hour, minute] = hm.split(':').map(Number);
+      date = new Date(year, month - 1, day, hour, minute);
+    }
+    if (!date || isNaN(date.getTime())) return 'Ngày không hợp lệ';
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()} lúc ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
   };
 
   const handleEmailTicket = async () => {
@@ -181,12 +197,12 @@ const BookingConfirmation: React.FC = () => {
       const response = await sendTicketEmail(confirmationDetails.bookingId);
 
       if (response.success) {
-        alert('Đã gửi vé qua email thành công!');
+        toast.success('Đã gửi vé qua email thành công!');
       } else {
         throw new Error(response.message || 'Không thể gửi email');
       }
     } catch (error: any) {
-      alert(error.message || 'Có lỗi xảy ra khi gửi email');
+      toast.error(error.message || 'Có lỗi xảy ra khi gửi email');
       console.error('Lỗi gửi email:', error);
     }
   };
@@ -198,6 +214,7 @@ const BookingConfirmation: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <ToastContainer />
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <div className="text-center mb-8">
@@ -250,21 +267,21 @@ const BookingConfirmation: React.FC = () => {
               <div>
                 <p className="text-gray-600 text-sm">Giá gốc</p>
                 <p className="font-medium">
-                  {((confirmationDetails.basePrice || 0) * seatNumbers.length).toLocaleString('vi-VN')} VND
+                  {((confirmationDetails.basePrice || 0) * seatNumbers.length).toLocaleString('vi-VN')} đ
                 </p>
               </div>
               {(confirmationDetails?.discount || 0) > 0 && (
                 <div>
                   <p className="text-gray-600 text-sm">Giảm giá</p>
                   <p className="font-medium text-green-600">
-                    -{(confirmationDetails?.discount || 0).toLocaleString('vi-VN')} VND
+                    -{(confirmationDetails?.discount || 0).toLocaleString('vi-VN')} đ
                   </p>
                 </div>
               )}
               <div>
                 <p className="text-gray-600 text-sm">Tổng tiền</p>
                 <p className="font-bold text-lg">
-                  {(confirmationDetails.totalPrice || 0).toLocaleString('vi-VN')} VND
+                  {(confirmationDetails.totalPrice || 0).toLocaleString('vi-VN')} đ
                 </p>
               </div>
               <div>

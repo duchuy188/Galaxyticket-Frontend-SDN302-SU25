@@ -7,6 +7,8 @@ import { EditIcon, TrashIcon, EyeIcon, Clock, XCircle, CheckCircle } from 'lucid
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import dayjs from 'dayjs';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const ScreeningManagement: React.FC = () => {
   const [screenings, setScreenings] = useState<Screening[]>([]);
@@ -36,6 +38,7 @@ const ScreeningManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [theaterFilter, setTheaterFilter] = useState<string>('');
   const [roomLoading, setRoomLoading] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const moviesNowShowing = movies.filter(m => m.showingStatus === 'now-showing');
 
@@ -80,11 +83,24 @@ const ScreeningManagement: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa suất chiếu này?')) {
-      await deleteScreening(id);
-      fetchScreenings();
+    setDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteId) {
+      try {
+        await deleteScreening(deleteId);
+        toast.success('Xóa suất chiếu thành công!');
+        fetchScreenings();
+      } catch (err: any) {
+        toast.error('Xóa suất chiếu thất bại: ' + (err?.message || 'Lỗi không xác định'));
+      } finally {
+        setDeleteId(null);
+      }
     }
   };
+
+  const cancelDelete = () => setDeleteId(null);
 
   const handleEdit = (screening: Screening) => {
     setEditingScreening(screening);
@@ -92,8 +108,8 @@ const ScreeningManagement: React.FC = () => {
       movieId: screening.movieId?._id || '',
       roomId: screening.roomId?._id || '',
       theaterId: screening.theaterId?._id || '',
-      startTime: screening.startTime ? screening.startTime.slice(0, 16) : '',
-      endTime: screening.endTime ? screening.endTime.slice(0, 16) : '',
+      startTime: screening.startTime || '', // Giữ nguyên ISO string
+      endTime: screening.endTime || '',
       ticketPrice: screening.ticketPrice,
     });
     setShowModal(true);
@@ -104,16 +120,16 @@ const ScreeningManagement: React.FC = () => {
     try {
       if (editingScreening) {
         await updateScreening(editingScreening._id, form);
-        alert('Cập nhật suất chiếu thành công!');
+        toast.success('Cập nhật suất chiếu thành công!');
       } else {
         await createScreening(form);
-        alert('Tạo suất chiếu thành công!');
+        toast.success('Tạo suất chiếu thành công!');
       }
       setShowModal(false);
       setEditingScreening(null);
       fetchScreenings();
     } catch (err: any) {
-      alert((editingScreening ? 'Cập nhật' : 'Tạo') + ' suất chiếu thất bại: ' + (err?.message || 'Lỗi không xác định'));
+      toast.error((editingScreening ? 'Cập nhật' : 'Tạo') + ' suất chiếu thất bại: ' + (err?.message || 'Lỗi không xác định'));
     }
   };
 
@@ -129,9 +145,9 @@ const ScreeningManagement: React.FC = () => {
       setShowRoomModal(false);
       setRoomForm({ name: '', theaterId: '', totalSeats: 0 });
       fetchRooms();
-      alert('Tạo phòng chiếu thành công!');
+      toast.success('Tạo phòng chiếu thành công!');
     } catch (err: any) {
-      alert('Tạo phòng chiếu thất bại: ' + (err?.message || 'Lỗi không xác định'));
+      toast.error('Tạo phòng chiếu thất bại: ' + (err?.message || 'Lỗi không xác định'));
     } finally {
       setRoomLoading(false);
     }
@@ -275,7 +291,7 @@ const ScreeningManagement: React.FC = () => {
                 showTimeSelect
                 timeFormat="HH:mm"
                 timeIntervals={15}
-                dateFormat="yyyy-MM-dd HH:mm"
+                dateFormat="dd/MM/yyyy HH:mm" // Đổi sang định dạng dd/MM/yyyy
                 timeCaption="Giờ (24h)"
                 className="w-full border rounded px-2 py-1"
                 placeholderText="Chọn thời gian bắt đầu"
@@ -374,11 +390,10 @@ const ScreeningManagement: React.FC = () => {
               <label>Số ghế:</label>
               <input
                 type="number"
-                min={1}
                 className="w-full border rounded px-2 py-1"
-                value={roomForm.totalSeats}
-                onChange={e => setRoomForm({ ...roomForm, totalSeats: Number(e.target.value) })}
-                required
+                value={64}
+                readOnly
+                disabled
               />
             </div>
             <div className="flex justify-end gap-2 mt-4">
@@ -502,6 +517,29 @@ const ScreeningManagement: React.FC = () => {
           </div>
         </div>
       )}
+      {deleteId && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-md min-w-[350px]">
+            <h3 className="text-lg font-bold mb-4 text-red-600">Xác nhận xóa</h3>
+            <p>Bạn có chắc chắn muốn xóa suất chiếu này?</p>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                className="px-4 py-2 bg-gray-400 text-white rounded"
+                onClick={cancelDelete}
+              >
+                Hủy
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded"
+                onClick={confirmDelete}
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <ToastContainer />
     </div>
   );
 };

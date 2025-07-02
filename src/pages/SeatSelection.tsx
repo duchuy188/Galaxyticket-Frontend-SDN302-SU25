@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import SeatGrid from '../components/SeatGrid';
 import { getTheaterById } from '../utils/theater';
 import { createBooking, updateBooking, cancelBooking } from '../utils/booking';
@@ -170,9 +172,23 @@ const SeatSelection: React.FC = () => {
     });
   };
 
+  // Thay thế setError bằng toast.error
+  const showError = (message: string) => {
+    toast.error(message, { position: 'top-right', autoClose: 3000 });
+  };
+
+  // Thay thế setPromoMessage bằng toast.success/toast.error
+  const showPromoMessage = (type: 'success' | 'error', message: string) => {
+    if (type === 'success') {
+      toast.success(message, { position: 'top-right', autoClose: 3000 });
+    } else {
+      toast.error(message, { position: 'top-right', autoClose: 3000 });
+    }
+  };
+
   const handleApplyPromoCode = async () => {
     if (!promoCode || selectedSeats.length === 0 || !screeningDetails) {
-      setPromoMessage({ type: 'error', message: 'Vui lòng chọn ít nhất một ghế và nhập mã khuyến mãi.' });
+      showPromoMessage('error', 'Vui lòng chọn ít nhất một ghế và nhập mã khuyến mãi.');
       return;
     }
 
@@ -182,9 +198,9 @@ const SeatSelection: React.FC = () => {
       if (validationResponse.isValid && validationResponse.discountedPrice !== undefined) {
         setTotalPrice(Number(validationResponse.discountedPrice));
         setAppliedPromoCode(promoCode);
-        setPromoMessage({ type: 'success', message: validationResponse.message || 'Mã khuyến mãi đã được áp dụng!' });
+        showPromoMessage('success', validationResponse.message || 'Mã khuyến mãi đã được áp dụng!');
       } else {
-        setPromoMessage({ type: 'error', message: validationResponse.message || 'Mã khuyến mãi không hợp lệ.' });
+        showPromoMessage('error', 'Mã khuyến mãi không hợp lệ hoặc đã hết hạn.');
         if (appliedPromoCode) {
           setTotalPrice(Number(currentTicketPrice) * selectedSeats.length);
           setAppliedPromoCode(null);
@@ -192,7 +208,7 @@ const SeatSelection: React.FC = () => {
       }
     } catch (error) {
       console.error('Error applying promo code:', error);
-      setPromoMessage({ type: 'error', message: 'Đã xảy ra lỗi khi áp dụng mã khuyến mãi.' });
+      showPromoMessage('error', 'Đã xảy ra lỗi khi áp dụng mã khuyến mãi.');
       if (appliedPromoCode) {
         setTotalPrice(Number(currentTicketPrice) * selectedSeats.length);
         setAppliedPromoCode(null);
@@ -202,11 +218,11 @@ const SeatSelection: React.FC = () => {
 
   const handleUpdateAndReturnToCheckout = async () => {
     if (!bookingId) {
-      setError('Không tìm thấy mã đặt vé để cập nhật.');
+      showError('Không tìm thấy mã đặt vé để cập nhật.');
       return;
     }
     if (selectedSeats.length === 0) {
-      setError('Vui lòng chọn ít nhất một ghế.');
+      showError('Vui lòng chọn ít nhất một ghế.');
       return;
     }
 
@@ -252,7 +268,7 @@ const SeatSelection: React.FC = () => {
 
     } catch (error: any) {
       console.error('Error updating booking:', error);
-      setError(error.message || 'Không thể cập nhật đặt vé.');
+      showError(error.message || 'Không thể cập nhật đặt vé.');
     } finally {
       isProceedingToCheckout.current = false;
     }
@@ -264,7 +280,7 @@ const SeatSelection: React.FC = () => {
     console.log('Selected seats:', selectedSeats); // Log selected seats
 
     if (!user) {
-      setError('Vui lòng đăng nhập để đặt vé');
+      showError('Vui lòng đăng nhập để đặt vé');
       navigate('/signin');
       return;
     }
@@ -274,18 +290,18 @@ const SeatSelection: React.FC = () => {
     console.log('User ID being used:', userId);
 
     if (!userId) {
-      setError('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+      showError('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
       navigate('/signin');
       return;
     }
 
     if (!screeningId) {
-      setError('Không tìm thấy thông tin suất chiếu');
+      showError('Không tìm thấy thông tin suất chiếu');
       return;
     }
 
     if (selectedSeats.length === 0) {
-      setError('Vui lòng chọn ít nhất một ghế');
+      showError('Vui lòng chọn ít nhất một ghế');
       return;
     }
 
@@ -363,14 +379,14 @@ const SeatSelection: React.FC = () => {
         const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi đặt vé. Vui lòng thử lại.';
         
         if (errorMessage.includes('already booked')) {
-          setError('Một số ghế đã được đặt bởi người khác. Vui lòng chọn ghế khác.');
+          showError('Một số ghế đã được đặt bởi người khác. Vui lòng chọn ghế khác.');
           setSelectedSeats([]);
           if (appliedPromoCode) {
             setAppliedPromoCode(null);
             setPromoCode('');
           }
         } else {
-          setError(errorMessage);
+          showError(errorMessage);
         }
         
         // Release the seats if booking failed
@@ -380,7 +396,7 @@ const SeatSelection: React.FC = () => {
       setShowTimer(false);
       console.error('Error creating or proceeding with booking:', error);
       if (error.message?.includes('already booked')) {
-        setError('Một số ghế đã được đặt bởi người khác. Vui lòng chọn ghế khác.');
+        showError('Một số ghế đã được đặt bởi người khác. Vui lòng chọn ghế khác.');
         setSelectedSeats([]);
         if (appliedPromoCode) {
           setAppliedPromoCode(null);
@@ -388,7 +404,7 @@ const SeatSelection: React.FC = () => {
           setPromoMessage(null);
         }
       } else {
-        setError(error.message || 'Không thể tạo đặt vé hoặc xử lý. Vui lòng thử lại.');
+        showError(error.message || 'Không thể tạo đặt vé hoặc xử lý. Vui lòng thử lại.');
       }
     } finally {
       isProceedingToCheckout.current = false;
@@ -407,6 +423,7 @@ const SeatSelection: React.FC = () => {
   };
 
   return <div className="container mx-auto px-4 py-8">
+    <ToastContainer position="top-right" />
     {/* Hiển thị đồng hồ đếm ngược khi cập nhật vé */}
     {isUpdateMode && (
       <div className="flex items-center justify-center mb-6">
@@ -419,19 +436,7 @@ const SeatSelection: React.FC = () => {
         </div>
       </div>
     )}
-    {error && (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-        <p className="mb-2">{error}</p>
-        {error.includes('already booked') && (
-          <button
-            onClick={() => window.location.reload()}
-            className="text-red-700 underline hover:text-red-800"
-          >
-            Làm mới danh sách ghế
-          </button>
-        )}
-      </div>
-    )}
+    {/* Đã chuyển thông báo sang Toastify, không cần hiển thị error/promoMessage ở đây nữa */}
     <div className="bg-white rounded-lg shadow-md p-6 mb-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
@@ -500,19 +505,19 @@ const SeatSelection: React.FC = () => {
           <div className="space-y-2 mb-4">
             <div className="flex justify-between">
               <span>
-                Vé ({selectedSeats.length} x {Number(currentTicketPrice)} VND)
+                Vé ({selectedSeats.length} x {Number(currentTicketPrice)} đ)
               </span>
-              <span>{Number(originalPrice)} VND</span>
+              <span>{Number(originalPrice)} đ</span>
             </div>
             {appliedPromoCode && discountAmount > 0 && (
               <div className="flex justify-between text-green-600">
                 Giảm giá ({Math.round(100 - (totalPrice / originalPrice * 100))}%)
-                <span>-{Math.round(discountAmount)} VND</span>
+                <span>-{Math.round(discountAmount)} đ</span>
               </div>
             )}
             <div className="border-t border-gray-300 pt-2 mt-2 flex justify-between font-bold">
               <span>Tổng cộng</span>
-              <span>{Math.round(totalPrice)} VND</span>
+              <span>{Math.round(totalPrice)} đ</span>
             </div>
           </div>
           {isUpdateMode ? (
