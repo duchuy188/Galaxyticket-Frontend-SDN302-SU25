@@ -80,7 +80,7 @@ export const getAllPromotions = async (status?: string): Promise<ApiResponse<Pro
         if (error.response?.status === 401) {
             throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
         }
-        throw new Error(error.response?.data?.message || 'Failed to fetch promotions');
+        throw new Error(error.response?.data?.message || 'Không thể lấy danh sách khuyến mãi');
     }
 };
 
@@ -93,7 +93,7 @@ export const getPromotionById = async (id: string): Promise<ApiResponse<Promotio
         if (error.response?.status === 401) {
             throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
         }
-        throw new Error(error.response?.data?.message || 'Failed to fetch promotion');
+        throw new Error(error.response?.data?.message || 'Không thể lấy thông tin khuyến mãi');
     }
 };
 
@@ -106,7 +106,10 @@ export const createPromotion = async (promotionData: CreatePromotionData): Promi
         if (error.response?.status === 401) {
             throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
         }
-        throw new Error(error.response?.data?.message || 'Failed to create promotion');
+        if (error.response?.status === 400) {
+            throw new Error(error.response.data.message || 'Dữ liệu không hợp lệ');
+        }
+        throw new Error(error.response?.data?.message || 'Không thể tạo khuyến mãi');
     }
 };
 
@@ -119,11 +122,17 @@ export const updatePromotion = async (id: string, promotionData: Partial<CreateP
         if (error.response?.status === 401) {
             throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
         }
-        throw new Error(error.response?.data?.message || 'Failed to update promotion');
+        if (error.response?.status === 404) {
+            throw new Error('Không tìm thấy khuyến mãi');
+        }
+        if (error.response?.status === 400) {
+            throw new Error(error.response.data.message || 'Dữ liệu không hợp lệ');
+        }
+        throw new Error(error.response?.data?.message || 'Không thể cập nhật khuyến mãi');
     }
 };
 
-// Delete promotion
+// Delete promotion (soft delete)
 export const deletePromotion = async (id: string): Promise<ApiResponse<void>> => {
     try {
         const response = await axiosInstance.delete(`/api/promotions/${id}`);
@@ -132,7 +141,10 @@ export const deletePromotion = async (id: string): Promise<ApiResponse<void>> =>
         if (error.response?.status === 401) {
             throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
         }
-        throw new Error(error.response?.data?.message || 'Failed to delete promotion');
+        if (error.response?.status === 404) {
+            throw new Error('Không tìm thấy khuyến mãi');
+        }
+        throw new Error(error.response?.data?.message || 'Không thể xóa khuyến mãi');
     }
 };
 
@@ -143,12 +155,11 @@ export const validatePromotionCode = async (
     numberOfSeats: number
 ): Promise<PromotionValidationResponse> => {
     try {
-        console.log('Validating promo code:', code, 'with ticketPrice:', ticketPrice, 'and numberOfSeats:', numberOfSeats);
         const response = await axiosInstance.post('/api/promotions/validate', {
             code
         });
 
-        // If the response is not successful, throw an error
+        // If the response is not successful or promotion is not found
         if (!response.data || response.data.message === 'Invalid or expired promotion code') {
             return {
                 isValid: false,
@@ -157,24 +168,20 @@ export const validatePromotionCode = async (
         }
 
         const promotion: Promotion = response.data;
-        console.log('Promotion data from backend:', promotion);
-        console.log('Promotion type:', promotion.type, 'Promotion value:', promotion.value);
 
         // Ensure promotion.value is a valid number
         const promotionValue = typeof promotion.value === 'number' ? promotion.value : parseFloat(promotion.value as any);
         if (isNaN(promotionValue)) {
-            throw new Error('Giá trị khuyến mãi từ backend không phải là số hợp lệ.');
+            throw new Error('Giá trị khuyến mãi không hợp lệ');
         }
 
         let calculatedDiscountedPrice = ticketPrice * numberOfSeats;
-        console.log('Initial calculated price (before discount):', calculatedDiscountedPrice);
 
         if (promotion.type === 'percent') {
             calculatedDiscountedPrice = Math.round(calculatedDiscountedPrice * (1 - promotionValue / 100));
         } else if (promotion.type === 'fixed') {
             calculatedDiscountedPrice = Math.round(Math.max(0, calculatedDiscountedPrice - promotionValue));
         }
-        console.log('Final calculated discounted price:', calculatedDiscountedPrice);
 
         return {
             isValid: true,
@@ -185,7 +192,6 @@ export const validatePromotionCode = async (
         if (error.response?.status === 401) {
             throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
         }
-        console.error('Error validating promotion code:', error);
         return {
             isValid: false,
             message: error.response?.data?.message || 'Mã khuyến mãi không hợp lệ'
