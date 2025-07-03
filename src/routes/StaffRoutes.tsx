@@ -4,6 +4,7 @@ import StaffDashboard from '../pages/dashboard/StaffDashboard';
 import TheaterManagement from '../pages/dashboard/TheaterManagement';
 import ScreeningManagement from '../pages/dashboard/ScreeningManagement';
 import PromotionManager from '../pages/dashboard/PromotionManager';
+import StaffProfile from '../pages/dashboard/StaffProfile';
 
 const StaffRoutes: React.FC = () => {
   return (
@@ -14,6 +15,7 @@ const StaffRoutes: React.FC = () => {
       <Route path="promotions" element={<PromotionManager />} />
       <Route path="theaters" element={<TheaterManagement />} />
       <Route path="*" element={<Navigate to="/staff" replace />} />
+      <Route path="profile" element={<StaffProfile />} />
     </Routes>
   );
 };
