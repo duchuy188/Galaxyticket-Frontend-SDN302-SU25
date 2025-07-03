@@ -56,13 +56,20 @@ export const AppRoutes = () => {
                     <UserPromotions />
                 </PrivateRoute>} />
             </Route>
-
+{/* Admin Profile Route */}
+<Route path="admin/profile" element={
+  <PrivateRoute allowedRoles={['admin']}>
+    <Profile />
+  </PrivateRoute>
+} />
             {/* Admin Dashboard Routes */}
             <Route path="admin/*" element={<PrivateRoute allowedRoles={['admin']}>
                 <DashboardLayout>
                     <AdminDashboard />
+                    
                 </DashboardLayout>
             </PrivateRoute>} />
+            
 
             {/* Manager Dashboard Routes */}
             <Route path="manager/*" element={<PrivateRoute allowedRoles={['manager']}>
