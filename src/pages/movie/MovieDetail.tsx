@@ -24,6 +24,7 @@ const MovieDetail: React.FC = () => {
   const [selectedScreening, setSelectedScreening] = useState<Screening | null>(null);
   const [theaters, setTheaters] = useState<Theater[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [now, setNow] = useState(new Date());
 
   // Fetch movie details
   useEffect(() => {
@@ -92,13 +93,26 @@ const MovieDetail: React.FC = () => {
   // Update selected screening when selections change
   useEffect(() => {
     if (selectedDate && selectedTime && selectedTheater && movie) {
-      const found = screenings.find(
-        s =>
-          s.startTime.startsWith(selectedDate) &&
-          s.startTime.includes(selectedTime) &&
-          (typeof s.theaterId === 'string' ? s.theaterId : s.theaterId?._id) === selectedTheater &&
-          (typeof s.movieId === 'string' ? s.movieId : s.movieId?._id) === movie._id
-      );
+      const found = screenings.find(s => {
+        const screeningDate = s.startTime.split('T')[0];
+        const theaterId = typeof s.theaterId === 'string' ? s.theaterId : s.theaterId?._id;
+        const movieId = typeof s.movieId === 'string' ? s.movieId : s.movieId?._id;
+
+        // Lấy giờ chiếu local giống như ở availableTimes
+        const localTime = new Date(s.startTime).toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+          timeZone: 'Asia/Ho_Chi_Minh'
+        });
+
+        return (
+          screeningDate === selectedDate &&
+          theaterId === selectedTheater &&
+          movieId === movie._id &&
+          localTime === selectedTime
+        );
+      });
       setSelectedScreening(found || null);
     } else {
       setSelectedScreening(null);
@@ -133,11 +147,26 @@ const MovieDetail: React.FC = () => {
         theaterId === selectedTheater &&
         movieId === movie._id
       ) {
-        times.add(s.startTime.split('T')[1].slice(0, 5));
+        // Chuyển sang giờ Việt Nam
+        const localTime = new Date(s.startTime).toLocaleTimeString('vi-VN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+          timeZone: 'Asia/Ho_Chi_Minh'
+        });
+        times.add(localTime);
       }
     });
     return Array.from(times).sort();
-  }, [selectedTheater, selectedDate, movie, screenings]);
+  }, [selectedTheater, selectedDate, movie, screenings, now]);
+
+  // Tự động cập nhật now mỗi 10 giây
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 10000); // 10 giây
+    return () => clearInterval(interval);
+  }, []);
 
   // Convert YouTube URL to embed URL
   const getEmbedUrl = (url: string) => {
@@ -429,16 +458,25 @@ const MovieDetail: React.FC = () => {
                     onChange={e => { setSelectedDate(e.target.value); setSelectedTime(''); }}
                   >
                     <option value="">Chọn ngày chiếu</option>
-                    {availableDates.map(date => (
-                      <option key={date} value={date}>
-                        {new Date(date).toLocaleDateString('vi-VN', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </option>
-                    ))}
+                    {availableDates
+                      .filter(date => {
+                        // Lấy ngày hiện tại ở VN, bỏ phần giờ phút giây
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const dateObj = new Date(date);
+                        dateObj.setHours(0, 0, 0, 0);
+                        return dateObj >= today;
+                      })
+                      .map(date => (
+                        <option key={date} value={date}>
+                          {new Date(date).toLocaleDateString('vi-VN', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </option>
+                      ))}
                   </select>
                 </div>
               )}
@@ -448,18 +486,36 @@ const MovieDetail: React.FC = () => {
                 <div className="mb-6">
                   <label className="block text-gray-700 font-medium mb-2">Chọn suất chiếu</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {availableTimes.map(time => (
-                      <button
-                        key={time}
-                        className={`p-2 rounded-lg transition-all ${selectedTime === time
-                          ? 'bg-red-600 text-white'
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                          }`}
-                        onClick={() => setSelectedTime(time)}
-                      >
-                        {time}
-                      </button>
-                    ))}
+                    {availableTimes
+                      .filter(time => {
+                        if (!selectedDate) return true;
+                        // Lấy ngày hiện tại ở VN
+                        const now = new Date();
+                        const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }); // yyyy-mm-dd
+                        if (selectedDate !== todayStr) return true;
+
+                        // Nếu là hôm nay, chỉ lấy suất chiếu lớn hơn giờ hiện tại
+                        // time dạng "HH:mm"
+                        const [hour, minute] = time.split(':').map(Number);
+                        const showTime = new Date(now);
+                        showTime.setHours(hour, minute, 0, 0);
+
+                        // So sánh với thời gian hiện tại ở VN
+                        const nowVN = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
+                        return showTime > nowVN;
+                      })
+                      .map(time => (
+                        <button
+                          key={time}
+                          className={`p-2 rounded-lg transition-all ${selectedTime === time
+                            ? 'bg-red-600 text-white'
+                            : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                            }`}
+                          onClick={() => setSelectedTime(time)}
+                        >
+                          {time}
+                        </button>
+                      ))}
                   </div>
                 </div>
               )}

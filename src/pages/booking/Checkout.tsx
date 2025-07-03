@@ -6,6 +6,8 @@ import { getRoomById } from '../../utils/room';
 import { getScreeningById } from '../../utils/screening';
 import { createBooking, cancelBooking, updateBooking } from '../../utils/booking';
 import { createPaymentUrl, processPaymentReturn } from '../../utils/vnpay';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 type BookingDetails = {
   movieId: string;
@@ -42,14 +44,16 @@ const Checkout: React.FC = () => {
   const isCreatingBooking = React.useRef(false);
   const bookingIdRef = React.useRef<string | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
+  const [timeLeft, setTimeLeft] = useState(120); // 2 phút = 120 giây
+  const [isExpired, setIsExpired] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
     // Check for update success message
     const successFlag = sessionStorage.getItem('bookingUpdateSuccess');
     if (successFlag) {
-      setUpdateMessage('Cập nhật vé thành công!');
+      toast.success('Cập nhật vé thành công!', { position: 'top-right', autoClose: 3000 });
       sessionStorage.removeItem('bookingUpdateSuccess');
-      setTimeout(() => setUpdateMessage(null), 4000); // Hide after 4 seconds
     }
 
     // Check for VNPay return
@@ -110,6 +114,26 @@ const Checkout: React.FC = () => {
     loadBookingDetails();
   }, []);
 
+  useEffect(() => {
+    // Đếm ngược thời gian giữ ghế
+    if (isExpired) return;
+    if (timeLeft <= 0) {
+      setIsExpired(true);
+      return;
+    }
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setIsExpired(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft, isExpired]);
+
   const handleVNPayReturn = async () => {
     try {
       const queryParams = Object.fromEntries(new URLSearchParams(window.location.search));
@@ -122,6 +146,7 @@ const Checkout: React.FC = () => {
           movieTitle: bookingDetails?.movieTitle,
           moviePoster: '',
           screeningTime: `${bookingDetails?.date} at ${bookingDetails?.time}`,
+          theaterName: theaterName, // Thêm trường này
           roomName: roomName,
           seatNumbers: bookingDetails?.seats || [],
           totalPrice: bookingDetails?.total || 0,
@@ -133,6 +158,7 @@ const Checkout: React.FC = () => {
         navigate('/confirmation');
       } else {
         // Payment failed
+        toast.error('Thanh toán thất bại: ' + (response.message || 'Vui lòng thử lại'), { position: 'top-right', autoClose: 3000 });
         setError('Thanh toán thất bại: ' + (response.message || 'Vui lòng thử lại'));
         
         // Update booking status to failed
@@ -142,12 +168,14 @@ const Checkout: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error processing VNPay return:', error);
+      toast.error('Lỗi xử lý thanh toán: ' + error.message, { position: 'top-right', autoClose: 3000 });
       setError('Lỗi xử lý thanh toán: ' + error.message);
     }
   };
 
   const handlePayment = async () => {
     if (!bookingDetails) {
+      toast.error('Không có thông tin đặt vé', { position: 'top-right', autoClose: 3000 });
       setError('Không có thông tin đặt vé');
       return;
     }
@@ -180,6 +208,7 @@ const Checkout: React.FC = () => {
           movieTitle: bookingDetails.movieTitle,
           moviePoster: '',
           screeningTime: `${bookingDetails.date} at ${bookingDetails.time}`,
+          theaterName: theaterName, // Thêm trường này
           roomName: roomName,
           seatNumbers: bookingDetails.seats,
           totalPrice: bookingDetails.total,
@@ -198,6 +227,7 @@ const Checkout: React.FC = () => {
           movieTitle: bookingDetails.movieTitle,
           moviePoster: '',
           screeningTime: `${bookingDetails.date} at ${bookingDetails.time}`,
+          theaterName: theaterName, // Thêm trường này
           roomName: roomName,
           seatNumbers: bookingDetails.seats,
           totalPrice: bookingDetails.total,
@@ -211,8 +241,10 @@ const Checkout: React.FC = () => {
     } catch (error: any) {
       console.error('Lỗi xử lý thanh toán:', error);
       if (error.message?.includes('already booked')) {
+        toast.error('Một số ghế đã được đặt bởi người khác. Vui lòng chọn ghế khác.', { position: 'top-right', autoClose: 3000 });
         setError('Một số ghế đã được đặt bởi người khác. Vui lòng chọn ghế khác.');
       } else {
+        toast.error(error.message || 'Không thể xử lý thanh toán. Vui lòng thử lại.', { position: 'top-right', autoClose: 3000 });
         setError(error.message || 'Không thể xử lý thanh toán. Vui lòng thử lại.');
       }
     } finally {
@@ -222,11 +254,16 @@ const Checkout: React.FC = () => {
 
   const handleUpdateBooking = () => {
     if (!bookingDetails) {
-      alert('Không tìm thấy thông tin đặt vé để cập nhật.');
+      toast.error('Không tìm thấy thông tin đặt vé để cập nhật.', { position: 'top-right', autoClose: 3000 });
       return;
     }
 
     sessionStorage.setItem('isUpdatingBooking', 'true');
+    // Lưu thời gian hết hạn giữ ghế (epoch milliseconds)
+    if (!isExpired) {
+      const expireAt = Date.now() + timeLeft * 1000;
+      sessionStorage.setItem('bookingExpireAt', expireAt.toString());
+    }
 
     const seatSelectionUrl = `/seats/${bookingDetails.movieId}?date=${bookingDetails.date}&time=${bookingDetails.time}&theater=${bookingDetails.theater}&screeningId=${bookingDetails.screeningId}&movieTitle=${encodeURIComponent(bookingDetails.movieTitle)}&userId=${bookingDetails.userId}`;
 
@@ -234,37 +271,32 @@ const Checkout: React.FC = () => {
   };
 
   const handleCancelBooking = async () => {
+    if (!bookingDetails?.bookingId) {
+      toast.error('Không tìm thấy mã đặt vé', { position: 'top-right', autoClose: 3000 });
+      return;
+    }
+    setShowCancelModal(true);
+  };
+
+  const confirmCancelBooking = async () => {
     try {
-      if (!bookingDetails?.bookingId) {
-        throw new Error('Không tìm thấy mã đặt vé');
-      }
-
-      const confirmCancel = window.confirm('Bạn có chắc chắn muốn hủy đặt vé này không? Hành động này không thể hoàn tác.');
-
-      if (!confirmCancel) {
-        return;
-      }
-
       setIsCancelling(true);
-
-      const response = await cancelBooking(bookingDetails.bookingId);
-
+      const response = await cancelBooking(bookingDetails?.bookingId!);
       if (response.booking) {
-        alert('Hủy đặt vé thành công!');
-
+        toast.success('Hủy đặt vé thành công!', { position: 'top-right', autoClose: 3000 });
         sessionStorage.removeItem('bookingDetails');
         sessionStorage.removeItem('currentBookingId');
         sessionStorage.removeItem('isUpdatingBooking');
-
         window.location.href = '/';
       } else {
         throw new Error(response.message || 'Không thể hủy đặt vé');
       }
     } catch (error: any) {
-      alert(error.message || 'Có lỗi xảy ra khi hủy đặt vé');
+      toast.error(error.message || 'Có lỗi xảy ra khi hủy đặt vé', { position: 'top-right', autoClose: 3000 });
       console.error('Lỗi hủy đặt vé:', error);
     } finally {
       setIsCancelling(false);
+      setShowCancelModal(false);
     }
   };
 
@@ -287,9 +319,27 @@ const Checkout: React.FC = () => {
     );
   }
 
+  // Format mm:ss
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
+      <ToastContainer position="top-right" />
       <div className="max-w-3xl mx-auto">
+        {/* Đồng hồ đếm ngược giữ ghế */}
+        <div className="flex items-center justify-center mb-6">
+          <div className={`text-lg font-bold px-4 py-2 rounded-lg border ${isExpired ? 'bg-red-100 text-red-600 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}> 
+            {isExpired ? (
+              <span>Hết thời gian giữ ghế, vui lòng chọn lại!</span>
+            ) : (
+              <span>Thời gian giữ ghế còn lại: {formatTime(timeLeft)}</span>
+            )}
+          </div>
+        </div>
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             <p className="mb-2">{error}</p>
@@ -343,10 +393,10 @@ const Checkout: React.FC = () => {
           <div className="bg-gray-50 p-4 rounded-lg mb-6">
             <div className="flex justify-between mb-2">
               <span>
-                Vé ({bookingDetails.seats.length} x {bookingDetails.basePrice.toLocaleString('vi-VN')} VND)
+                Vé ({bookingDetails.seats.length} x {bookingDetails.basePrice.toLocaleString('vi-VN')} đ)
               </span>
               <span>
-                {(bookingDetails.basePrice * bookingDetails.seats.length).toLocaleString('vi-VN')} VND
+                {(bookingDetails.basePrice * bookingDetails.seats.length).toLocaleString('vi-VN')} đ
               </span>
             </div>
             {bookingDetails.discount > 0 && (
@@ -360,13 +410,13 @@ const Checkout: React.FC = () => {
                   })()})
                 </span>
                 <span>
-                  -{(bookingDetails.discount || 0).toLocaleString('vi-VN')} VND
+                  -{(bookingDetails.discount || 0).toLocaleString('vi-VN')} đ
                 </span>
               </div>
             )}
             <div className="border-t border-gray-300 pt-2 mt-2 flex justify-between font-bold">
               <span>Tổng cộng</span>
-              <span>{(bookingDetails.total || 0).toLocaleString('vi-VN')} VND</span>
+              <span>{(bookingDetails.total || 0).toLocaleString('vi-VN')} đ</span>
             </div>
           </div>
 
@@ -458,43 +508,81 @@ const Checkout: React.FC = () => {
 
           <button
             className={`w-full py-3 rounded-md font-medium ${
-              isPaymentProcessing ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+              isPaymentProcessing || isExpired ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
             } text-white mb-4`}
             onClick={handlePayment}
-            disabled={isPaymentProcessing}
+            disabled={isPaymentProcessing || isExpired}
           >
-            {isPaymentProcessing ? 'Đang Xử Lý Thanh Toán...' : 'Thanh Toán Ngay'}
+            {isExpired ? 'Hết thời gian giữ ghế' : (isPaymentProcessing ? 'Đang Xử Lý Thanh Toán...' : 'Thanh Toán Ngay')}
           </button>
 
-          <div className="flex gap-4 mt-4">
-            <button
-              onClick={handleUpdateBooking}
-              disabled={isUpdating}
-              className={`flex-1 flex items-center justify-center py-2 px-4 border border-blue-300 rounded-md ${
-                isUpdating
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-              }`}
-            >
-              <EditIcon size={18} className="mr-2" />
-              {isUpdating ? 'Đang cập nhật...' : 'Cập nhật vé'}
-            </button>
+          {/* Khi hết thời gian giữ ghế, chỉ hiện nút quay về trang chủ */}
+          {isExpired ? (
+            <div className="flex gap-4 mt-4">
+              <button
+                onClick={() => window.location.href = '/'}
+                className="flex-1 flex items-center justify-center py-2 px-4 border border-blue-300 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium"
+              >
+                Quay về trang chủ
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-4 mt-4">
+              <button
+                onClick={handleUpdateBooking}
+                disabled={isUpdating}
+                className={`flex-1 flex items-center justify-center py-2 px-4 border border-blue-300 rounded-md ${
+                  isUpdating
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                }`}
+              >
+                <EditIcon size={18} className="mr-2" />
+                {isUpdating ? 'Đang cập nhật...' : 'Cập nhật vé'}
+              </button>
 
-            <button
-              onClick={handleCancelBooking}
-              disabled={isCancelling}
-              className={`flex-1 flex items-center justify-center py-2 px-4 border border-red-300 rounded-md ${
-                isCancelling
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-red-50 text-red-700 hover:bg-red-100'
-              }`}
-            >
-              <XCircleIcon size={18} className="mr-2" />
-              {isCancelling ? 'Đang hủy...' : 'Hủy đặt vé'}
-            </button>
-          </div>
+              <button
+                onClick={handleCancelBooking}
+                disabled={isCancelling}
+                className={`flex-1 flex items-center justify-center py-2 px-4 border border-red-300 rounded-md ${
+                  isCancelling
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-red-50 text-red-700 hover:bg-red-100'
+                }`}
+              >
+                <XCircleIcon size={18} className="mr-2" />
+                {isCancelling ? 'Đang hủy...' : 'Hủy đặt vé'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Modal xác nhận hủy đặt vé */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-4">Xác nhận hủy đặt vé</h3>
+            <p className="mb-6">Bạn có chắc chắn muốn hủy đặt vé này không? Hành động này không thể hoàn tác.</p>
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
+                onClick={() => setShowCancelModal(false)}
+                disabled={isCancelling}
+              >
+                Hủy
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700 font-semibold"
+                onClick={confirmCancelBooking}
+                disabled={isCancelling}
+              >
+                {isCancelling ? 'Đang hủy...' : 'Đồng ý'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

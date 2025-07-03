@@ -192,7 +192,7 @@ export const getScreeningsByTheater = async (theaterId: string): Promise<Screeni
 
 export const getScheduleByTheater = async (date: string): Promise<TheaterSchedule[]> => {
     try {
-        const response = await api.get<ApiResponse<TheaterSchedule[]>>(`/api/screenings/schedule`, {
+        const response = await api.get<ApiResponse<TheaterSchedule[]>>(`/api/screenings/public`, {
             params: { date }
         });
         return response.data.data || [];
@@ -239,5 +239,21 @@ export const getPublicScreeningById = async (id: string): Promise<Screening> => 
     } catch (error) {
         console.error(`Error fetching public screening with id ${id}:`, error);
         throw error;
+    }
+};
+
+export const getPublicScreeningsByTheaterAndDate = async (theaterId: string, startTime: string): Promise<Screening[]> => {
+    try {
+        const response = await api.get<ApiResponse<Screening[]>>(`/api/screenings/public`, {
+            params: { theaterId, startTime }
+        });
+        if (response.data.success && Array.isArray(response.data.data)) {
+            return response.data.data;
+        } else {
+            return [];
+        }
+    } catch (error) {
+        console.error('Error fetching public screenings by theater and date:', error);
+        return [];
     }
 };

@@ -248,14 +248,7 @@ export const getUserBookings = async (): Promise<BookingResponse> => {
                     const qrContent = [
                         `Mã đặt vé: ${booking._id.toString()}`,
                         `Phim: ${booking.screeningId.movieId?.title || 'N/A'}`,
-                        `Thời gian chiếu phim: ${booking.screeningId.startTime ? (() => {
-                            const d = new Date(booking.screeningId.startTime);
-                            if (isNaN(d.getTime())) return 'N/A';
-                            const vnDate = new Date(d.getTime() - (7 * 60 * 60 * 1000));
-                            const day = vnDate.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-                            const time = vnDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Ho_Chi_Minh' });
-                            return `Ngày: ${day} vào lúc: ${time}`;
-                        })() : 'N/A'}`,
+                        `Thời gian chiếu phim: ${new Date(booking.screeningId.startTime).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })} vào lúc: ${new Date(booking.screeningId.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Ho_Chi_Minh' })}`,
                         `Phòng: ${booking.screeningId.roomId?.name || 'N/A'}`,
                         `Ghế: ${booking.seatNumbers.join(', ')}`,
                         `Tổng tiền: ${(booking.totalPrice || 0).toLocaleString('vi-VN')} VND`,
@@ -351,7 +344,7 @@ export const updateBookingStatus = async (bookingId: string): Promise<BookingRes
 
 export const sendTicketEmail = async (bookingId: string): Promise<BookingResponse> => {
     try {
-        const response = await api.post('/api/bookings/email-ticket', { bookingId });
+        const response = await api.post(`/api/bookings/${bookingId}/send-ticket`);
         return {
             success: response.data.success,
             message: response.data.message
