@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { User, Mail, Phone, Lock, Edit2, Camera, History, Bell, X, Eye, EyeOff, Check, Loader2, AlertTriangle } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import api from '../../utils/api';
 
 type TabType = 'history' | 'profile' | 'notifications';
 
@@ -13,7 +14,7 @@ interface FormErrors {
   birthday?: string;
 }
 
-const Profile: React.FC = () => {
+const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [isEditing, setIsEditing] = useState(false);
@@ -133,34 +134,85 @@ const Profile: React.FC = () => {
     setShowConfirmDialog(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
     
-    if (!validateForm()) {
-      toast.error('Please fix the errors in the form');
-      return;
-    }
+  //   if (!validateForm()) {
+  //     toast.error('Please fix the errors in the form');
+  //     return;
+  //   }
 
-    setIsLoading(true);
-    try {
-      // TODO: Implement update logic
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated API call
-      setIsEditing(false);
-      toast.success('Profile updated successfully!');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error('Failed to update profile. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //   setIsLoading(true);
+  //   try {
+  //     // TODO: Implement update logic
+  //     await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated API call
+  //     setIsEditing(false);
+  //     toast.success('Profile updated successfully!');
+  //   } catch (error) {
+  //     console.error('Error updating profile:', error);
+  //     toast.error('Failed to update profile. Please try again.');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement password change logic
+
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validateForm()) {
+    toast.error('Please fix the errors in the form');
+    return;
+  }
+  setIsLoading(true);
+  try {
+    // Mapping đúng field: BE dùng "name", FE có thể đang dùng "fullName"
+    const payload = {
+      name: formData.fullName, // FE là fullName, BE là name
+      email: formData.email,
+      phone: formData.phone,
+      // Nếu có đổi mật khẩu ở đây thì thêm password: formData.password
+    };
+    const response = await api.put('/api/profile', payload);
+    // Cập nhật lại user ở FE nếu cần
+    // updateUser(response.data.user);
+    setIsEditing(false);
+    toast.success(response.data.message || 'Profile updated successfully!');
+  } catch (error) {
+    toast.error(error.response?.data?.message || 'Failed to update profile');
+  } finally {
+    setIsLoading(false);
+  }
+};
+  // const handlePasswordSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   // TODO: Implement password change logic
+  //   setShowPasswordModal(false);
+  // };
+
+
+  const handlePasswordSubmit = async (e) => {
+  e.preventDefault();
+  if (passwordData.newPassword !== passwordData.confirmPassword) {
+    toast.error('Passwords do not match');
+    return;
+  }
+  setIsLoading(true);
+  try {
+    const payload = {
+      currentPassword: passwordData.currentPassword,
+      newPassword: passwordData.newPassword,
+      confirmNewPassword: passwordData.confirmPassword,
+    };
+    const response = await api.put('/api/change-password', payload);
+    toast.success(response.data.message || 'Password updated successfully!');
     setShowPasswordModal(false);
-  };
-
+    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  } catch (error) {
+    toast.error(error.response?.data?.message || 'Failed to update password');
+  } finally {
+    setIsLoading(false);
+  }
+};
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -175,11 +227,19 @@ const Profile: React.FC = () => {
     }
   };
 
-  const tabs = [
-    { id: 'history', label: 'Transaction History', icon: History },
-    { id: 'profile', label: 'Personal Information', icon: User },
-    { id: 'notifications', label: 'Notifications', icon: Bell }
+ const tabs = React.useMemo(() => {
+  if (user?.role === 'member' ) {
+    return [
+      { id: 'history', label: 'Transaction History', icon: History },
+      { id: 'profile', label: 'Personal Information', icon: User },
+      { id: 'notifications', label: 'Notifications', icon: Bell }
+    ];
+  }
+  // Các role khác chỉ có tab thông tin cá nhân
+  return [
+    { id: 'profile', label: 'Personal Information', icon: User }
   ];
+}, [user?.role]);
 
   const renderPasswordModal = () => {
     const passwordStrength = getPasswordStrength(passwordData.newPassword);
@@ -535,25 +595,27 @@ const Profile: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
           {/* Tabs */}
-          <div className="flex border-b border-gray-200 mb-6">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as TabType)}
-                className={`flex items-center justify-center gap-2 flex-1 px-8 py-4 text-sm font-medium transition-all duration-300 ${
-                  activeTab === tab.id
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-b-2 border-transparent'
-                }`}
-              >
-                <tab.icon className={`w-5 h-5 transition-colors duration-300 ${
-                  activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'
-                }`} />
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </div>
-
+          
+      {!hideTabs && (
+            <div className="flex border-b border-gray-200 mb-6">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as TabType)}
+                  className={`flex items-center justify-center gap-2 flex-1 px-8 py-4 text-sm font-medium transition-all duration-300 ${
+                    activeTab === tab.id
+                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 border-b-2 border-transparent'
+                  }`}
+                >
+                  <tab.icon className={`w-5 h-5 transition-colors duration-300 ${
+                    activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'
+                  }`} />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {/* Content */}
           {renderContent()}
         </div>

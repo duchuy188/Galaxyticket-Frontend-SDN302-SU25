@@ -118,6 +118,41 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                   </Link>
                 </li>
               ))}
+              {/* Thêm link Profile cho admin */}
+              {isAdmin && (
+                <li>
+                  <Link
+                    to="/admin/profile"
+                    className={`flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700 transition-colors ${location.pathname === '/admin/profile' ? 'bg-gray-700' : ''}`}
+                  >
+                    <UsersIcon size={20} />
+                    <span>Profile</span>
+                  </Link>
+                </li>
+              )}
+              {/* Thêm link Profile cho manager và staff */}
+              {isManager && (
+                <li>
+                  <Link
+                    to="/manager/profile"
+                    className={`flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700 transition-colors ${location.pathname === '/manager/profile' ? 'bg-gray-700' : ''}`}
+                  >
+                    <UsersIcon size={20} />
+                    <span>Profile</span>
+                  </Link>
+                </li>
+              )}
+              {(!isAdmin && !isManager) && (
+                <li>
+                  <Link
+                    to="/staff/profile"
+                    className={`flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700 transition-colors ${location.pathname === '/staff/profile' ? 'bg-gray-700' : ''}`}
+                  >
+                    <UsersIcon size={20} />
+                    <span>Profile</span>
+                  </Link>
+                </li>
+              )}
             </ul>
           </nav>
         </div>

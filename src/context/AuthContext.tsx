@@ -135,39 +135,27 @@ export const AuthProvider: React.FC<{
   // };
 
   const register = async (
-  userData: Omit<User, 'id' | '_id' | 'role'> & { password: string }
-): Promise<boolean> => {
-  try {
-    const res = await axios.post('http://localhost:5000/api/auth/register', {
-      name: userData.fullName, // map fullName -> name
-      email: userData.email,
-      password: userData.password,
-      phone: userData.phone,
-      
-    });
+    userData: Omit<User, 'id' | '_id' | 'role'> & { password: string }
+  ): Promise<boolean> => {
+    try {
+      const res = await axios.post('http://localhost:5000/api/auth/register', {
+        name: userData.fullName, // map fullName -> name
+        email: userData.email,
+        password: userData.password,
+        phone: userData.phone,
+      });
 
-    if (res.data.success && res.data.user) {
-      const userInfo: User = {
-        id: res.data.user._id,
-        _id: res.data.user._id,
-        fullName: res.data.user.name, // lấy lại theo cách BE trả về
-        email: res.data.user.email,
-        phone: res.data.user.phone,
-        role: res.data.user.role,
-      };
+      if (res.data.success && res.data.user) {
+        // KHÔNG lưu user và token ở đây!
+        return true;
+      }
 
-      setUser(userInfo);
-      localStorage.setItem('user', JSON.stringify(userInfo));
-      localStorage.setItem('token', res.data.token);
-      return true;
+      return false;
+    } catch (err) {
+      console.error('Register failed:', err);
+      return false;
     }
-
-    return false;
-  } catch (err) {
-    console.error('Register failed:', err);
-    return false;
-  }
-};
+  };
 
   const logout = () => {
     setUser(null);

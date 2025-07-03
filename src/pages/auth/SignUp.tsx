@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -100,7 +98,7 @@ const SignUp: React.FC = () => {
       const success = await register(userData);
 
       if (success) {
-        navigate('/');
+        navigate('/signin');
       } else {
         setError('Registration failed. Please try again.');
       }
