@@ -15,8 +15,13 @@ const UserPromotions: React.FC = () => {
   const fetchPromotions = async () => {
     try {
       setLoading(true);
-      const response = await getAllPromotions('approved'); // Chỉ lấy các promotion đã được duyệt
-      setPromotions(response.data || []);
+      const response = await getAllPromotions('approved');
+      // Lọc ra các mã giảm giá chưa hết hạn
+      const currentDate = new Date();
+      const validPromotions = response.data?.filter(promotion => 
+        new Date(promotion.endDate) >= currentDate
+      ) || [];
+      setPromotions(validPromotions);
     } catch (err: any) {
       if (err.message.includes('Phiên đăng nhập đã hết hạn')) {
         navigate('/auth/signin');
