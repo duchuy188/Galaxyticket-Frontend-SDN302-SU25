@@ -1,9 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getTheaterById, Theater } from '../../utils/theater';
 import { Building2, MapPin, Phone, Calendar, Film, Clock, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 import { Movie, getMovies } from '../../utils/movie';
+import dayjs from 'dayjs';
+import { getScheduleByTheater, TheaterSchedule, getPublicScreenings, Screening, getPublicScreeningsByTheaterAndDate } from '../../utils/screening';
+import { useAuth } from '../../context/AuthContext';
+
+// Đặt hàm này ở đây, TRƯỚC khi dùng useState
+const getNextFiveDays = () => {
+  const weekdayVi = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  const days = [];
+  for (let i = 0; i < 5; i++) {
+    const date = dayjs().add(i, 'day');
+    days.push({
+      label: i === 0 ? 'Hôm Nay' : weekdayVi[date.day()],
+      value: date.format('DD/MM'),
+      fullDate: date.format('YYYY-MM-DD'),
+    });
+  }
+  return days;
+};
 
 const containerStyle = {
   width: '100%',
@@ -26,9 +44,23 @@ const TheaterDetail: React.FC = () => {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
   });
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [activeDay, setActiveDay] = useState('11/06');
-  const [currentPage, setCurrentPage] = useState(0);
-  const moviesPerPage = 5; // Số phim hiển thị mỗi trang
+  const [days, setDays] = useState(getNextFiveDays());
+  const [activeDay, setActiveDay] = useState(days[0].value);
+  const [schedule, setSchedule] = useState<TheaterSchedule | null>(null);
+  const [screenings, setScreenings] = useState<Screening[]>([]);
+  const [selectedMovieId, setSelectedMovieId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
+  // Lấy ngày hôm nay dạng 'DD/MM'
+  const todayValue = dayjs().format('DD/MM');
+  // now là dayjs object, tự động cập nhật mỗi 10 giây
+  const [now, setNow] = useState(dayjs());
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(dayjs());
+    }, 10000); // cập nhật mỗi 10 giây
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,6 +94,38 @@ const TheaterDetail: React.FC = () => {
 
     fetchData();
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchScreenings = async () => {
+      setLoading(true);
+      try {
+        const dateISO = dayjs(days.find(d => d.value === activeDay)?.fullDate).startOf('day').toISOString();
+        const screenings = await getPublicScreeningsByTheaterAndDate(id, dateISO);
+        setScreenings(screenings);
+      } catch (err) {
+        setError('Không thể tải suất chiếu');
+      }
+      setLoading(false);
+    };
+    fetchScreenings();
+  }, [id, activeDay, days]);
+
+  useEffect(() => {
+    if (!id) return;
+    const fetchSchedule = async () => {
+      setLoading(true);
+      try {
+        const schedules = await getScheduleByTheater(days.find(d => d.value === activeDay)?.fullDate || '');
+        const theaterSchedule = schedules.find(s => s.theaterId === id);
+        setSchedule(theaterSchedule || null);
+      } catch (err) {
+        setError('Không thể tải lịch chiếu');
+      }
+      setLoading(false);
+    };
+    fetchSchedule();
+  }, [id, activeDay, days]);
 
   const handleMapLoad = (map: google.maps.Map) => {
     // This function is no longer used in the new renderMap function
@@ -118,21 +182,13 @@ const TheaterDetail: React.FC = () => {
     );
   };
 
-  // Lọc movies đang chiếu
-  const nowShowingMovies = movies.filter(movie => movie.showingStatus === 'now-showing');
-  const totalPages = Math.ceil(nowShowingMovies.length / moviesPerPage);
-  const displayedMovies = nowShowingMovies.slice(
-    currentPage * moviesPerPage,
-    (currentPage + 1) * moviesPerPage
-  );
-
-  const nextPage = () => {
-    setCurrentPage((prev) => (prev + 1) % totalPages);
-  };
-
-  const prevPage = () => {
-    setCurrentPage((prev) => (prev - 1 + totalPages) % totalPages);
-  };
+  // Nhóm suất chiếu theo phim
+  const screeningsByMovie = screenings.reduce((acc, screening) => {
+    const movieId = screening.movieId._id;
+    if (!acc[movieId]) acc[movieId] = [];
+    acc[movieId].push(screening);
+    return acc;
+  }, {} as Record<string, Screening[]>);
 
   if (loading) {
     return (
@@ -219,7 +275,7 @@ const TheaterDetail: React.FC = () => {
               <Calendar className="w-5 h-5 text-blue-600 mr-2" />
               <div>
                 <p className="text-xs text-gray-500">Suất chiếu hôm nay</p>
-                <p className="font-medium">{nowShowingMovies.length} Phim</p>
+                <p className="font-medium">{Object.keys(screeningsByMovie).length} Phim</p>
               </div>
             </div>
             <a 
@@ -257,90 +313,107 @@ const TheaterDetail: React.FC = () => {
             {/* Date Selection */}
             <div className="flex justify-center mb-6">
               <div className="inline-flex bg-gray-100 rounded-xl p-1.5">
-                {['11/06', '12/06', '13/06', '14/06', '15/06'].map((date, index) => {
-                  const dayNames = ['Hôm Nay', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
-                  return (
-                    <button
-                      key={date}
-                      onClick={() => setActiveDay(date)}
-                      className={`flex flex-col items-center min-w-[120px] px-4 py-2 rounded-lg transition-all ${
-                        activeDay === date
-                          ? 'bg-blue-600 text-white shadow'
-                          : 'text-gray-600 hover:bg-white/50'
-                      }`}
-                    >
-                      <span className="text-sm font-medium">{dayNames[index]}</span>
-                      <span className={`text-sm ${activeDay === date ? 'text-white/90' : 'text-gray-500'}`}>
-                        {date}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Movies Grid */}
-            <div className="relative">
-              <button
-                onClick={prevPage}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10
-                  w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center
-                  hover:bg-gray-100 transition-colors"
-                disabled={currentPage === 0}
-              >
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
-              </button>
-
-              <div className="grid grid-cols-5 gap-4 overflow-hidden px-4">
-                {displayedMovies.map((movie) => (
-                  <div key={movie._id} className="group relative cursor-pointer">
-                    <div className="relative aspect-[2/3] overflow-hidden rounded-lg">
-                      <img 
-                        src={movie.posterUrl} 
-                        alt={movie.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/placeholder-movie.jpg';
-                        }}
-                      />
-                      <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/70 px-2 py-1 rounded text-white">
-                        <Star size={14} className="fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium">{movie.rating || '7.5'}</span>
-                      </div>
-                      <div className="absolute bottom-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-                        {movie.ageRating}
-                      </div>
-                    </div>
-                    <h3 className="mt-3 text-sm font-medium text-gray-900 line-clamp-2 text-center">
-                      {movie.title}
-                    </h3>
-                  </div>
+                {days.map((day, index) => (
+                  <button
+                    key={day.value}
+                    onClick={() => setActiveDay(day.value)}
+                    className={`flex flex-col items-center min-w-[120px] px-4 py-2 rounded-lg transition-all ${
+                      activeDay === day.value
+                        ? 'bg-blue-600 text-white shadow'
+                        : 'text-gray-600 hover:bg-white/50'
+                    }`}
+                  >
+                    <span className="text-sm font-medium">{day.label}</span>
+                    <span className={`text-sm ${activeDay === day.value ? 'text-white/90' : 'text-gray-500'}`}>{day.value}</span>
+                  </button>
                 ))}
               </div>
-
-              <button
-                onClick={nextPage}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10
-                  w-8 h-8 rounded-full bg-white shadow-lg flex items-center justify-center
-                  hover:bg-gray-100 transition-colors"
-                disabled={currentPage === totalPages - 1}
-              >
-                <ChevronRight className="w-5 h-5 text-gray-600" />
-              </button>
             </div>
 
-            {/* Pagination Dots */}
-            <div className="flex justify-center gap-2 mt-4">
-              {Array.from({ length: totalPages }).map((_, index) => (
-                <button
-                  key={index}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    currentPage === index ? 'bg-blue-600' : 'bg-gray-300'
-                  }`}
-                  onClick={() => setCurrentPage(index)}
-                />
-              ))}
+            {/* Movies Grid - render theo screeningsByMovie */}
+            <div className="relative">
+              {Object.keys(screeningsByMovie).length > 0 ? (
+                <div className="grid grid-cols-5 gap-4 overflow-hidden px-4">
+                  {Object.values(screeningsByMovie).map((movieScreenings) => {
+                    const movie = movieScreenings[0].movieId;
+                    return (
+                      <div key={movie._id} className="group relative cursor-pointer">
+                        <div
+                          className="relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center hover:ring-2 ring-blue-400 transition"
+                          onClick={() => setSelectedMovieId(selectedMovieId === movie._id ? null : movie._id)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {/* Overlay dấu tích khi được chọn */}
+                          {selectedMovieId === movie._id && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
+                              <span className="bg-orange-500 rounded-full p-4 flex items-center justify-center">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="feather feather-check">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              </span>
+                            </div>
+                          )}
+                          {/* Poster phim */}
+                          {(() => {
+                            const movieFull = movies.find(m => m._id === movie._id);
+                            return movieFull?.posterUrl ? (
+                              <img
+                                src={movieFull.posterUrl}
+                                alt={movie.title}
+                                className={`w-full h-full object-cover ${selectedMovieId === movie._id ? 'opacity-60' : ''}`}
+                                onError={e => { e.currentTarget.src = '/placeholder-movie.jpg'; }}
+                              />
+                            ) : (
+                              <span className="text-lg font-bold text-gray-700">{movie.title}</span>
+                            );
+                          })()}
+                        </div>
+                        <h3 className="mt-3 text-sm font-medium text-gray-900 line-clamp-2 text-center">
+                          {movie.title}
+                        </h3>
+                        {selectedMovieId === movie._id && (
+                          <div className="mt-2 bg-gray-50 rounded-lg p-4 flex flex-row flex-wrap gap-4">
+                            {Object.values(
+                              movieScreenings.reduce((acc, screening) => {
+                                const hour = dayjs(screening.startTime).format('HH:mm');
+                                if (!acc[hour]) acc[hour] = screening;
+                                return acc;
+                              }, {} as Record<string, Screening>)
+                            )
+                            // Lọc suất chiếu nếu là hôm nay và giờ chiếu <= giờ hiện tại thì ẩn
+                            .filter(screening => {
+                              if (activeDay === todayValue) {
+                                return dayjs(screening.startTime).isAfter(now);
+                              }
+                              return true;
+                            })
+                            .map(screening => (
+                              <button
+                                key={screening._id}
+                                className="px-6 py-2 bg-white border rounded shadow text-base transition-all hover:bg-blue-700 hover:text-white"
+                                onClick={() => {
+                                  if (!isAuthenticated) {
+                                    navigate('/signin');
+                                    return;
+                                  }
+                                  // Lấy đúng ID rạp
+                                  const theaterId = typeof screening.theaterId === 'string' ? screening.theaterId : screening.theaterId._id;
+                                  // Điều hướng sang trang chọn ghế/checkout, truyền thêm tên rạp
+                                  navigate(`/seats/${screening.movieId._id}?date=${dayjs(screening.startTime).format('YYYY-MM-DD')}&time=${dayjs(screening.startTime).format('HH:mm')}&theater=${theaterId}&theaterName=${encodeURIComponent(screening.theaterId.name || '')}&screeningId=${screening._id}&movieTitle=${encodeURIComponent(screening.movieId.title)}&userId=${user?.id}`);
+                                }}
+                              >
+                                {dayjs(screening.startTime).format('HH:mm')}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500">Không có suất chiếu</div>
+              )}
             </div>
           </div>
 
