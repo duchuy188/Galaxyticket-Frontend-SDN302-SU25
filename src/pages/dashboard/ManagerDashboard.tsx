@@ -42,6 +42,10 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
   // Nếu có filterType được truyền vào thông qua prop, sử dụng nó
   const [filterTypeState, setFilterTypeState] = useState<string>(filterType || 'all');
 
+  // 1. Thêm state quản lý phân trang (thêm vào sau dòng khai báo state filterStatus)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
   // Fetch dữ liệu chỉ một lần khi component mount
   useEffect(() => {
     if (filterType) {
@@ -53,7 +57,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
     fetchApprovalRequests();
   }, [filterType]); // Chỉ phụ thuộc vào filterType
 
-  // Áp dụng bộ lọc cho dữ liệu local
+  // Thêm vào useEffect xử lý bộ lọc
   useEffect(() => {
     let filtered = [...requests];
 
@@ -66,7 +70,14 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
     }
 
     setLocalFiltered(filtered);
+    setCurrentPage(1); // Reset về trang đầu tiên khi thay đổi bộ lọc
   }, [requests, filterTypeState, filterStatus]);
+
+  // 2. Thêm logic phân trang (thêm vào sau đoạn code lọc dữ liệu localFiltered)
+  // Tính toán các yêu cầu hiển thị cho trang hiện tại
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = localFiltered.slice(indexOfFirstItem, indexOfLastItem);
 
   // Sửa hàm fetchApprovalRequests để không hiển thị loading khi không cần thiết
   const fetchApprovalRequests = async (showLoading = false) => {
@@ -82,10 +93,12 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
 
       setRequests(data);
       setLocalFiltered(data);
+      return true; // Trả về true khi thành công
     } catch (err) {
       console.error('Error fetching approval requests:', err);
       setError('Failed to fetch approval requests');
       toast.error('Không thể tải danh sách yêu cầu phê duyệt');
+      throw err; // Ném lỗi để xử lý ở phía gọi hàm
     } finally {
       if (showLoading) {
         setIsLoading(false);
@@ -175,6 +188,27 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
       case 'promotion': return 'Khuyến Mãi';
       case 'screening': return 'Lịch Chiếu';
       default: return type;
+    }
+  };
+
+  // Thêm hàm mới để lấy tên của yêu cầu
+  const getRequestName = (request: ApprovalRequest): string => {
+    if (!request || !request.requestData) return 'Không có dữ liệu';
+    
+    switch (request.type) {
+      case 'movie':
+        return request.requestData.title || 'Phim không tên';
+      case 'promotion':
+        return request.requestData.name || 'Khuyến mãi không tên';
+      case 'screening':
+        // Kiểm tra xem movieId có phải là object hay không
+        if (typeof request.requestData.movieId === 'object' && request.requestData.movieId !== null) {
+          return request.requestData.movieId.title || 'Lịch chiếu không tên';
+        } else {
+          return 'Lịch chiếu: ' + (request.requestData.movieId || 'Không xác định');
+        }
+      default:
+        return 'Không xác định';
     }
   };
 
@@ -269,7 +303,12 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
               </select>
 
               <button
-                onClick={() => fetchApprovalRequests(true)}
+                onClick={() => {
+                  fetchApprovalRequests(true)
+                    .then(() => {
+                      toast.success('Đã cập nhật dữ liệu thành công!');
+                    });
+                }}
                 className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"
               >
                 Cập Nhật Dữ Liệu
@@ -294,7 +333,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Loại Yêu Cầu
+                    Tên
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Người Yêu Cầu
@@ -311,11 +350,14 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {localFiltered.length > 0 ? (
-                  localFiltered.map((request) => (
+                {currentItems.length > 0 ? (
+                  currentItems.map((request) => (
                     <tr key={request._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
+                          {getRequestName(request)}
+                        </div>
+                        <div className="text-xs text-gray-500">
                           {getRequestTypeLabel(request.type)}
                         </div>
                       </td>
@@ -363,6 +405,41 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                 )}
               </tbody>
             </table>
+
+            {/* 4. Thêm UI phân trang vào cuối bảng (sau thẻ table) */}
+            <div className="mt-4 flex justify-center">
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  &laquo;
+                </button>
+                
+                {Array.from({ length: Math.ceil(localFiltered.length / itemsPerPage) }).map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentPage(index + 1)}
+                    className={`px-3 py-1 rounded ${
+                      currentPage === index + 1
+                        ? 'bg-blue-600 text-white'
+                        : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(localFiltered.length / itemsPerPage)))}
+                  disabled={currentPage === Math.ceil(localFiltered.length / itemsPerPage)}
+                  className="px-3 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  &raquo;
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -444,6 +521,14 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                           <div>
                             <span className="text-sm font-medium text-gray-500">Ngày phát hành:</span>
                             <span className="text-sm ml-2">{new Date(selectedRequest.requestData.releaseDate).toLocaleDateString('vi-VN')}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium text-gray-500">Ngày kết thúc:</span>
+                            <span className="text-sm ml-2">
+                              {selectedRequest.requestData.endDate 
+                                ? new Date(selectedRequest.requestData.endDate).toLocaleDateString('vi-VN')
+                                : 'Chưa xác định'}
+                            </span>
                           </div>
                           <div>
                             <span className="text-sm font-medium text-gray-500">Quốc gia:</span>

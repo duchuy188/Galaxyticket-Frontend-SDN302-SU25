@@ -30,6 +30,7 @@ export interface Movie {
     approvedBy?: string | null;
     isActive?: boolean;
     __v?: number;
+    endDate?: string | null;
     
     // Trường temporary cho file upload
     posterFile?: File;

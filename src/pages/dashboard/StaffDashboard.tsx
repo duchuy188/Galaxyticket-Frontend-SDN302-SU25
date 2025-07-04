@@ -147,6 +147,8 @@ const StaffDashboard: React.FC = () => {
   const isPromotionManagement = location.pathname === '/staff/promotions';
   // Thêm state cho movie detail modal
   const [viewingMovie, setViewingMovie] = useState<Movie | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // Lấy dữ liệu ban đầu một lần
   useEffect(() => {
@@ -188,6 +190,13 @@ const StaffDashboard: React.FC = () => {
       filtered = filtered.filter(movie => movie.status === statusFilter);
     }
     
+    // Sắp xếp theo createdAt mới nhất đầu tiên
+    filtered.sort((a, b) => {
+      if (!a.createdAt) return 1;
+      if (!b.createdAt) return -1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+    
     setLocalMovies(filtered);
     setIsFilterLoading(false);
   }, [statusFilter, showingStatusFilter, movies]);
@@ -201,6 +210,7 @@ const StaffDashboard: React.FC = () => {
       posterUrl: '',
       trailerUrl: '',
       releaseDate: new Date().toISOString(),
+      endDate: null, // Initialize endDate as null
       country: '',
       producer: '',
       directors: [],
@@ -300,6 +310,7 @@ const StaffDashboard: React.FC = () => {
       formData.append('genre', editingMovie.genre || '');
       formData.append('duration', String(editingMovie.duration || 0));
       formData.append('releaseDate', editingMovie.releaseDate || new Date().toISOString());
+      formData.append('endDate', editingMovie.endDate || ''); // Luôn gửi endDate, dù là null hay có giá trị
       formData.append('country', editingMovie.country?.trim() || '');
       formData.append('producer', editingMovie.producer?.trim() || '');
       formData.append('showingStatus', editingMovie.showingStatus || 'coming-soon');
@@ -460,6 +471,11 @@ const StaffDashboard: React.FC = () => {
     setViewingMovie(movie);
   };
 
+  // Tính toán phim hiển thị cho trang hiện tại
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentMovies = localMovies.slice(indexOfFirstItem, indexOfLastItem);
+
   const renderMainDashboard = () => (
     <div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -562,7 +578,28 @@ const StaffDashboard: React.FC = () => {
       )}
 
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Quản Lý Phim</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold">Quản Lý Phim</h2>
+          <button 
+            onClick={async () => {
+              try {
+                // Không hiển thị loading khi cập nhật
+                // setIsLoading(true);
+                const data = await getStaffMovies({});
+                setMovies(data);
+                // Giữ lại thông báo toast
+                toast.success('Đã cập nhật dữ liệu thành công!');
+              } catch (err) {
+                toast.error('Không thể cập nhật dữ liệu');
+              } finally {
+                // setIsLoading(false);
+              }
+            }}
+            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"
+          >
+            Cập Nhật Dữ Liệu
+          </button>
+        </div>
         <div className="flex items-center gap-4">
           <select 
             value={showingStatusFilter}
@@ -622,7 +659,7 @@ const StaffDashboard: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {localMovies.map(movie => (
+            {currentMovies.map(movie => (
               <tr key={movie._id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
@@ -655,9 +692,15 @@ const StaffDashboard: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-500">
-                    {movie.showingStatus === 'now-showing' ? 'Đang Chiếu' : 
-                     movie.showingStatus === 'coming-soon' ? 'Sắp Chiếu' : 'Đã Kết Thúc'}
+                  <div className="flex gap-2">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      movie.showingStatus === 'now-showing' ? 'bg-blue-100 text-blue-800' :
+                      movie.showingStatus === 'coming-soon' ? 'bg-purple-100 text-purple-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {movie.showingStatus === 'now-showing' ? 'Đang Chiếu' :
+                       movie.showingStatus === 'coming-soon' ? 'Sắp Chiếu' : 'Đã Kết Thúc'}
+                    </span>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -808,12 +851,49 @@ const StaffDashboard: React.FC = () => {
                       type="date" 
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
                       value={editingMovie.releaseDate ? new Date(editingMovie.releaseDate).toISOString().split('T')[0] : ''} 
-                      onChange={e => setEditingMovie({
-                        ...editingMovie,
-                        releaseDate: new Date(e.target.value).toISOString()
-                      })} 
-                      required 
+                      onChange={e => {
+                        const releaseDateValue = e.target.value;
+                        if (releaseDateValue) {
+                          setEditingMovie({
+                            ...editingMovie,
+                            releaseDate: new Date(releaseDateValue).toISOString()
+                          });
+                        }
+                      }} 
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Ngày Kết Thúc
+                    </label>
+                    <input 
+                      type="date" 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
+                      value={editingMovie.endDate ? new Date(editingMovie.endDate).toISOString().split('T')[0] : ''} 
+                      onChange={e => {
+                        const endDateValue = e.target.value;
+                        if (endDateValue) {
+                          const endDate = new Date(endDateValue);
+                          const releaseDate = new Date(editingMovie.releaseDate || new Date());
+                          
+                          if (endDate < releaseDate) {
+                            toast.error('Ngày kết thúc phải sau ngày khởi chiếu');
+                            return;
+                          }
+                          
+                          setEditingMovie({
+                            ...editingMovie,
+                            endDate: endDate.toISOString()
+                          });
+                        } else {
+                          setEditingMovie({
+                            ...editingMovie,
+                            endDate: null
+                          });
+                        }
+                      }} 
+                    />
+                    <p className="text-xs text-gray-500">Ngày kết thúc phải sau ngày khởi chiếu. Để trống nếu chưa xác định.</p>
                   </div>
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
@@ -1280,6 +1360,15 @@ const StaffDashboard: React.FC = () => {
                     </div>
 
                     <div>
+                      <span className="font-medium text-gray-700">Ngày Kết Thúc:</span>
+                      <p className="mt-1">
+                        {viewingMovie.endDate 
+                          ? new Date(viewingMovie.endDate).toLocaleDateString('vi-VN') 
+                          : 'Chưa xác định'}
+                      </p>
+                    </div>
+
+                    <div>
                       <span className="font-medium text-gray-700">Quốc Gia:</span>
                       <p className="mt-1">{viewingMovie.country}</p>
                     </div>
@@ -1514,6 +1603,40 @@ const StaffDashboard: React.FC = () => {
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
         </div>
       )}
+      {/* Phân trang */}
+      <div className="mt-4 flex justify-center">
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            &laquo;
+          </button>
+          
+          {Array.from({ length: Math.ceil(localMovies.length / itemsPerPage) }).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentPage(index + 1)}
+              className={`px-3 py-1 rounded ${
+                currentPage === index + 1
+                  ? 'bg-blue-600 text-white'
+                  : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {index + 1}
+            </button>
+          ))}
+          
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(localMovies.length / itemsPerPage)))}
+            disabled={currentPage === Math.ceil(localMovies.length / itemsPerPage)}
+            className="px-3 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            &raquo;
+          </button>
+        </div>
+      </div>
     </div>
   );
   const renderPromotionManagement = () => {
@@ -1673,7 +1796,6 @@ const StaffDashboard: React.FC = () => {
 
   return <div>
       <ToastContainer />
-      <h1 className="text-3xl font-bold mb-6">Bảng Điều Khiển Nhân Viên</h1>
       {isMainDashboard && renderMainDashboard()}
       {isMovieManagement && renderMovieManagement()}
       {isScreeningManagement && renderScreeningManagement()}

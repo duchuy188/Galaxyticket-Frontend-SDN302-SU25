@@ -250,14 +250,16 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isComingSoon }) => {
           }}
         />
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3">
-          <Link
-            to={`/movie/${movie._id}/booking`}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/movie/${movie._id}`);  // Chuyển đến trang chi tiết phim giống nút Trailer
+            }}
             className="bg-[#ff6b6b] hover:bg-[#ff5252] text-white px-6 py-2 rounded-full flex items-center gap-2 transition-colors"
-            onClick={(e) => e.stopPropagation()}
           >
             <Ticket className="w-4 h-4" />
             <span>Mua vé</span>
-          </Link>
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();

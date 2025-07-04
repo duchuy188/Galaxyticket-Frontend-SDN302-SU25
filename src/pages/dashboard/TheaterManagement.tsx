@@ -106,7 +106,25 @@ const TheaterManagement: React.FC = () => {
       <ToastContainer />
 
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Quản Lý Rạp Chiếu Phim</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold">Quản Lý Rạp Chiếu Phim</h2>
+          <button 
+            onClick={async () => {
+              try {
+                setIsLoading(true);
+                await fetchTheaters();
+                toast.success('Đã cập nhật dữ liệu thành công!');
+              } catch (err) {
+                toast.error('Không thể cập nhật dữ liệu');
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"
+          >
+            Cập Nhật Dữ Liệu
+          </button>
+        </div>
         <button 
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center"
           onClick={handleAddTheater}
@@ -194,18 +212,31 @@ const TheaterManagement: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
-                      className="text-blue-600 hover:text-blue-900 mr-3"
-                      onClick={() => handleEditTheater(theater)}
-                    >
-                      Sửa
-                    </button>
-                    <button 
-                      className="text-red-600 hover:text-red-900"
-                      onClick={() => handleDeleteClick(theater)}
-                    >
-                      Xóa
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button 
+                        className="group relative p-2 hover:bg-blue-50 rounded-full"
+                        onClick={() => handleEditTheater(theater)}
+                      >
+                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2">
+                          Chỉnh sửa
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                      </button>
+
+                      <button 
+                        className="group relative p-2 hover:bg-red-50 rounded-full"
+                        onClick={() => handleDeleteClick(theater)}
+                      >
+                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2">
+                          Xóa
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -160,8 +160,29 @@ const ScreeningManagement: React.FC = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-3xl font-bold mb-6 text-center">Quản lý suất chiếu</h1>
-      <div className="mb-4 flex flex-wrap items-center justify-between">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold">Quản lý suất chiếu</h1>
+          <button 
+            onClick={async () => {
+              try {
+                setLoading(true);
+                await fetchScreenings();
+                await fetchMovies();
+                await fetchRooms();
+                await fetchTheaters();
+                toast.success('Đã cập nhật dữ liệu thành công!');
+              } catch (err) {
+                toast.error('Không thể cập nhật dữ liệu');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"
+          >
+            Cập Nhật Dữ Liệu
+          </button>
+        </div>
         <div className="flex items-center gap-2">
           <label>Trạng thái:</label>
           <select
@@ -457,30 +478,45 @@ const ScreeningManagement: React.FC = () => {
                     )}
                   </td>
                   <td className="border px-3 py-2 text-center">
-  <div className="flex items-center justify-center gap-8">
-    <button
-      className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-blue-50 transition-colors duration-150 cursor-pointer"
-      title="Xem"
-      onClick={() => setViewingScreening(s)}
-    >
-      <EyeIcon size={24} className="text-blue-600" />
-    </button>
-    <button
-      className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-yellow-50 transition-colors duration-150 cursor-pointer"
-      title="Sửa"
-      onClick={() => handleEdit(s)}
-    >
-      <EditIcon size={24} className="text-yellow-600" />
-    </button>
-    <button
-      className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-red-50 transition-colors duration-150 cursor-pointer"
-      title="Xóa"
-      onClick={() => handleDelete(s._id)}
-    >
-      <TrashIcon size={24} className="text-red-600" />
-    </button>
-  </div>
-</td>
+                    <div className="flex items-center justify-center gap-2">
+                      <button 
+                        className="group relative p-2 hover:bg-blue-50 rounded-full"
+                        onClick={() => setViewingScreening(s)}
+                      >
+                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2 whitespace-nowrap z-10">
+                          Xem chi tiết
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                          <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+
+                      <button 
+                        className="group relative p-2 hover:bg-blue-50 rounded-full"
+                        onClick={() => handleEdit(s)}
+                      >
+                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2 whitespace-nowrap z-10">
+                          Chỉnh sửa
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                      </button>
+
+                      <button 
+                        className="group relative p-2 hover:bg-red-50 rounded-full"
+                        onClick={() => handleDelete(s._id)}
+                      >
+                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2 whitespace-nowrap z-10">
+                          Xóa
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {screenings.length === 0 && (
@@ -496,9 +532,9 @@ const ScreeningManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow-md min-w-[350px]">
             <h3 className="text-lg font-bold mb-4">Thông tin suất chiếu</h3>
-            <div className="mb-2"><b>Phim:</b> {viewingScreening.movieId?.title || viewingScreening.movieId}</div>
-            <div className="mb-2"><b>Rạp:</b> {viewingScreening.theaterId?.name || viewingScreening.theaterId}</div>
-            <div className="mb-2"><b>Phòng:</b> {viewingScreening.roomId?.name || viewingScreening.roomId}</div>
+            <div className="mb-2"><b>Phim:</b> {typeof viewingScreening.movieId === 'object' ? viewingScreening.movieId.title : viewingScreening.movieId}</div>
+            <div className="mb-2"><b>Rạp:</b> {typeof viewingScreening.theaterId === 'object' ? viewingScreening.theaterId.name : viewingScreening.theaterId}</div>
+            <div className="mb-2"><b>Phòng:</b> {typeof viewingScreening.roomId === 'object' ? viewingScreening.roomId.name : viewingScreening.roomId}</div>
             <div className="mb-2"><b>Thời gian bắt đầu:</b> {new Date(viewingScreening.startTime).toLocaleString('vi-VN', { hour12: false })}</div>
             <div className="mb-2"><b>Thời gian kết thúc:</b> {new Date(viewingScreening.endTime).toLocaleString('vi-VN', { hour12: false })}</div>
             <div className="mb-2"><b>Trạng thái:</b> {viewingScreening.status}</div>

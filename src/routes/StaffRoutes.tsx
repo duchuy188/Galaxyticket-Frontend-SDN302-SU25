@@ -9,12 +9,14 @@ import StaffProfile from '../pages/dashboard/StaffProfile';
 const StaffRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route index element={<StaffDashboard />} />
+      {/* Chuyển hướng từ trang index đến trang movies */}
+      <Route index element={<Navigate to="/staff/movies" replace />} />
       <Route path="movies" element={<StaffDashboard />} />
       <Route path="screenings" element={<ScreeningManagement />} />
       <Route path="promotions" element={<PromotionManager />} />
       <Route path="theaters" element={<TheaterManagement />} />
-      <Route path="*" element={<Navigate to="/staff" replace />} />
+      {/* Cập nhật route mặc định để chuyển đến movies thay vì staff */}
+      <Route path="*" element={<Navigate to="/staff/movies" replace />} />
       <Route path="profile" element={<StaffProfile />} />
     </Routes>
   );
