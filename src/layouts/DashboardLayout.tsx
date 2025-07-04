@@ -44,11 +44,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     },
   ]
   const staffNavItems = [
-    {
-      label: 'Bảng điều khiển',
-      path: `${basePath}`,
-      icon: <LayoutDashboardIcon size={20} />,
-    },
+   
     {
       label: 'Quản lý phim',
       path: `${basePath}/movies`,

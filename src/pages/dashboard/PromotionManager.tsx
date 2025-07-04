@@ -239,21 +239,43 @@ const PromotionManager: React.FC = () => {
       {/* Header Section */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Quản lý Khuyến mãi</h1>
-            <p className="text-gray-600 mt-1">Quản lý tất cả các chương trình khuyến mãi</p>
-          </div>
-          {(user?.role === 'manager' || user?.role === 'staff') && (
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition duration-200 ease-in-out flex items-center gap-2 shadow-sm"
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl font-bold">Quản Lý Khuyến Mãi</h2>
+            <button 
+              onClick={async () => {
+                try {
+                  setLoading(true);
+                  await fetchPromotions();
+                  toast.success('Đã cập nhật dữ liệu thành công!');
+                } catch (err) {
+                  toast.error('Không thể cập nhật dữ liệu');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="px-4 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-              Thêm Khuyến mãi
+              Cập Nhật Dữ Liệu
             </button>
-          )}
+          </div>
+          <button
+            className="bg-blue-600 text-white px-4 py-2 rounded-md"
+            onClick={() => {
+              setEditingPromotion(null);
+              setFormData({
+                code: '',
+                name: '',
+                description: '',
+                type: 'percent',
+                value: 0,
+                startDate: getCurrentDate(),
+                endDate: ''
+              });
+              setIsModalOpen(true);
+            }}
+          >
+            Tạo Khuyến Mãi Mới
+          </button>
         </div>
 
         {/* Filter Section */}

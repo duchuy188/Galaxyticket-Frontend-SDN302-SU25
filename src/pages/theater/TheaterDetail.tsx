@@ -55,6 +55,8 @@ const TheaterDetail: React.FC = () => {
   const todayValue = dayjs().format('DD/MM');
   // now là dayjs object, tự động cập nhật mỗi 10 giây
   const [now, setNow] = useState(dayjs());
+  const [dayLoading, setDayLoading] = useState(false);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setNow(dayjs());
@@ -98,7 +100,7 @@ const TheaterDetail: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     const fetchScreenings = async () => {
-      setLoading(true);
+      setDayLoading(true);
       try {
         const dateISO = dayjs(days.find(d => d.value === activeDay)?.fullDate).startOf('day').toISOString();
         const screenings = await getPublicScreeningsByTheaterAndDate(id, dateISO);
@@ -106,7 +108,7 @@ const TheaterDetail: React.FC = () => {
       } catch (err) {
         setError('Không thể tải suất chiếu');
       }
-      setLoading(false);
+      setDayLoading(false);
     };
     fetchScreenings();
   }, [id, activeDay, days]);
@@ -114,7 +116,7 @@ const TheaterDetail: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     const fetchSchedule = async () => {
-      setLoading(true);
+      setDayLoading(true);
       try {
         const schedules = await getScheduleByTheater(days.find(d => d.value === activeDay)?.fullDate || '');
         const theaterSchedule = schedules.find(s => s.theaterId === id);
@@ -122,7 +124,7 @@ const TheaterDetail: React.FC = () => {
       } catch (err) {
         setError('Không thể tải lịch chiếu');
       }
-      setLoading(false);
+      setDayLoading(false);
     };
     fetchSchedule();
   }, [id, activeDay, days]);
@@ -329,6 +331,14 @@ const TheaterDetail: React.FC = () => {
                 ))}
               </div>
             </div>
+            
+            {/* Hiển thị loading indicator nhỏ khi chuyển ngày */}
+            {dayLoading && (
+              <div className="text-center mb-4">
+                <div className="inline-block animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-sm text-gray-500">Đang tải...</span>
+              </div>
+            )}
 
             {/* Movies Grid - render theo screeningsByMovie */}
             <div className="relative">
