@@ -168,12 +168,7 @@ const StaffDashboard: React.FC = () => {
 
     fetchAllMovies();
     
-    // Thêm một interval để kiểm tra cập nhật định kỳ
-    const intervalId = setInterval(() => {
-      fetchAllMovies();
-    }, 60000); // Cập nhật mỗi 60 giây
-    
-    return () => clearInterval(intervalId);
+
   }, []);
 
   // Thêm useEffect để lọc phim từ dữ liệu local

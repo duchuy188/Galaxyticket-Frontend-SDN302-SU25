@@ -42,6 +42,9 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
   // Nếu có filterType được truyền vào thông qua prop, sử dụng nó
   const [filterTypeState, setFilterTypeState] = useState<string>(filterType || 'all');
 
+  // Thêm state để lưu khoảng thời gian lọc
+  const [dateFilter, setDateFilter] = useState<number>(30); // Mặc định hiển thị 30 ngày gần nhất
+
   // 1. Thêm state quản lý phân trang (thêm vào sau dòng khai báo state filterStatus)
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -69,9 +72,20 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
       filtered = filtered.filter(req => req.status === filterStatus);
     }
 
+    // Thêm lọc theo ngày
+    if (dateFilter > 0) {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - dateFilter); // Lấy ngày cách đây dateFilter ngày
+      
+      filtered = filtered.filter(req => {
+        const requestDate = new Date(req.createdAt);
+        return requestDate >= cutoffDate;
+      });
+    }
+
     setLocalFiltered(filtered);
     setCurrentPage(1); // Reset về trang đầu tiên khi thay đổi bộ lọc
-  }, [requests, filterTypeState, filterStatus]);
+  }, [requests, filterTypeState, filterStatus, dateFilter]);
 
   // 2. Thêm logic phân trang (thêm vào sau đoạn code lọc dữ liệu localFiltered)
   // Tính toán các yêu cầu hiển thị cho trang hiện tại
@@ -300,6 +314,19 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                 <option value="pending">Chờ Duyệt</option>
                 <option value="approved">Đã Duyệt</option>
                 <option value="rejected">Từ Chối</option>
+              </select>
+
+              {/* Thêm dropdown để chọn khoảng thời gian */}
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(Number(e.target.value))}
+                className="px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value={0}>Tất cả thời gian</option>
+                <option value={7}>7 ngày gần đây</option>
+                <option value={30}>30 ngày gần đây</option>
+                <option value={90}>90 ngày gần đây</option>
+                <option value={180}>6 tháng gần đây</option>
               </select>
 
               <button
