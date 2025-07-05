@@ -47,8 +47,13 @@ const SignIn: React.FC = () => {
       } else {
         setError('Invalid email or password');
       }
-    } catch (err) {
-      setError('An error occurred. Please try again.');
+    } catch (err: any) {
+      // Nếu backend trả về message đặc biệt (ví dụ tài khoản bị khóa)
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else {
+        setError('Invalid email or password');
+      }
     } finally {
       setIsLoading(false);
     }

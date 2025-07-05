@@ -15,7 +15,7 @@ interface FormErrors {
 }
 
 const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
-  const { user } = useAuth();
+  const { user, updateUser, refreshUserData } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -27,8 +27,25 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
     email: user?.email || '',
     phone: user?.phone || '',
     avatar: user?.avatar || 'https://via.placeholder.com/150',
-    birthday: '2003-11-30' // Changed to YYYY-MM-DD format for date input
+    birthday: '2003-11-30', // Changed to YYYY-MM-DD format for date input
+    avatarFile: null as File | null
   });
+
+  React.useEffect(() => {
+    setFormData({
+      fullName: user?.fullName || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      avatar: user?.avatar || 'https://via.placeholder.com/150',
+      birthday: '2003-11-30',
+      avatarFile: null
+    });
+  }, [user]);
+
+  // Debug: Log user data when it changes
+  React.useEffect(() => {
+    console.log('User data updated:', user);
+  }, [user]);
 
   const getPasswordStrength = (password: string) => {
     let strength = 0;
@@ -127,7 +144,8 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
       email: user?.email || '',
       phone: user?.phone || '',
       avatar: user?.avatar || 'https://via.placeholder.com/150',
-      birthday: '2003-11-30'
+      birthday: '2003-11-30',
+      avatarFile: null
     });
     setFormErrors({});
     setIsEditing(false);
@@ -157,7 +175,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
   // };
 
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   if (!validateForm()) {
     toast.error('Please fix the errors in the form');
@@ -165,19 +183,61 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
   }
   setIsLoading(true);
   try {
-    // Mapping đúng field: BE dùng "name", FE có thể đang dùng "fullName"
-    const payload = {
-      name: formData.fullName, // FE là fullName, BE là name
+    // Tạo FormData để gửi cả text và file
+    const formDataToSend = new FormData();
+    formDataToSend.append('name', formData.fullName);
+    formDataToSend.append('email', formData.email);
+    formDataToSend.append('phone', formData.phone);
+    
+    // Thêm avatar file nếu có
+    if (formData.avatarFile) {
+      formDataToSend.append('avatar', formData.avatarFile);
+    }
+
+    // Debug: Log data being sent
+    console.log('Sending profile data:', {
+      name: formData.fullName,
       email: formData.email,
       phone: formData.phone,
-      // Nếu có đổi mật khẩu ở đây thì thêm password: formData.password
-    };
-    const response = await api.put('/api/profile', payload);
-    // Cập nhật lại user ở FE nếu cần
-    // updateUser(response.data.user);
+      hasAvatarFile: !!formData.avatarFile
+    });
+
+    const response = await api.put('/api/auth/profile', formDataToSend, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    
+    console.log('Profile update response:', response.data);
+    
+    // Cập nhật lại user ở FE nếu backend trả về user data
+    if (response.data.user) {
+      const updatedUserData = {
+        fullName: response.data.user.name || response.data.user.fullName,
+        email: response.data.user.email,
+        phone: response.data.user.phone,
+        avatar: response.data.user.avatar
+      };
+      
+      // Update user context và localStorage
+      updateUser(updatedUserData);
+      
+      // Update formData với avatar URL mới từ backend
+      setFormData(prev => ({
+        ...prev,
+        avatar: response.data.user.avatar || 'https://via.placeholder.com/150',
+        avatarFile: null // Reset avatarFile sau khi upload thành công
+      }));
+    } else {
+      // Nếu backend không trả về user data, refresh từ API
+      await refreshUserData();
+    }
+    
     setIsEditing(false);
     toast.success(response.data.message || 'Profile updated successfully!');
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Profile update error:', error);
+    console.error('Error response:', error.response?.data);
     toast.error(error.response?.data?.message || 'Failed to update profile');
   } finally {
     setIsLoading(false);
@@ -190,7 +250,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
   // };
 
 
-  const handlePasswordSubmit = async (e) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   if (passwordData.newPassword !== passwordData.confirmPassword) {
     toast.error('Passwords do not match');
@@ -203,11 +263,11 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
       newPassword: passwordData.newPassword,
       confirmNewPassword: passwordData.confirmPassword,
     };
-    const response = await api.put('/api/change-password', payload);
+    const response = await api.put('/api/auth/change-password', payload);
     toast.success(response.data.message || 'Password updated successfully!');
     setShowPasswordModal(false);
     setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  } catch (error) {
+  } catch (error: any) {
     toast.error(error.response?.data?.message || 'Failed to update password');
   } finally {
     setIsLoading(false);
@@ -216,6 +276,20 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Please upload JPG, PNG, JPEG, or WEBP format');
+        return;
+      }
+
+      // Create local preview first
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({
@@ -224,6 +298,35 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
         }));
       };
       reader.readAsDataURL(file);
+
+      // Store file for later upload when form is submitted
+      setFormData(prev => ({
+        ...prev,
+        avatarFile: file
+      }));
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    try {
+      const response = await api.delete('/api/auth/profile/avatar');
+      if (response.data.user) {
+        // Update user context và localStorage
+        updateUser({
+          avatar: response.data.user.avatar
+        });
+        
+        // Update formData với avatar URL mới từ backend
+        setFormData(prev => ({
+          ...prev,
+          avatar: response.data.user.avatar || 'https://via.placeholder.com/150',
+          avatarFile: null
+        }));
+      }
+      toast.success(response.data.message || 'Avatar removed successfully!');
+    } catch (error: any) {
+      console.error('Remove avatar error:', error);
+      toast.error(error.response?.data?.message || 'Failed to remove avatar');
     }
   };
 
@@ -432,18 +535,29 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
               className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg transition-all duration-300 group-hover:scale-105"
             />
             {isEditing && (
-              <label 
-                className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg cursor-pointer hover:bg-gray-50 transition-all duration-300 transform hover:scale-110"
-                title="Change profile picture"
-              >
-                <Camera className="w-5 h-5 text-gray-600" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
-              </label>
+              <>
+                <label 
+                  className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg cursor-pointer hover:bg-gray-50 transition-all duration-300 transform hover:scale-110"
+                  title="Change profile picture"
+                >
+                  <Camera className="w-5 h-5 text-gray-600" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
+                </label>
+                {formData.avatar !== 'https://via.placeholder.com/150' && (
+                  <button
+                    onClick={handleRemoveAvatar}
+                    className="absolute top-0 right-0 p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-all duration-300 transform hover:scale-110"
+                    title="Remove profile picture"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

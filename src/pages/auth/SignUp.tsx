@@ -49,6 +49,10 @@ const SignUp: React.FC = () => {
   };
 
   const validateForm = () => {
+    if (!/^[0-9]{10}$/.test(formData.phone.replace(/[^0-9]/g, ''))) {
+      setError('Phone number must be exactly 10 digits');
+      return false;
+    }
     if (!acceptTerms) {
       setError('Please accept the Terms and Conditions');
       return false;

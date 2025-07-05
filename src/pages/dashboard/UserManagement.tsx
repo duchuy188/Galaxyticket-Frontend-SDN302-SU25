@@ -34,7 +34,7 @@ const UserManagement: React.FC = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await api.get('/api/users');
+        const response = await api.get('/api/auth/users');
         const usersData = (Array.isArray(response.data) ? response.data : response.data.users || []).map((u: any) => ({
           id: u._id,
           fullName: u.name,
@@ -45,18 +45,43 @@ const UserManagement: React.FC = () => {
         }));
         setUsers(usersData);
       } catch (err) {
-        console.error('Failed to fetch users:', err);
+        // Đừng gọi toast.error ở đây để tránh double noti!
+        // console.error('Failed to fetch users:', err);
       }
     };
     fetchUsers();
   }, []);
 
-  const handleToggleLock = (userId: string) => {
-    setUsers(users.map(user => user.id === userId ? {
-      ...user,
-      isLocked: !user.isLocked
-    } : user));
+  const handleLockUser = async (userId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`/api/admin/users/${userId}/lock`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success('Khóa tài khoản thành công!');
+      // Update UI ngay lập tức
+      setUsers(users => users.map(user => user.id === userId ? { ...user, isLocked: true } : user));
+      // fetchUsers(); // Nếu muốn, có thể fetch lại users sau đó
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Khóa tài khoản thất bại!');
+    }
   };
+
+  const handleUnlockUser = async (userId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`/api/admin/users/${userId}/unlock`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success('Mở khóa tài khoản thành công!');
+      // Update UI ngay lập tức
+      setUsers(users => users.map(user => user.id === userId ? { ...user, isLocked: false } : user));
+      // fetchUsers(); // Nếu muốn, có thể fetch lại users sau đó
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Mở khóa tài khoản thất bại!');
+    }
+  };
+
   const handleEditUser = (user: User) => {
     setEditingUser(user);
   };
@@ -170,9 +195,15 @@ const handleUpdateUser = async (e: React.FormEvent) => {
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isLocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>{user.isLocked ? 'Locked' : 'Active'}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button onClick={() => handleToggleLock(user.id)} className="text-gray-600 hover:text-gray-900 mr-3" title={user.isLocked ? 'Unlock Account' : 'Lock Account'}>
-                      {user.isLocked ? <UnlockIcon size={18} /> : <LockIcon size={18} />}
-                    </button>
+                    {user.isLocked ? (
+                      <button onClick={() => handleUnlockUser(user.id)} className="text-gray-600 hover:text-gray-900 mr-3" title="Unlock Account">
+                        <UnlockIcon size={18} />
+                      </button>
+                    ) : (
+                      <button onClick={() => handleLockUser(user.id)} className="text-gray-600 hover:text-gray-900 mr-3" title="Lock Account">
+                        <LockIcon size={18} />
+                      </button>
+                    )}
                     <button onClick={() => handleEditUser(user)} className="text-blue-600 hover:text-blue-900 mr-3">
                       <EditIcon size={18} />
                     </button>
