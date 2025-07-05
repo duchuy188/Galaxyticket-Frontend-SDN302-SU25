@@ -19,6 +19,8 @@ type AuthContextType = {
     userData: Omit<User, 'id' | '_id' | 'role'> & { password: string }
   ) => Promise<boolean>;
   logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
+  refreshUserData: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -103,7 +105,7 @@ export const AuthProvider: React.FC<{
       }
     } catch (err) {
       console.error('Login failed:', err);
-      return false;
+      throw err;
     }
   };
 
@@ -163,6 +165,43 @@ export const AuthProvider: React.FC<{
     localStorage.removeItem('token');
   };
 
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
+  const refreshUserData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get('http://localhost:5000/api/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data) {
+        const userData = response.data;
+        const userInfo: User = {
+          id: userData._id || userData.id,
+          _id: userData._id || userData.id,
+          fullName: userData.name || userData.fullName,
+          email: userData.email,
+          phone: userData.phone,
+          role: userData.role,
+          avatar: userData.avatar
+        };
+
+        setUser(userInfo);
+        localStorage.setItem('user', JSON.stringify(userInfo));
+      }
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -171,6 +210,8 @@ export const AuthProvider: React.FC<{
         login,
         register,
         logout,
+        updateUser,
+        refreshUserData,
       }}
     >
       {children}

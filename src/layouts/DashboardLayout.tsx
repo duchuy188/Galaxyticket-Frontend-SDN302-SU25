@@ -37,11 +37,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       path: `${basePath}/users`,
       icon: <UsersIcon size={20} />,
     },
-    {
-      label: 'Báo cáo doanh thu',
-      path: `${basePath}/reports`,
-      icon: <CreditCardIcon size={20} />,
-    },
+    // {
+    //   label: 'Báo cáo doanh thu',
+    //   path: `${basePath}/reports`,
+    //   icon: <CreditCardIcon size={20} />,
+    // },
   ]
   const staffNavItems = [
    
