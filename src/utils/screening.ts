@@ -7,6 +7,7 @@ export interface Screening {
         title: string;
         genre: string;
         duration?: number;
+        posterUrl?: string;
     };
     roomId: {
         _id: string;
