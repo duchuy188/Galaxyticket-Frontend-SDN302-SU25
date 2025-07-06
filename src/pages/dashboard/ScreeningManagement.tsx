@@ -404,7 +404,9 @@ const ScreeningManagement: React.FC = () => {
                   <select
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={form.theaterId}
-                    onChange={e => setForm({ ...form, theaterId: e.target.value })}
+                    onChange={e => {
+                      setForm({ ...form, theaterId: e.target.value, roomId: '' }); // Reset phòng khi đổi rạp
+                    }}
                     required
                   >
                     <option value="">Chọn rạp</option>
@@ -433,48 +435,12 @@ const ScreeningManagement: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phòng
-                  </label>
-                  <select
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={form.roomId}
-                    onChange={e => setForm({ ...form, roomId: e.target.value })}
-                    required
-                  >
-                    <option value="">Chọn phòng</option>
-                    {rooms
-                      .filter(r => {
-                        if (!r.theaterId) return false;
-                        return (typeof r.theaterId === 'object' ? r.theaterId._id : r.theaterId) === form.theaterId;
-                      })
-                      .map(r => (
-                        <option key={r._id} value={r._id}>{r.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Giá vé
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={form.ticketPrice}
-                    onChange={e => setForm({ ...form, ticketPrice: Number(e.target.value) })}
-                    min={0}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Thời gian bắt đầu
                   </label>
                   <DatePicker
                     selected={form.startTime ? new Date(form.startTime) : null}
                     onChange={date => {
-                      setForm({ ...form, startTime: date ? date.toISOString() : '' });
+                      setForm({ ...form, startTime: date ? date.toISOString() : '', roomId: '' }); // Reset phòng khi đổi thời gian
                     }}
                     showTimeSelect
                     timeFormat="HH:mm"
@@ -521,6 +487,138 @@ const ScreeningManagement: React.FC = () => {
                         return max;
                       })()
                     }
+                    excludeTimes={
+                      form.theaterId ? (() => {
+                        const selectedDate = form.startTime ? new Date(form.startTime) : new Date();
+                        const excludedTimes: Date[] = [];
+                        
+                        // Lấy tất cả suất chiếu trong rạp đã chọn trong ngày đã chọn
+                        const conflictingScreenings = screenings.filter(s => {
+                          // Bỏ qua suất chiếu đang chỉnh sửa
+                          if (editingScreening && s._id === editingScreening._id) return false;
+                          
+                          // Kiểm tra cùng rạp
+                          const screeningTheaterId = typeof s.theaterId === 'object' ? s.theaterId._id : s.theaterId;
+                          if (screeningTheaterId !== form.theaterId) return false;
+                          
+                          // Kiểm tra cùng ngày
+                          const existingStartTime = new Date(s.startTime);
+                          return (
+                            existingStartTime.getFullYear() === selectedDate.getFullYear() &&
+                            existingStartTime.getMonth() === selectedDate.getMonth() &&
+                            existingStartTime.getDate() === selectedDate.getDate()
+                          );
+                        });
+                        
+                        // Thêm các thời gian bị xung đột vào danh sách exclude
+                        conflictingScreenings.forEach(s => {
+                          const existingStartTime = new Date(s.startTime);
+                          
+                          // Chỉ exclude nếu cùng phim
+                          const existingMovieId = typeof s.movieId === 'object' ? s.movieId._id : s.movieId;
+                          if (existingMovieId !== form.movieId) return; // Khác phim thì không exclude
+                          
+                          // Exclude thời gian bắt đầu của suất chiếu hiện có
+                          excludedTimes.push(existingStartTime);
+                          
+                          // Exclude các thời gian từ 1 phút đến 14 phút trước và sau thời gian bắt đầu
+                          for (let i = 1; i < 15; i++) {
+                            const timeBefore = new Date(existingStartTime.getTime() - i * 60000);
+                            const timeAfter = new Date(existingStartTime.getTime() + i * 60000);
+                            
+                            if (timeBefore.getHours() >= 8 && timeBefore.getHours() <= 23) {
+                              excludedTimes.push(timeBefore);
+                            }
+                            if (timeAfter.getHours() >= 8 && timeAfter.getHours() <= 23) {
+                              excludedTimes.push(timeAfter);
+                            }
+                          }
+                        });
+                        
+                        return excludedTimes;
+                      })() : []
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phòng
+                  </label>
+                  <select
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={form.roomId}
+                    onChange={e => setForm({ ...form, roomId: e.target.value })}
+                    required
+                  >
+                    <option value="">Chọn phòng</option>
+                    {rooms
+                      .filter(r => {
+                        if (!r.theaterId) return false;
+                        if ((typeof r.theaterId === 'object' ? r.theaterId._id : r.theaterId) !== form.theaterId) return false;
+                        
+                        // Kiểm tra xung đột thời gian nếu đã chọn thời gian bắt đầu
+                        if (form.startTime) {
+                          const selectedStartTime = new Date(form.startTime);
+                          const selectedMovieDuration = movies.find(m => m._id === form.movieId)?.duration || 120; // mặc định 120 phút
+                          const selectedEndTime = new Date(selectedStartTime.getTime() + selectedMovieDuration * 60000);
+                          
+                          // Kiểm tra các suất chiếu hiện có trong cùng rạp
+                          const conflictingScreenings = screenings.filter(s => {
+                            // Bỏ qua suất chiếu đang chỉnh sửa
+                            if (editingScreening && s._id === editingScreening._id) return false;
+                            
+                            // Kiểm tra cùng rạp
+                            const screeningTheaterId = typeof s.theaterId === 'object' ? s.theaterId._id : s.theaterId;
+                            if (screeningTheaterId !== form.theaterId) return false;
+                            
+                            const existingStartTime = new Date(s.startTime);
+                            const existingEndTime = new Date(s.endTime);
+                            
+                            // Quy tắc 1: Nếu cùng phòng, không được trùng thời gian
+                            const screeningRoomId = typeof s.roomId === 'object' ? s.roomId._id : s.roomId;
+                            if (screeningRoomId === r._id) {
+                              return (
+                                (selectedStartTime >= existingStartTime && selectedStartTime < existingEndTime) ||
+                                (selectedEndTime > existingStartTime && selectedEndTime <= existingEndTime) ||
+                                (selectedStartTime <= existingStartTime && selectedEndTime >= existingEndTime)
+                              );
+                            }
+                            
+                            // Quy tắc 2: Nếu khác phòng nhưng cùng rạp và cùng phim, không được cùng giờ bắt đầu (phải cách nhau ít nhất 15 phút)
+                            const existingMovieId = typeof s.movieId === 'object' ? s.movieId._id : s.movieId;
+                            if (existingMovieId === form.movieId) { // Chỉ áp dụng quy tắc này khi cùng phim
+                              const timeDifference = Math.abs(selectedStartTime.getTime() - existingStartTime.getTime());
+                              const fifteenMinutes = 15 * 60 * 1000; // 15 phút tính bằng milliseconds
+                              
+                              return timeDifference < fifteenMinutes;
+                            }
+                            
+                            return false; // Khác phim thì không có xung đột
+                          });
+                          
+                          return conflictingScreenings.length === 0;
+                        }
+                        
+                        return true;
+                      })
+                      .map(r => (
+                        <option key={r._id} value={r._id}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Giá vé
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={form.ticketPrice}
+                    onChange={e => setForm({ ...form, ticketPrice: Number(e.target.value) })}
+                    min={0}
+                    required
                   />
                 </div>
               </div>
