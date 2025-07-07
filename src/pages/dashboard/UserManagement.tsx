@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../utils/api';
-import { EditIcon, TrashIcon, LockIcon, UnlockIcon } from 'lucide-react';
+import { EditIcon, TrashIcon, LockIcon, UnlockIcon, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
@@ -30,6 +30,8 @@ const UserManagement: React.FC = () => {
     role: 'staff',
   });
   const [creating, setCreating] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -108,13 +110,18 @@ const handleUpdateUser = async (e: React.FormEvent) => {
   }
 };
   const handleDeleteUser = async (userId: string) => {
+    const userToDelete = users.find(user => user.id === userId);
+    if (userToDelete?.role === 'admin') {
+      toast.error('Không thể xóa tài khoản admin!');
+      return;
+    }
     if (!window.confirm('Bạn có chắc chắn muốn xóa user này?')) return;
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`/api/admin/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setUsers(users.filter(user => (user._id || user.id) !== userId));
+      setUsers(users.filter(user => user.id !== userId));
       toast.success('Xóa user thành công!');
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Xóa user thất bại!');
@@ -123,6 +130,17 @@ const handleUpdateUser = async (e: React.FormEvent) => {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Validate phone number
+    const phone = newUser.phone.trim();
+    if (!phone) {
+      setPhoneError('Số điện thoại không được để trống');
+      return;
+    }
+    if (!/^[0-9]{10}$/.test(phone)) {
+      setPhoneError('Số điện thoại phải đúng 10 số');
+      return;
+    }
+    setPhoneError(null);
     setCreating(true);
     try {
       const token = localStorage.getItem('token');
@@ -132,17 +150,21 @@ const handleUpdateUser = async (e: React.FormEvent) => {
       toast.success('Tạo user thành công!');
       setShowCreateModal(false);
       setNewUser({ name: '', email: '', phone: '', password: '', role: 'staff' });
-      // Reload lại danh sách user
-      const response = await api.get('/api/users');
-      const usersData = (Array.isArray(response.data) ? response.data : response.data.users || []).map((u: any) => ({
-        id: u._id,
-        fullName: u.name,
-        email: u.email,
-        phone: u.phone,
-        role: u.role,
-        isLocked: u.status === false
-      }));
-      setUsers(usersData);
+      // Reload lại danh sách user (nếu lỗi thì chỉ log, không báo toast.error)
+      try {
+        const response = await api.get('/api/users');
+        const usersData = (Array.isArray(response.data) ? response.data : response.data.users || []).map((u: any) => ({
+          id: u._id,
+          fullName: u.name,
+          email: u.email,
+          phone: u.phone,
+          role: u.role,
+          isLocked: u.status === false
+        }));
+        setUsers(usersData);
+      } catch (err) {
+        console.error('Lỗi reload danh sách user:', err);
+      }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Tạo user thất bại!');
     } finally {
@@ -283,67 +305,127 @@ const handleUpdateUser = async (e: React.FormEvent) => {
         </div>
       )}
       {showCreateModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-          <form
-            onSubmit={handleCreateUser}
-            className="bg-white p-6 rounded shadow-md min-w-[350px]"
-          >
-            <h3 className="text-lg font-semibold mb-4">Tạo user mới</h3>
-            <input
-              className="border rounded px-3 py-2 w-full mb-2"
-              placeholder="Họ tên"
-              value={newUser.name}
-              onChange={e => setNewUser({ ...newUser, name: e.target.value })}
-              required
-            />
-            <input
-              className="border rounded px-3 py-2 w-full mb-2"
-              placeholder="Email"
-              type="email"
-              value={newUser.email}
-              onChange={e => setNewUser({ ...newUser, email: e.target.value })}
-              required
-            />
-            <input
-              className="border rounded px-3 py-2 w-full mb-2"
-              placeholder="Số điện thoại"
-              value={newUser.phone}
-              onChange={e => setNewUser({ ...newUser, phone: e.target.value })}
-              required
-            />
-            <input
-              className="border rounded px-3 py-2 w-full mb-2"
-              placeholder="Mật khẩu"
-              type="password"
-              value={newUser.password}
-              onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-              required
-            />
-            <select
-              className="border rounded px-3 py-2 w-full mb-4"
-              value={newUser.role}
-              onChange={e => setNewUser({ ...newUser, role: e.target.value })}
-            >
-              <option value="staff">staff</option>
-              <option value="manager">manager</option>
-            </select>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                onClick={() => setShowCreateModal(false)}
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                disabled={creating}
-              >
-                {creating ? 'Đang tạo...' : 'Tạo mới'}
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">Tạo User Mới</h3>
+                <button
+                  onClick={() => !creating && setShowCreateModal(false)}
+                  className={`text-gray-400 hover:text-gray-500 ${creating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={creating}
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <form onSubmit={handleCreateUser} className="space-y-6 relative">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Họ tên</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      placeholder="Họ tên"
+                      value={newUser.name}
+                      onChange={e => setNewUser({ ...newUser, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Email</label>
+                    <input
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      placeholder="Email"
+                      type="email"
+                      value={newUser.email}
+                      onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
+                    <input
+                      className={`w-full px-3 py-2 border ${phoneError ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white`}
+                      placeholder="Số điện thoại"
+                      value={newUser.phone}
+                      onChange={e => {
+                        setNewUser({ ...newUser, phone: e.target.value });
+                        if (phoneError) setPhoneError(null);
+                      }}
+                      required
+                    />
+                    {phoneError && <p className="text-xs text-red-500 mt-1">{phoneError}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
+                    <div className="relative">
+                      <input
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white pr-10"
+                        placeholder="Mật khẩu"
+                        type={showPassword ? 'text' : 'password'}
+                        value={newUser.password}
+                        onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                        required
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        onClick={() => setShowPassword(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        disabled={creating}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700">Vai trò</label>
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      value={newUser.role}
+                      onChange={e => setNewUser({ ...newUser, role: e.target.value })}
+                    >
+                      <option value="staff">Staff</option>
+                      <option value="manager">Manager</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-6 border-t">
+                  <button
+                    type="button"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    onClick={() => setShowCreateModal(false)}
+                    disabled={creating}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="relative px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    disabled={creating}
+                  >
+                    {creating ? (
+                      <>
+                        <span className="opacity-0">Tạo mới</span>
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </span>
+                      </>
+                    ) : (
+                      'Tạo mới'
+                    )}
+                  </button>
+                </div>
+                {creating && (
+                  <div className="absolute inset-0 bg-gray-100 bg-opacity-40 pointer-events-auto cursor-not-allowed z-10" />
+                )}
+              </form>
             </div>
-          </form>
+          </div>
         </div>
       )}
     </div>

@@ -4,6 +4,7 @@ import { User, Mail, Phone, Lock, Edit2, Camera, History, Bell, X, Eye, EyeOff, 
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../utils/api';
+import { useNavigate } from 'react-router-dom';
 
 type TabType = 'history' | 'profile' | 'notifications';
 
@@ -11,11 +12,11 @@ interface FormErrors {
   fullName?: string;
   email?: string;
   phone?: string;
-  birthday?: string;
 }
 
 const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
   const { user, updateUser, refreshUserData } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -27,7 +28,6 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
     email: user?.email || '',
     phone: user?.phone || '',
     avatar: user?.avatar || 'https://via.placeholder.com/150',
-    birthday: '2003-11-30', // Changed to YYYY-MM-DD format for date input
     avatarFile: null as File | null
   });
 
@@ -37,7 +37,6 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
       email: user?.email || '',
       phone: user?.phone || '',
       avatar: user?.avatar || 'https://via.placeholder.com/150',
-      birthday: '2003-11-30',
       avatarFile: null
     });
   }, [user]);
@@ -80,26 +79,25 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
     let isValid = true;
 
     if (!formData.fullName.trim()) {
-      errors.fullName = 'Full name is required';
+      errors.fullName = 'Họ tên không được để trống';
       isValid = false;
     }
 
     if (!formData.email.trim()) {
-      errors.email = 'Email is required';
+      errors.email = 'Email không được để trống';
+      isValid = false;
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Invalid email format';
+      errors.email = 'Email không hợp lệ';
       isValid = false;
     }
 
-    if (!formData.phone.trim()) {
-      errors.phone = 'Phone number is required';
-    } else if (!/^[0-9]{10}$/.test(formData.phone.replace(/[^0-9]/g, ''))) {
-      errors.phone = 'Invalid phone number format';
+    // Validate phone number: không được để trống, phải đúng 10 số
+    const phone = formData.phone.trim();
+    if (!phone) {
+      errors.phone = 'Số điện thoại không được để trống';
       isValid = false;
-    }
-
-    if (!formData.birthday) {
-      errors.birthday = 'Date of birth is required';
+    } else if (!/^[0-9]{10}$/.test(phone)) {
+      errors.phone = 'Số điện thoại phải đúng 10 số';
       isValid = false;
     }
 
@@ -144,7 +142,6 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
       email: user?.email || '',
       phone: user?.phone || '',
       avatar: user?.avatar || 'https://via.placeholder.com/150',
-      birthday: '2003-11-30',
       avatarFile: null
     });
     setFormErrors({});
@@ -152,127 +149,99 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
     setShowConfirmDialog(false);
   };
 
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-    
-  //   if (!validateForm()) {
-  //     toast.error('Please fix the errors in the form');
-  //     return;
-  //   }
-
-  //   setIsLoading(true);
-  //   try {
-  //     // TODO: Implement update logic
-  //     await new Promise(resolve => setTimeout(resolve, 1000)); // Simulated API call
-  //     setIsEditing(false);
-  //     toast.success('Profile updated successfully!');
-  //   } catch (error) {
-  //     console.error('Error updating profile:', error);
-  //     toast.error('Failed to update profile. Please try again.');
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
-
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!validateForm()) {
-    toast.error('Please fix the errors in the form');
-    return;
-  }
-  setIsLoading(true);
-  try {
-    // Tạo FormData để gửi cả text và file
-    const formDataToSend = new FormData();
-    formDataToSend.append('name', formData.fullName);
-    formDataToSend.append('email', formData.email);
-    formDataToSend.append('phone', formData.phone);
-    
-    // Thêm avatar file nếu có
-    if (formData.avatarFile) {
-      formDataToSend.append('avatar', formData.avatarFile);
+    e.preventDefault();
+    if (!validateForm()) {
+      toast.error('Please fix the errors in the form');
+      return;
     }
-
-    // Debug: Log data being sent
-    console.log('Sending profile data:', {
-      name: formData.fullName,
-      email: formData.email,
-      phone: formData.phone,
-      hasAvatarFile: !!formData.avatarFile
-    });
-
-    const response = await api.put('/api/auth/profile', formDataToSend, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    
-    console.log('Profile update response:', response.data);
-    
-    // Cập nhật lại user ở FE nếu backend trả về user data
-    if (response.data.user) {
-      const updatedUserData = {
-        fullName: response.data.user.name || response.data.user.fullName,
-        email: response.data.user.email,
-        phone: response.data.user.phone,
-        avatar: response.data.user.avatar
-      };
+    setIsLoading(true);
+    try {
+      // Tạo FormData để gửi cả text và file
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.fullName);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('phone', formData.phone);
       
-      // Update user context và localStorage
-      updateUser(updatedUserData);
+      // Thêm avatar file nếu có
+      if (formData.avatarFile) {
+        formDataToSend.append('avatar', formData.avatarFile);
+      }
+
+      // Debug: Log data being sent
+      console.log('Sending profile data:', {
+        name: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        hasAvatarFile: !!formData.avatarFile
+      });
+
+      const response = await api.put('/api/auth/profile', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       
-      // Update formData với avatar URL mới từ backend
-      setFormData(prev => ({
-        ...prev,
-        avatar: response.data.user.avatar || 'https://via.placeholder.com/150',
-        avatarFile: null // Reset avatarFile sau khi upload thành công
-      }));
-    } else {
-      // Nếu backend không trả về user data, refresh từ API
-      await refreshUserData();
+      console.log('Profile update response:', response.data);
+      
+      // Cập nhật lại user ở FE nếu backend trả về user data
+      if (response.data.user) {
+        const updatedUserData = {
+          fullName: response.data.user.name || response.data.user.fullName,
+          email: response.data.user.email,
+          phone: response.data.user.phone,
+          avatar: response.data.user.avatar
+        };
+        
+        // Update user context và localStorage
+        updateUser(updatedUserData);
+        
+        // Update formData với avatar URL mới từ backend
+        setFormData(prev => ({
+          ...prev,
+          avatar: response.data.user.avatar || 'https://via.placeholder.com/150',
+          avatarFile: null // Reset avatarFile sau khi upload thành công
+        }));
+      } else {
+        // Nếu backend không trả về user data, refresh từ API
+        await refreshUserData();
+      }
+      
+      setIsEditing(false);
+      toast.success(response.data.message || 'Profile updated successfully!');
+    } catch (error: any) {
+      console.error('Profile update error:', error);
+      console.error('Error response:', error.response?.data);
+      toast.error(error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsEditing(false);
-    toast.success(response.data.message || 'Profile updated successfully!');
-  } catch (error: any) {
-    console.error('Profile update error:', error);
-    console.error('Error response:', error.response?.data);
-    toast.error(error.response?.data?.message || 'Failed to update profile');
-  } finally {
-    setIsLoading(false);
-  }
-};
-  // const handlePasswordSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   // TODO: Implement password change logic
-  //   setShowPasswordModal(false);
-  // };
-
+  };
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (passwordData.newPassword !== passwordData.confirmPassword) {
-    toast.error('Passwords do not match');
-    return;
-  }
-  setIsLoading(true);
-  try {
-    const payload = {
-      currentPassword: passwordData.currentPassword,
-      newPassword: passwordData.newPassword,
-      confirmNewPassword: passwordData.confirmPassword,
-    };
-    const response = await api.put('/api/auth/change-password', payload);
-    toast.success(response.data.message || 'Password updated successfully!');
-    setShowPasswordModal(false);
-    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-  } catch (error: any) {
-    toast.error(error.response?.data?.message || 'Failed to update password');
-  } finally {
-    setIsLoading(false);
-  }
-};
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const payload = {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        confirmNewPassword: passwordData.confirmPassword,
+      };
+      const response = await api.put('/api/auth/change-password', payload);
+      toast.success(response.data.message || 'Password updated successfully!');
+      setShowPasswordModal(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update password');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -587,23 +556,6 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
             </div>
 
             <div className="group">
-              <label className="block text-sm font-medium text-gray-600 mb-2">Date of Birth</label>
-              <input
-                type="date"
-                name="birthday"
-                value={formData.birthday}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className={`w-full px-4 py-2.5 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-300 ${
-                  formErrors.birthday ? 'border-red-500' : 'border-gray-200'
-                }`}
-              />
-              {formErrors.birthday && (
-                <p className="mt-1 text-sm text-red-500">{formErrors.birthday}</p>
-              )}
-            </div>
-
-            <div className="group">
               <label className="block text-sm font-medium text-gray-600 mb-2">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
@@ -708,6 +660,18 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
+          {/* Back button for admin profile */}
+          {hideTabs && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium px-4 py-2 bg-blue-50 rounded-lg shadow-sm hover:bg-blue-100 transition-all"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+              <span>Back to Dashboard</span>
+            </button>
+          )}
           {/* Tabs */}
           
       {!hideTabs && (
