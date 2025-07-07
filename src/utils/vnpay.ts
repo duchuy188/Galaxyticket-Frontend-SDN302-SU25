@@ -1,5 +1,4 @@
 import axios from 'axios';
-import moment from 'moment';
 
 const API_URL = 'http://localhost:5000';
 
