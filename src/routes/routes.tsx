@@ -23,6 +23,7 @@ import StaffRoutes from './StaffRoutes';
 import ManagerRoutes from './ManagerRoutes';
 import UserPromotions from '../pages/user/PromotionList';
 import PromotionManager from '../pages/dashboard/PromotionManager';
+import AdminProfile from '../pages/dashboard/AdminProfile';
 
 export const AppRoutes = () => {
     return (
@@ -59,7 +60,7 @@ export const AppRoutes = () => {
 {/* Admin Profile Route */}
 <Route path="admin/profile" element={
   <PrivateRoute allowedRoles={['admin']}>
-    <Profile />
+    <AdminProfile />
   </PrivateRoute>
 } />
             {/* Admin Dashboard Routes */}
