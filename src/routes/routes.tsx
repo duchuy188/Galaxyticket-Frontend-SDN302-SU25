@@ -23,7 +23,6 @@ import StaffRoutes from './StaffRoutes';
 import ManagerRoutes from './ManagerRoutes';
 import UserPromotions from '../pages/user/PromotionList';
 import PromotionManager from '../pages/dashboard/PromotionManager';
-import AdminProfile from '../pages/dashboard/AdminProfile';
 
 export const AppRoutes = () => {
     return (
@@ -57,17 +56,11 @@ export const AppRoutes = () => {
                     <UserPromotions />
                 </PrivateRoute>} />
             </Route>
-{/* Admin Profile Route */}
-<Route path="admin/profile" element={
-  <PrivateRoute allowedRoles={['admin']}>
-    <AdminProfile />
-  </PrivateRoute>
-} />
+
             {/* Admin Dashboard Routes */}
             <Route path="admin/*" element={<PrivateRoute allowedRoles={['admin']}>
                 <DashboardLayout>
                     <AdminDashboard />
-                    
                 </DashboardLayout>
             </PrivateRoute>} />
             

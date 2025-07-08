@@ -122,7 +122,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     className={`flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700 transition-colors ${location.pathname === '/admin/profile' ? 'bg-gray-700' : ''}`}
                   >
                     <UsersIcon size={20} />
-                    <span>Profile</span>
+                    <span>Hồ sơ</span>
                   </Link>
                 </li>
               )}
@@ -134,7 +134,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     className={`flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700 transition-colors ${location.pathname === '/manager/profile' ? 'bg-gray-700' : ''}`}
                   >
                     <UsersIcon size={20} />
-                    <span>Profile</span>
+                    <span>Hồ sơ</span>
                   </Link>
                 </li>
               )}
@@ -145,7 +145,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     className={`flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700 transition-colors ${location.pathname === '/staff/profile' ? 'bg-gray-700' : ''}`}
                   >
                     <UsersIcon size={20} />
-                    <span>Profile</span>
+                    <span>Hồ sơ</span>
                   </Link>
                 </li>
               )}

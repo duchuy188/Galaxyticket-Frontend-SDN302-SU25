@@ -6,6 +6,7 @@ import { EditIcon, TrashIcon, LockIcon, UnlockIcon } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import UserManagement from './UserManagement';
+import AdminProfile from './AdminProfile';
 import api from '../../utils/api';
 // Mock user data
 interface User {
@@ -24,6 +25,7 @@ const AdminDashboard: React.FC = () => {
   // Check if we're on the main dashboard or a subpage
   const isMainDashboard = location.pathname === '/admin';
   const isUserManagement = location.pathname === '/admin/users';
+  const isProfilePage = location.pathname === '/admin/profile';
   // const isRevenueReports = location.pathname === '/admin/reports';
   useEffect(() => {
     // Fetch user list từ backend khi vào dashboard hoặc user managementAdd commentMore actions
@@ -112,29 +114,29 @@ const AdminDashboard: React.FC = () => {
   const renderMainDashboard = () => <div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-2">Total Users</h3>
+          <h3 className="text-lg font-semibold mb-2">Tổng người dùng</h3>
           <p className="text-3xl font-bold">{users.length}</p>
           <div className="mt-2 text-sm text-gray-500">
-            <span className="text-green-500">↑ 12%</span> from last month
+            <span className="text-green-500">↑ 12%</span> từ tháng trước
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-2">Active Bookings</h3>
+          <h3 className="text-lg font-semibold mb-2">Đặt vé hoạt động</h3>
           <p className="text-3xl font-bold">42</p>
           <div className="mt-2 text-sm text-gray-500">
-            <span className="text-green-500">↑ 8%</span> from last week
+            <span className="text-green-500">↑ 8%</span> từ tuần trước
           </div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold mb-2">Monthly Revenue</h3>
+          <h3 className="text-lg font-semibold mb-2">Doanh thu tháng</h3>
           <p className="text-3xl font-bold">$12,450</p>
           <div className="mt-2 text-sm text-gray-500">
-            <span className="text-green-500">↑ 5%</span> from last month
+            <span className="text-green-500">↑ 5%</span> từ tháng trước
           </div>
         </div>
       </div>
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Revenue Overview</h3>
+        <h3 className="text-lg font-semibold mb-4">Tổng quan doanh thu</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={revenueData} margin={{
@@ -146,30 +148,30 @@ const AdminDashboard: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
-              <Tooltip formatter={(value: any) => [`$${value}`, 'Revenue']} />
+              <Tooltip formatter={(value: any) => [`$${value}`, 'Doanh thu']} />
               <Legend />
-              <Bar dataKey="revenue" name="Revenue" fill="#3B82F6" />
+              <Bar dataKey="revenue" name="Doanh thu" fill="#3B82F6" />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
       <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-4">Recent Users</h3>
+        <h3 className="text-lg font-semibold mb-4">Người dùng gần đây</h3>
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
+                  Tên
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Email
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
+                  Vai trò
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  Trạng thái
                 </th>
               </tr>
             </thead>
@@ -190,7 +192,7 @@ const AdminDashboard: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isLocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                      {user.isLocked ? 'Locked' : 'Active'}
+                      {user.isLocked ? 'Đã khóa' : 'Hoạt động'}
                     </span>
                   </td>
                 </tr>)}
@@ -198,7 +200,7 @@ const AdminDashboard: React.FC = () => {
           </table>
           <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
             <button className="text-sm font-medium text-blue-600 hover:text-blue-500" onClick={() => navigate('/admin/users')}>
-              View All Users
+              Xem tất cả người dùng
             </button>
           </div>
         </div>
@@ -208,7 +210,7 @@ const AdminDashboard: React.FC = () => {
     console.log('RenderUserManagement called, users:', users);
     return (
       <div>
-        <h2 className="text-2xl font-bold mb-6">User Management</h2>
+        <h2 className="text-2xl font-bold mb-6">Quản lý người dùng</h2>
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div style={{color: 'blue', fontWeight: 'bold'}}>DEBUG: renderUserManagement return called, users.length = {users.length}</div>
           <table border={1} style={{width: '100%'}}>
@@ -397,9 +399,10 @@ const AdminDashboard: React.FC = () => {
   //   </div>;
   return <div>
       <ToastContainer />
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-6">Bảng điều khiển quản trị</h1>
       {isMainDashboard && renderMainDashboard()}
       {isUserManagement && <UserManagement />}
+      {isProfilePage && <AdminProfile />}
       {/* {isRevenueReports && renderRevenueReports()} */}
     </div>;
 };
