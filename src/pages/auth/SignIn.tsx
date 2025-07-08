@@ -45,14 +45,14 @@ const SignIn: React.FC = () => {
           navigate('/');
         }
       } else {
-        setError('Invalid email or password');
+        setError('Email hoặc mật khẩu không đúng');
       }
     } catch (err: any) {
       // Nếu backend trả về message đặc biệt (ví dụ tài khoản bị khóa)
       if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else {
-        setError('Invalid email or password');
+        setError('Email hoặc mật khẩu không đúng');
       }
     } finally {
       setIsLoading(false);
@@ -66,7 +66,7 @@ const SignIn: React.FC = () => {
         className="fixed top-4 left-4 flex items-center text-gray-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="h-5 w-5 mr-1" />
-        <span>Back to Home</span>
+        <span>Về Trang Chủ</span>
       </Link>
 
       <div className="max-w-md w-full bg-[#1e293b] p-8 rounded-xl shadow-2xl border border-gray-700">
@@ -77,7 +77,7 @@ const SignIn: React.FC = () => {
               <h2 className="text-3xl font-bold text-white">Galaxy Cinema</h2>
             </div>
           </Link>
-          <p className="mt-2 text-gray-400">Welcome back! Please sign in to your account</p>
+          <p className="mt-2 text-gray-400">Chào mừng bạn trở lại! Vui lòng đăng nhập vào tài khoản của bạn</p>
         </div>
 
         {error && (
@@ -105,7 +105,7 @@ const SignIn: React.FC = () => {
                   type="email"
                   required
                   className="appearance-none rounded-lg block w-full pl-10 px-3 py-2.5 border border-gray-700 bg-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your email"
+                  placeholder="Nhập email của bạn"
                   value={formData.email}
                   onChange={handleChange}
                 />
@@ -114,7 +114,7 @@ const SignIn: React.FC = () => {
 
             <div>
               <label htmlFor="password" className="text-white block text-sm font-medium mb-2">
-                Password
+                Mật khẩu
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -126,7 +126,7 @@ const SignIn: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   required
                   className="appearance-none rounded-lg block w-full pl-10 px-3 py-2.5 border border-gray-700 bg-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your password"
+                  placeholder="Nhập mật khẩu của bạn"
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -151,14 +151,14 @@ const SignIn: React.FC = () => {
                   onChange={(e) => setRememberMe(e.target.checked)}
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-400">
-                  Remember me
+                  Ghi nhớ đăng nhập
                 </label>
               </div>
               <Link
                 to="/forgot-password"
                 className="text-sm text-red-400 hover:text-red-300 transition-colors"
               >
-                Forgot password?
+                Quên mật khẩu?
               </Link>
             </div>
           </div>
@@ -171,19 +171,19 @@ const SignIn: React.FC = () => {
             {isLoading ? (
               <div className="flex items-center justify-center">
                 <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                Signing in...
+                Đang đăng nhập...
               </div>
             ) : (
-              'Sign in'
+              'Đăng nhập'
             )}
           </button>
         </form>
 
         <div className="text-center mt-6">
           <p className="text-gray-400">
-            Don't have an account?{' '}
+            Chưa có tài khoản?{' '}
             <Link to="/signup" className="text-red-400 hover:text-red-300 transition-colors">
-              Sign up here
+              Đăng ký tại đây
             </Link>
           </p>
         </div>

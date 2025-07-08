@@ -57,11 +57,11 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
 
   const getPasswordStrengthText = (strength: number) => {
     switch (strength) {
-      case 0: return 'Very Weak';
-      case 1: return 'Weak';
-      case 2: return 'Medium';
-      case 3: return 'Strong';
-      case 4: return 'Very Strong';
+      case 0: return 'Rất yếu';
+      case 1: return 'Yếu';
+      case 2: return 'Trung bình';
+      case 3: return 'Mạnh';
+      case 4: return 'Rất mạnh';
       default: return '';
     }
   };
@@ -152,7 +152,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
-      toast.error('Please fix the errors in the form');
+      toast.error('Vui lòng sửa các lỗi trong biểu mẫu');
       return;
     }
     setIsLoading(true);
@@ -208,11 +208,11 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
       }
       
       setIsEditing(false);
-      toast.success(response.data.message || 'Profile updated successfully!');
+      toast.success(response.data.message || 'Cập nhật thông tin thành công!');
     } catch (error: any) {
       console.error('Profile update error:', error);
       console.error('Error response:', error.response?.data);
-      toast.error(error.response?.data?.message || 'Failed to update profile');
+      toast.error(error.response?.data?.message || 'Cập nhật thông tin thất bại');
     } finally {
       setIsLoading(false);
     }
@@ -221,7 +221,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error('Mật khẩu không khớp');
       return;
     }
     setIsLoading(true);
@@ -232,11 +232,11 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
         confirmNewPassword: passwordData.confirmPassword,
       };
       const response = await api.put('/api/auth/change-password', payload);
-      toast.success(response.data.message || 'Password updated successfully!');
+      toast.success(response.data.message || 'Cập nhật mật khẩu thành công!');
       setShowPasswordModal(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update password');
+      toast.error(error.response?.data?.message || 'Cập nhật mật khẩu thất bại');
     } finally {
       setIsLoading(false);
     }
@@ -247,14 +247,14 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
     if (file) {
       // Validate file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
+        toast.error('Kích thước file phải nhỏ hơn 5MB');
         return;
       }
 
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
-        toast.error('Please upload JPG, PNG, JPEG, or WEBP format');
+        toast.error('Vui lòng tải lên định dạng JPG, PNG, JPEG hoặc WEBP');
         return;
       }
 
@@ -295,21 +295,21 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
       toast.success(response.data.message || 'Avatar removed successfully!');
     } catch (error: any) {
       console.error('Remove avatar error:', error);
-      toast.error(error.response?.data?.message || 'Failed to remove avatar');
+      toast.error(error.response?.data?.message || 'Xóa avatar thất bại');
     }
   };
 
  const tabs = React.useMemo(() => {
   if (user?.role === 'member' ) {
     return [
-      { id: 'history', label: 'Transaction History', icon: History },
-      { id: 'profile', label: 'Personal Information', icon: User },
-      { id: 'notifications', label: 'Notifications', icon: Bell }
+      { id: 'history', label: 'Lịch sử giao dịch', icon: History },
+      { id: 'profile', label: 'Thông tin cá nhân', icon: User },
+      { id: 'notifications', label: 'Thông báo', icon: Bell }
     ];
   }
   // Các role khác chỉ có tab thông tin cá nhân
   return [
-    { id: 'profile', label: 'Personal Information', icon: User }
+    { id: 'profile', label: 'Thông tin cá nhân', icon: User }
   ];
 }, [user?.role]);
 
@@ -320,18 +320,18 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Đổi mật khẩu</h3>
           <button
             onClick={() => setShowPasswordModal(false)}
             className="text-gray-400 hover:text-gray-500"
-            title="Close"
+            title="Đóng"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
         <form onSubmit={handlePasswordSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu hiện tại</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -345,7 +345,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu mới</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -396,7 +396,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Xác nhận mật khẩu mới</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -421,12 +421,12 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
                 {passwordData.newPassword === passwordData.confirmPassword ? (
                   <>
                     <Check className="h-4 w-4 text-green-500 mr-1" />
-                    <span className="text-green-600">Passwords match</span>
+                    <span className="text-green-600">Mật khẩu khớp</span>
                   </>
                 ) : (
                   <>
                     <X className="h-4 w-4 text-red-500 mr-1" />
-                    <span className="text-red-600">Passwords do not match</span>
+                    <span className="text-red-600">Mật khẩu không khớp</span>
                   </>
                 )}
               </div>
@@ -438,13 +438,13 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
               onClick={() => setShowPasswordModal(false)}
               className="px-4 py-2 text-gray-700 hover:text-gray-900"
             >
-              Cancel
+              Hủy
             </button>
             <button
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Update Password
+              Cập nhật mật khẩu
             </button>
           </div>
         </form>
@@ -457,23 +457,23 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
         <div className="flex items-center gap-3 mb-4">
           <AlertTriangle className="w-6 h-6 text-yellow-500" />
-          <h3 className="text-lg font-semibold">Discard Changes?</h3>
+          <h3 className="text-lg font-semibold">Bỏ thay đổi?</h3>
         </div>
         <p className="text-gray-600 mb-6">
-          Are you sure you want to cancel? All unsaved changes will be lost.
+          Bạn có chắc chắn muốn hủy? Tất cả thay đổi chưa lưu sẽ bị mất.
         </p>
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setShowConfirmDialog(false)}
             className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
-            Keep Editing
+            Tiếp tục chỉnh sửa
           </button>
           <button
             onClick={handleCancelEdit}
             className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
           >
-            Discard Changes
+            Bỏ thay đổi
           </button>
         </div>
       </div>
@@ -488,10 +488,10 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
             type="button"
             onClick={handleEditClick}
             className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-all duration-300 transform hover:scale-105"
-            title={isEditing ? "Cancel editing" : "Edit profile"}
+            title={isEditing ? "Hủy chỉnh sửa" : "Chỉnh sửa hồ sơ"}
           >
             <Edit2 className="w-4 h-4" />
-            <span>{isEditing ? 'Cancel' : 'Edit'}</span>
+            <span>{isEditing ? 'Hủy' : 'Chỉnh sửa'}</span>
           </button>
         </div>
 
@@ -507,7 +507,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
               <>
                 <label 
                   className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg cursor-pointer hover:bg-gray-50 transition-all duration-300 transform hover:scale-110"
-                  title="Change profile picture"
+                  title="Thay đổi ảnh đại diện"
                 >
                   <Camera className="w-5 h-5 text-gray-600" />
                   <input
@@ -521,7 +521,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
                   <button
                     onClick={handleRemoveAvatar}
                     className="absolute top-0 right-0 p-2 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-all duration-300 transform hover:scale-110"
-                    title="Remove profile picture"
+                    title="Xóa ảnh đại diện"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -535,7 +535,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             <div className="group">
-              <label className="block text-sm font-medium text-gray-600 mb-2">Full Name</label>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Họ và tên</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
                 <input
@@ -547,7 +547,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
                   className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-300 ${
                     formErrors.fullName ? 'border-red-500' : 'border-gray-200'
                   }`}
-                  placeholder="Enter your full name"
+                  placeholder="Nhập họ và tên của bạn"
                 />
                 {formErrors.fullName && (
                   <p className="mt-1 text-sm text-red-500">{formErrors.fullName}</p>
@@ -568,7 +568,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
                   className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-300 ${
                     formErrors.email ? 'border-red-500' : 'border-gray-200'
                   }`}
-                  placeholder="Enter your email"
+                  placeholder="Nhập email của bạn"
                 />
                 {formErrors.email && (
                   <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
@@ -577,7 +577,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
             </div>
 
             <div className="group">
-              <label className="block text-sm font-medium text-gray-600 mb-2">Phone Number</label>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Số điện thoại</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
                 <input
@@ -589,7 +589,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
                   className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-300 ${
                     formErrors.phone ? 'border-red-500' : 'border-gray-200'
                   }`}
-                  placeholder="Enter your phone number"
+                  placeholder="Nhập số điện thoại của bạn"
                 />
                 {formErrors.phone && (
                   <p className="mt-1 text-sm text-red-500">{formErrors.phone}</p>
@@ -598,7 +598,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
             </div>
 
             <div className="col-span-full group">
-              <label className="block text-sm font-medium text-gray-600 mb-2">Password</label>
+              <label className="block text-sm font-medium text-gray-600 mb-2">Mật khẩu</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
                 <input
@@ -611,9 +611,9 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
                   type="button"
                   onClick={() => setShowPasswordModal(true)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                  title="Change password"
+                  title="Đổi mật khẩu"
                 >
-                  Change
+                  Đổi
                 </button>
               </div>
             </div>
@@ -625,15 +625,15 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
                 type="submit"
                 disabled={isLoading}
                 className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 disabled:bg-blue-400 disabled:transform-none"
-                title="Save changes"
+                title="Lưu thay đổi"
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Updating...</span>
+                    <span>Đang cập nhật...</span>
                   </>
                 ) : (
-                  <span>Update</span>
+                  <span>Cập nhật</span>
                 )}
               </button>
             </div>
@@ -648,9 +648,9 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
       case 'profile':
         return renderProfileContent();
       case 'history':
-        return <div className="bg-white rounded-lg shadow-sm p-8">Transaction history will be displayed here</div>;
+        return <div className="bg-white rounded-lg shadow-sm p-8">Lịch sử giao dịch sẽ được hiển thị ở đây</div>;
       case 'notifications':
-        return <div className="bg-white rounded-lg shadow-sm p-8">Notifications will be displayed here</div>;
+        return <div className="bg-white rounded-lg shadow-sm p-8">Thông báo sẽ được hiển thị ở đây</div>;
       default:
         return null;
     }
@@ -660,20 +660,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
-          {/* Back button for admin profile */}
-          {hideTabs && (
-            <button
-              onClick={() => navigate('/admin')}
-              className="mb-6 flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium px-4 py-2 bg-blue-50 rounded-lg shadow-sm hover:bg-blue-100 transition-all"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-              </svg>
-              <span>Back to Dashboard</span>
-            </button>
-          )}
-          {/* Tabs */}
-          
+ 
       {!hideTabs && (
             <div className="flex border-b border-gray-200 mb-6">
               {tabs.map(tab => (

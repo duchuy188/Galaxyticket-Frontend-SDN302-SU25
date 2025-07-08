@@ -39,42 +39,42 @@ const SignUp: React.FC = () => {
 
   const getPasswordStrengthText = (strength: number) => {
     switch (strength) {
-      case 0: return 'Very Weak';
-      case 1: return 'Weak';
-      case 2: return 'Medium';
-      case 3: return 'Strong';
-      case 4: return 'Very Strong';
+      case 0: return 'Rất yếu';
+      case 1: return 'Yếu';
+      case 2: return 'Trung bình';
+      case 3: return 'Mạnh';
+      case 4: return 'Rất mạnh';
       default: return '';
     }
   };
 
   const validateForm = () => {
     if (!/^[0-9]{10}$/.test(formData.phone.replace(/[^0-9]/g, ''))) {
-      setError('Phone number must be exactly 10 digits');
+      setError('Số điện thoại phải có đúng 10 chữ số');
       return false;
     }
     if (!acceptTerms) {
-      setError('Please accept the Terms and Conditions');
+      setError('Vui lòng đồng ý với Điều khoản và Điều kiện');
       return false;
     }
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError('Mật khẩu không khớp');
       return false;
     }
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
+      setError('Mật khẩu phải có ít nhất 8 ký tự');
       return false;
     }
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError('Vui lòng nhập địa chỉ email hợp lệ');
       return false;
     }
     if (!/^\+?[\d\s-()]+$/.test(formData.phone)) {
-      setError('Please enter a valid phone number');
+      setError('Vui lòng nhập số điện thoại hợp lệ');
       return false;
     }
     if (!formData.fullName.trim()) {
-      setError('Full name is required');
+      setError('Họ tên là bắt buộc');
       return false;
     }
     return true;
@@ -104,10 +104,10 @@ const SignUp: React.FC = () => {
       if (success) {
         navigate('/signin');
       } else {
-        setError('Registration failed. Please try again.');
+        setError('Đăng ký thất bại. Vui lòng thử lại.');
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('Đã xảy ra lỗi. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +123,7 @@ const SignUp: React.FC = () => {
         className="fixed top-4 left-4 flex items-center text-gray-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="h-5 w-5 mr-1" />
-        <span>Back to Home</span>
+        <span>Về Trang Chủ</span>
       </Link>
 
       <div className="w-full max-w-md">
@@ -134,13 +134,13 @@ const SignUp: React.FC = () => {
               <h2 className="text-3xl font-bold text-white">Galaxy Cinema</h2>
             </div>
           </Link>
-          <p className="text-gray-400">Create your account</p>
+          <p className="text-gray-400">Tạo tài khoản của bạn</p>
         </div>
 
         <div className="bg-[#1e293b] border border-gray-700 rounded-xl shadow-2xl p-8">
           <div className="mb-6">
-            <h3 className="text-xl font-semibold text-white">Join Galaxy Cinema</h3>
-            <p className="text-gray-400 text-sm">Fill in your details to create an account</p>
+            <h3 className="text-xl font-semibold text-white">Tham gia Galaxy Cinema</h3>
+            <p className="text-gray-400 text-sm">Điền thông tin chi tiết để tạo tài khoản</p>
           </div>
 
           {error && (
@@ -153,7 +153,7 @@ const SignUp: React.FC = () => {
             {/* Full Name */}
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-white mb-2">
-                Full Name
+                Họ và tên
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -165,7 +165,7 @@ const SignUp: React.FC = () => {
                   type="text"
                   required
                   className="w-full pl-10 px-3 py-2.5 bg-gray-700/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your full name"
+                  placeholder="Nhập họ và tên của bạn"
                   value={formData.fullName}
                   onChange={handleChange}
                 />
@@ -187,7 +187,7 @@ const SignUp: React.FC = () => {
                   type="email"
                   required
                   className="w-full pl-10 px-3 py-2.5 bg-gray-700/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your email"
+                  placeholder="Nhập email của bạn"
                   value={formData.email}
                   onChange={handleChange}
                 />
@@ -197,7 +197,7 @@ const SignUp: React.FC = () => {
             {/* Phone */}
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-white mb-2">
-                Phone Number
+                Số điện thoại
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -209,7 +209,7 @@ const SignUp: React.FC = () => {
                   type="tel"
                   required
                   className="w-full pl-10 px-3 py-2.5 bg-gray-700/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your phone number"
+                  placeholder="Nhập số điện thoại của bạn"
                   value={formData.phone}
                   onChange={handleChange}
                 />
@@ -219,7 +219,7 @@ const SignUp: React.FC = () => {
             {/* Password */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
-                Password
+                Mật khẩu
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -231,7 +231,7 @@ const SignUp: React.FC = () => {
                   type={showPassword ? "text" : "password"}
                   required
                   className="w-full pl-10 px-3 py-2.5 bg-gray-700/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Create a password"
+                  placeholder="Tạo mật khẩu"
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -239,7 +239,7 @@ const SignUp: React.FC = () => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -278,7 +278,7 @@ const SignUp: React.FC = () => {
             {/* Confirm Password */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-white mb-2">
-                Confirm Password
+                Xác nhận mật khẩu
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -290,7 +290,7 @@ const SignUp: React.FC = () => {
                   type={showConfirmPassword ? "text" : "password"}
                   required
                   className="w-full pl-10 px-3 py-2.5 bg-gray-700/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Confirm your password"
+                  placeholder="Xác nhận mật khẩu của bạn"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                 />
@@ -298,7 +298,7 @@ const SignUp: React.FC = () => {
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -308,12 +308,12 @@ const SignUp: React.FC = () => {
                   {formData.password === formData.confirmPassword ? (
                     <>
                       <Check className="h-4 w-4 text-green-500 mr-1" />
-                      <span className="text-green-400">Passwords match</span>
+                      <span className="text-green-400">Mật khẩu khớp</span>
                     </>
                   ) : (
                     <>
                       <X className="h-4 w-4 text-red-500 mr-1" />
-                      <span className="text-red-400">Passwords do not match</span>
+                      <span className="text-red-400">Mật khẩu không khớp</span>
                     </>
                   )}
                 </div>
@@ -331,13 +331,13 @@ const SignUp: React.FC = () => {
                 className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
               />
               <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-300">
-                I accept the{' '}
+                Tôi đồng ý với{' '}
                 <Link
                   to="/terms"
                   target="_blank"
                   className="text-red-500 underline hover:text-red-400"
                 >
-                  Terms and Conditions
+                  Điều khoản và Điều kiện
                 </Link>
               </label>
             </div>
@@ -347,14 +347,14 @@ const SignUp: React.FC = () => {
               disabled={isLoading}
               className="w-full flex justify-center items-center rounded-xl bg-gradient-to-r from-red-600 to-red-700 py-2 text-white font-semibold text-lg hover:from-red-700 hover:to-red-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign Up'}
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Đăng ký'}
             </button>
           </form>
 
           <p className="mt-6 text-center text-gray-400 text-sm">
-            Already have an account?{' '}
-            <Link to="/login" className="text-red-500 hover:underline">
-              Login
+            Đã có tài khoản?{' '}
+            <Link to="/signin" className="text-red-500 hover:underline">
+              Đăng nhập
             </Link>
           </p>
         </div>

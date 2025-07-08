@@ -32,6 +32,9 @@ const UserManagement: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -115,17 +118,33 @@ const handleUpdateUser = async (e: React.FormEvent) => {
       toast.error('Không thể xóa tài khoản admin!');
       return;
     }
-    if (!window.confirm('Bạn có chắc chắn muốn xóa user này?')) return;
+    // Hiển thị modal xác nhận
+    setUserToDelete(userToDelete!);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setDeleting(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`/api/admin/users/${userId}`, {
+      await axios.delete(`/api/admin/users/${userToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setUsers(users.filter(user => user.id !== userId));
+      setUsers(users.filter(user => user.id !== userToDelete.id));
       toast.success('Xóa user thành công!');
+      setShowDeleteModal(false);
+      setUserToDelete(null);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Xóa user thất bại!');
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const cancelDeleteUser = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -174,7 +193,7 @@ const handleUpdateUser = async (e: React.FormEvent) => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">User Management</h2>
+      <h2 className="text-2xl font-bold mb-6">Quản lý người dùng</h2>
       <button
         className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         onClick={() => setShowCreateModal(true)}
@@ -185,18 +204,18 @@ const handleUpdateUser = async (e: React.FormEvent) => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Điện thoại</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vai trò</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Hành động</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedUsers.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-4 text-gray-400">No users found</td>
+                <td colSpan={6} className="text-center py-4 text-gray-400">Không tìm thấy người dùng</td>
               </tr>
             ) : (
               paginatedUsers.map(user => (
@@ -214,15 +233,15 @@ const handleUpdateUser = async (e: React.FormEvent) => {
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : user.role === 'staff' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>{user.role}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isLocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>{user.isLocked ? 'Locked' : 'Active'}</span>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isLocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>{user.isLocked ? 'Đã khóa' : 'Hoạt động'}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     {user.isLocked ? (
-                      <button onClick={() => handleUnlockUser(user.id)} className="text-gray-600 hover:text-gray-900 mr-3" title="Unlock Account">
+                      <button onClick={() => handleUnlockUser(user.id)} className="text-gray-600 hover:text-gray-900 mr-3" title="Mở khóa tài khoản">
                         <UnlockIcon size={18} />
                       </button>
                     ) : (
-                      <button onClick={() => handleLockUser(user.id)} className="text-gray-600 hover:text-gray-900 mr-3" title="Lock Account">
+                      <button onClick={() => handleLockUser(user.id)} className="text-gray-600 hover:text-gray-900 mr-3" title="Khóa tài khoản">
                         <LockIcon size={18} />
                       </button>
                     )}
@@ -246,7 +265,7 @@ const handleUpdateUser = async (e: React.FormEvent) => {
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
             >
-              Previous
+              Trước
             </button>
             {Array.from({ length: totalPages }, (_, i) => (
               <button
@@ -262,7 +281,7 @@ const handleUpdateUser = async (e: React.FormEvent) => {
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
             >
-              Next
+              Sau
             </button>
           </div>
         )}
@@ -272,7 +291,7 @@ const handleUpdateUser = async (e: React.FormEvent) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6">
-              <h3 className="text-lg font-bold mb-4">Edit User</h3>
+              <h3 className="text-lg font-bold mb-4">Chỉnh sửa người dùng</h3>
               <form onSubmit={handleUpdateUser}>
                 {/* <div className="mb-4">
                   <label className="block text-gray-700 text-sm font-medium mb-1">Full Name</label>
@@ -287,17 +306,17 @@ const handleUpdateUser = async (e: React.FormEvent) => {
                   <input type="tel" className="w-full p-2 border border-gray-300 rounded-md" value={editingUser.phone} readOnly />
                 </div> */}
                 <div className="mb-4">
-                  <label className="block text-gray-700 text-sm font-medium mb-1">Role</label>
+                  <label className="block text-gray-700 text-sm font-medium mb-1">Vai trò</label>
                   <select className="w-full p-2 border border-gray-300 rounded-md" value={editingUser.role} onChange={e => setEditingUser({ ...editingUser, role: e.target.value })}>
-                    <option value="member">Member</option>
-                    <option value="staff">Staff</option>
-                    <option value="manager">Manager</option>
-                    <option value="admin">Admin</option>
+                    <option value="member">Thành viên</option>
+                    <option value="staff">Nhân viên</option>
+                    <option value="manager">Quản lý</option>
+                    <option value="admin">Quản trị viên</option>
                   </select>
                 </div>
                 <div className="flex justify-end space-x-2 mt-6">
-                  <button type="button" className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50" onClick={() => setEditingUser(null)}>Cancel</button>
-                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Save Changes</button>
+                  <button type="button" className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50" onClick={() => setEditingUser(null)}>Hủy</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Lưu thay đổi</button>
                 </div>
               </form>
             </div>
@@ -386,8 +405,8 @@ const handleUpdateUser = async (e: React.FormEvent) => {
                       value={newUser.role}
                       onChange={e => setNewUser({ ...newUser, role: e.target.value })}
                     >
-                      <option value="staff">Staff</option>
-                      <option value="manager">Manager</option>
+                      <option value="staff">Nhân viên</option>
+                      <option value="manager">Quản lý</option>
                     </select>
                   </div>
                 </div>
@@ -424,6 +443,53 @@ const handleUpdateUser = async (e: React.FormEvent) => {
                   <div className="absolute inset-0 bg-gray-100 bg-opacity-40 pointer-events-auto cursor-not-allowed z-10" />
                 )}
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && userToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                <TrashIcon className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-center text-gray-900 mb-2">Xác nhận xóa người dùng</h3>
+              <p className="text-sm text-gray-500 text-center mb-6">
+                Bạn có chắc chắn muốn xóa người dùng <strong>{userToDelete.fullName}</strong>? 
+                Hành động này không thể hoàn tác.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button 
+                  type="button" 
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
+                  onClick={cancelDeleteUser}
+                  disabled={deleting}
+                >
+                  Hủy
+                </button>
+                <button 
+                  type="button" 
+                  className="relative px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                  onClick={confirmDeleteUser}
+                  disabled={deleting}
+                >
+                  {deleting ? (
+                    <>
+                      <span className="opacity-0">Xóa</span>
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </span>
+                    </>
+                  ) : (
+                    'Xóa'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
