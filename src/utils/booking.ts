@@ -34,8 +34,10 @@ export interface Booking {
     totalPrice: number;
     basePrice: number;
     discount: number;
+    discountAmount: number;
     paymentStatus: 'pending' | 'paid' | 'failed' | 'cancelled';
     code?: string;
+    promotionId?: string;
     createdAt: string;
     updatedAt: string;
     qrCodeDataUrl?: string;
@@ -51,6 +53,7 @@ export interface CreateBookingData {
     screeningId: string;
     seatNumbers: string[];
     code?: string;
+    promotionId?: string;
 }
 
 export interface UpdateBookingData {
@@ -60,6 +63,7 @@ export interface UpdateBookingData {
     totalPrice?: number;
     basePrice?: number;
     discount?: number;
+    discountAmount?: number;
 }
 
 export interface BookingFilters {
@@ -121,25 +125,25 @@ export const createBooking = async (bookingData: CreateBookingData): Promise<Boo
             userId: bookingData.userId,
             screeningId: bookingData.screeningId,
             seatNumbers: bookingData.seatNumbers,
-            ...(bookingData.code && { code: bookingData.code })
+            ...(bookingData.code && { code: bookingData.code }),
+            ...(bookingData.promotionId && { promotionId: bookingData.promotionId })
         };
 
         // Attempt to create the booking
         const response = await api.post('/api/bookings', cleanBookingData);
-        
-        // Validate response
+
         if (!response.data) {
             throw new Error('No response data received from server');
         }
-        
+
         if (!response.data.success) {
             throw new Error(response.data.message || 'Booking creation failed');
         }
-        
+
         return response.data;
     } catch (error) {
         const apiError = error as ApiError;
-        
+
         // Log detailed error for debugging
         console.error('Booking creation error:', {
             error: apiError,
@@ -147,24 +151,27 @@ export const createBooking = async (bookingData: CreateBookingData): Promise<Boo
             status: apiError.response?.status,
             requestData: bookingData
         });
-        
+
         // Handle specific error cases
         if (apiError.response?.status === 500) {
             throw new Error('Lỗi máy chủ. Vui lòng thử lại sau.');
         }
-        
+
         if (apiError.response?.status === 409) {
             throw new Error('Ghế đã được đặt. Vui lòng chọn ghế khác.');
         }
-        
+
         if (apiError.response?.status === 400) {
+            // Thêm xử lý cho trường hợp mã đã được sử dụng
+            if (apiError.response.data?.message?.includes('đã sử dụng mã khuyến mãi')) {
+                throw new Error('Bạn đã sử dụng mã khuyến mãi này rồi. Vui lòng sử dụng mã khác.');
+            }
             throw new Error(apiError.response.data?.message || 'Thông tin đặt vé không hợp lệ.');
         }
-        
-        // Default error message
+
         throw new Error(
-            apiError.response?.data?.message || 
-            apiError.message || 
+            apiError.response?.data?.message ||
+            apiError.message ||
             'Có lỗi xảy ra khi đặt vé. Vui lòng thử lại.'
         );
     }
@@ -173,7 +180,7 @@ export const createBooking = async (bookingData: CreateBookingData): Promise<Boo
 export const cancelBooking = async (bookingId: string): Promise<BookingResponse> => {
     try {
         const response = await api.post(`/api/bookings/${bookingId}/cancel`);
-        
+
         if (!response.data.success) {
             throw new Error(response.data.message || 'Không thể hủy đặt vé');
         }
@@ -198,13 +205,17 @@ export const updateBooking = async (
 ): Promise<Booking> => {
     try {
         const response = await api.put<{ booking: Booking }>(`/api/bookings/${bookingId}`, updateData);
-        // Assuming the backend returns the updated booking in a `booking` property.
         if (response.data && response.data.booking) {
             return response.data.booking;
         }
-        // Fallback for cases where the root object is the booking itself
         return response.data as unknown as Booking;
     } catch (error: any) {
+        if (error.response?.status === 400) {
+            // Thêm xử lý cho trường hợp mã đã được sử dụng
+            if (error.response.data?.message?.includes('đã sử dụng mã khuyến mãi')) {
+                throw new Error('Bạn đã sử dụng mã khuyến mãi này rồi. Vui lòng sử dụng mã khác.');
+            }
+        }
         if (error.response) {
             throw new Error(error.response.data.message || 'Error updating booking');
         }
@@ -227,10 +238,10 @@ export const getBookingById = async (bookingId: string): Promise<Booking> => {
 export const getUserBookings = async (): Promise<BookingResponse> => {
     try {
         const response = await api.get('/api/bookings/user');
-        
+
         // Handle the new response structure where bookings are nested in data
         const bookingsData = response.data?.data?.bookings || response.data?.bookings;
-        
+
         if (!bookingsData || !Array.isArray(bookingsData)) {
             console.error('Invalid response structure from /user:', response.data);
             return { message: "Invalid data from server", bookings: [] };
@@ -252,6 +263,8 @@ export const getUserBookings = async (): Promise<BookingResponse> => {
                         `Phòng: ${booking.screeningId.roomId?.name || 'N/A'}`,
                         `Ghế: ${booking.seatNumbers.join(', ')}`,
                         `Tổng tiền: ${(booking.totalPrice || 0).toLocaleString('vi-VN')} VND`,
+                        ...(booking.code ? [`Mã khuyến mãi: ${booking.code}`] : []),
+                        ...(booking.discountAmount ? [`Số tiền giảm: ${booking.discountAmount.toLocaleString('vi-VN')} VND`] : []),
                         `Ngày đặt: Ngày: ${new Date(booking.createdAt).toLocaleDateString('vi-VN')} vào lúc: ${new Date(booking.createdAt).getHours().toString().padStart(2, '0')}:${new Date(booking.createdAt).getMinutes().toString().padStart(2, '0')}`
                     ].join('\n');
                     const qrCodeDataUrl = await QRCode.toDataURL(qrContent);
@@ -276,7 +289,7 @@ export const getUserBookings = async (): Promise<BookingResponse> => {
                 }
             })
         );
-        
+
         const validBookings = bookingsWithQrCode.filter(Boolean) as Booking[];
 
         return {
@@ -294,7 +307,6 @@ export const getUserBookings = async (): Promise<BookingResponse> => {
 
 export const updateBookingStatus = async (bookingId: string): Promise<BookingResponse> => {
     try {
-        // Lấy thông tin booking details từ sessionStorage
         const storedDetails = sessionStorage.getItem('bookingDetails');
         const bookingDetails = storedDetails ? JSON.parse(storedDetails) : null;
 
@@ -320,10 +332,13 @@ export const updateBookingStatus = async (bookingId: string): Promise<BookingRes
             totalPrice: Number(bookingDetails.total),
             basePrice: Number(bookingDetails.basePrice),
             discount: Number(bookingDetails.discount),
-            paymentStatus: 'paid'
+            discountAmount: Number(bookingDetails.discountAmount),
+            paymentStatus: 'paid',
+            promotionId: response.data.booking.promotionId,
+            code: bookingDetails.code
         };
         sessionStorage.setItem('confirmationDetails', JSON.stringify(confirmationDetails));
-        
+
         return {
             success: true,
             message: 'Cập nhật trạng thái thành công',
@@ -335,6 +350,12 @@ export const updateBookingStatus = async (bookingId: string): Promise<BookingRes
             }
         };
     } catch (error: any) {
+        if (error.response?.status === 400) {
+            // Xử lý các trường hợp lỗi cụ thể
+            if (error.response.data?.message?.includes('đã sử dụng mã khuyến mãi')) {
+                throw new Error('Mã khuyến mãi đã được sử dụng bởi người khác trong thời gian bạn thanh toán. Vui lòng thử lại với mã khác.');
+            }
+        }
         if (error.response) {
             throw new Error(error.response.data.message || 'Error updating booking status');
         }
