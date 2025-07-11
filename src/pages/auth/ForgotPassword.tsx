@@ -180,7 +180,7 @@ const ForgotPassword: React.FC = () => {
       
       if (response.data.message || response.data.success) {
         console.log('✅ OTP sent successfully!');
-        toast.success('OTP sent to your email!');
+        toast.success('OTP đã gửi tới email của bạn. Vui lòng kiểm tra hộp thư đến.');
         setCurrentStep('otp');
       } else {
         console.log('❌ Failed to send OTP');
@@ -226,7 +226,7 @@ const ForgotPassword: React.FC = () => {
       const response = await api.post('/api/auth/verify-otp', { email, otp });
 
       if (response.data.verified) {
-        toast.success('OTP verified successfully!');
+        toast.success('OTP đã được xác thực thành công!');
         setCurrentStep('newPassword');
       } else {
         setError('Invalid OTP. Please try again.');
@@ -268,7 +268,7 @@ const ForgotPassword: React.FC = () => {
       });
       
       if (response.data.message) {
-        toast.success('Password reset successfully!');
+        toast.success('Đã đặt lại mật khẩu thành công!');
         setCurrentStep('success');
       } else {
         setError('Failed to reset password. Please try again.');
@@ -284,28 +284,28 @@ const ForgotPassword: React.FC = () => {
   const getStepTitle = () => {
     switch (currentStep) {
       case 'email':
-        return 'Reset Your Password';
+        return 'Đặt lại mật khẩu';
       case 'otp':
-        return 'Enter OTP';
+        return 'Nhập mã OTP';
       case 'newPassword':
-        return 'Set New Password';
+        return 'Tạo mật khẩu mới';
       case 'success':
-        return 'Password Reset Success';
+        return 'Đặt lại mật khẩu thành công';
       default:
-        return 'Reset Your Password';
+        return 'Đặt lại mật khẩu';
     }
   };
 
   const getStepDescription = () => {
     switch (currentStep) {
       case 'email':
-        return 'Enter your email address and we\'ll send you an OTP to reset your password.';
+        return 'Nhập địa chỉ email của bạn và chúng tôi sẽ gửi cho bạn mã OTP để đặt lại mật khẩu.';
       case 'otp':
-        return 'Enter the 6-digit OTP sent to your email address.';
+        return 'Nhập mã OTP gồm 6 chữ số được gửi đến email của bạn.';
       case 'newPassword':
-        return 'Create a new password for your account.';
+        return 'Tạo mật khẩu mới cho tài khoản của bạn.';
       case 'success':
-        return 'Your password has been reset successfully. You can now sign in with your new password.';
+        return 'Mật khẩu của bạn đã được đặt lại thành công. Bạn có thể đăng nhập bằng mật khẩu mới.';
       default:
         return '';
     }
@@ -318,7 +318,7 @@ const ForgotPassword: React.FC = () => {
           <form onSubmit={handleSendOTP} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
-                Email Address
+                Địa chỉ Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -330,7 +330,7 @@ const ForgotPassword: React.FC = () => {
                   type="email"
                   required
                   className="w-full pl-10 px-3 py-2.5 bg-gray-700/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your email"
+                  placeholder="Nhập email của bạn"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -345,10 +345,10 @@ const ForgotPassword: React.FC = () => {
               {isLoading ? (
                 <div className="flex items-center justify-center">
                   <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                  Sending OTP...
+                  Đang gửi OTP...
                 </div>
               ) : (
-                'Send OTP'
+                'Gửi mã OTP'
               )}
             </button>
           </form>
@@ -359,7 +359,7 @@ const ForgotPassword: React.FC = () => {
           <form onSubmit={handleVerifyOTP} className="space-y-6">
             <div>
               <label htmlFor="otp" className="block text-sm font-medium text-white mb-2">
-                OTP Code
+                Mã OTP
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -372,13 +372,13 @@ const ForgotPassword: React.FC = () => {
                   maxLength={6}
                   required
                   className="w-full pl-10 px-3 py-2.5 bg-gray-700/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 text-center text-lg tracking-widest"
-                  placeholder="000000"
+                  placeholder="Nhập mã OTP"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
                 />
               </div>
               <p className="text-gray-400 text-sm mt-2">
-                OTP sent to: <span className="text-white">{email}</span>
+                Đã gửi OTP đến: <span className="text-white">{email}</span>
               </p>
             </div>
 
@@ -388,7 +388,7 @@ const ForgotPassword: React.FC = () => {
                 onClick={() => setCurrentStep('email')}
                 className="flex-1 py-2.5 px-4 border border-gray-600 text-sm font-medium rounded-lg text-gray-300 bg-transparent hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all duration-200"
               >
-                Back
+                Quay lại
               </button>
               <button
                 type="submit"
@@ -398,10 +398,10 @@ const ForgotPassword: React.FC = () => {
                 {isLoading ? (
                   <div className="flex items-center justify-center">
                     <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                    Verifying...
+                    Đang xác thực...
                   </div>
                 ) : (
-                  'Verify OTP'
+                  'Xác thực OTP'
                 )}
               </button>
             </div>
@@ -413,7 +413,7 @@ const ForgotPassword: React.FC = () => {
           <form onSubmit={handleResetPassword} className="space-y-6">
             <div>
               <label htmlFor="newPassword" className="block text-sm font-medium text-white mb-2">
-                New Password
+                Mật khẩu mới
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -431,7 +431,7 @@ const ForgotPassword: React.FC = () => {
                         : 'border-yellow-500'
                       : 'border-gray-700'
                   }`}
-                  placeholder="Enter new password"
+                  placeholder="Nhập mật khẩu mới"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                 />
@@ -452,12 +452,12 @@ const ForgotPassword: React.FC = () => {
                   {passwordStrength ? (
                     <>
                       <Check className="h-4 w-4 text-green-500 mr-1" />
-                      <span className="text-green-400">Password is strong enough (8+ characters)</span>
+                      <span className="text-green-400">Mật khẩu đủ mạnh (từ 8 ký tự trở lên)</span>
                     </>
                   ) : (
                     <>
                       <X className="h-4 w-4 text-yellow-500 mr-1" />
-                      <span className="text-yellow-400">Password must be at least 8 characters</span>
+                      <span className="text-yellow-400">Mật khẩu phải có ít nhất 8 ký tự</span>
                     </>
                   )}
                 </div>
@@ -466,7 +466,7 @@ const ForgotPassword: React.FC = () => {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-white mb-2">
-                Confirm New Password
+                Xác nhận mật khẩu mới
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -484,7 +484,7 @@ const ForgotPassword: React.FC = () => {
                         : 'border-red-500'
                       : 'border-gray-700'
                   }`}
-                  placeholder="Confirm new password"
+                  placeholder="Nhập lại mật khẩu mới"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
@@ -505,12 +505,12 @@ const ForgotPassword: React.FC = () => {
                   {passwordsMatch ? (
                     <>
                       <Check className="h-4 w-4 text-green-500 mr-1" />
-                      <span className="text-green-400">Passwords match</span>
+                      <span className="text-green-400">Mật khẩu trùng khớp</span>
                     </>
                   ) : (
                     <>
                       <X className="h-4 w-4 text-red-500 mr-1" />
-                      <span className="text-red-400">Passwords do not match</span>
+                      <span className="text-red-400">Mật khẩu không trùng khớp</span>
                     </>
                   )}
                 </div>
@@ -523,7 +523,7 @@ const ForgotPassword: React.FC = () => {
                 onClick={() => setCurrentStep('otp')}
                 className="flex-1 py-2.5 px-4 border border-gray-600 text-sm font-medium rounded-lg text-gray-300 bg-transparent hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-all duration-200"
               >
-                Back
+                Quay lại
               </button>
               <button
                 type="submit"
@@ -533,10 +533,10 @@ const ForgotPassword: React.FC = () => {
                 {isLoading ? (
                   <div className="flex items-center justify-center">
                     <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                    Resetting...
+                    Đang đặt lại...
                   </div>
                 ) : (
-                  'Reset Password'
+                  'Đặt lại mật khẩu'
                 )}
               </button>
             </div>
@@ -551,15 +551,15 @@ const ForgotPassword: React.FC = () => {
                 <Check className="h-8 w-8 text-green-500" />
               </div>
             </div>
-            <h4 className="text-white font-medium mb-2">Password Reset Success!</h4>
+            <h4 className="text-white font-medium mb-2">Đặt lại mật khẩu thành công!</h4>
             <p className="text-gray-400 text-sm mb-6">
-              Your password has been reset successfully. You can now sign in with your new password.
+              Mật khẩu của bạn đã được đặt lại thành công. Bạn có thể đăng nhập bằng mật khẩu mới.
             </p>
             <Link
               to="/signin"
               className="inline-block w-full py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
             >
-              Sign In
+              Đăng nhập
             </Link>
           </div>
         );
@@ -577,7 +577,7 @@ const ForgotPassword: React.FC = () => {
         className="fixed top-4 left-4 flex items-center text-gray-400 hover:text-white transition-colors"
       >
         <ArrowLeft className="h-5 w-5 mr-1" />
-        <span>Back to Sign In</span>
+        <span>Quay lại đăng nhập</span>
       </Link>
 
       <div className="max-w-md w-full">
@@ -643,4 +643,4 @@ const ForgotPassword: React.FC = () => {
   );
 };
 
-export default ForgotPassword; 
+export default ForgotPassword;

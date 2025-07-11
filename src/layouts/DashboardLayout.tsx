@@ -28,11 +28,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   }
   const adminNavItems = [
     {
-      label: 'Bảng điều khiển',
-      path: `${basePath}`,
-      icon: <LayoutDashboardIcon size={20} />,
-    },
-    {
       label: 'Quản lý người dùng',
       path: `${basePath}/users`,
       icon: <UsersIcon size={20} />,
