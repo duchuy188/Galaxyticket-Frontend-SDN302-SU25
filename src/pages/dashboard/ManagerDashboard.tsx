@@ -76,7 +76,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
     if (dateFilter > 0) {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - dateFilter); // Lấy ngày cách đây dateFilter ngày
-      
+
       filtered = filtered.filter(req => {
         const requestDate = new Date(req.createdAt);
         return requestDate >= cutoffDate;
@@ -131,11 +131,11 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
         prevRequests.map(req =>
           req._id === requestId
             ? {
-                ...req,
-                status: 'approved',
-                managerId: { _id: 'currentUser', name: 'Current Manager' },
-                requestData: updatedData.requestData // Cập nhật dữ liệu mới
-              }
+              ...req,
+              status: 'approved',
+              managerId: { _id: 'currentUser', name: 'Current Manager' },
+              requestData: updatedData.requestData // Cập nhật dữ liệu mới
+            }
             : req
         )
       );
@@ -208,7 +208,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
   // Thêm hàm mới để lấy tên của yêu cầu
   const getRequestName = (request: ApprovalRequest): string => {
     if (!request || !request.requestData) return 'Không có dữ liệu';
-    
+
     switch (request.type) {
       case 'movie':
         return request.requestData.title || 'Phim không tên';
@@ -398,8 +398,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                           {getStatusIcon(request.status)}
                           <span className={`ml-2 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
                             {request.status === 'pending' ? 'Chờ Duyệt' :
-                             request.status === 'approved' ? 'Đã Duyệt' :
-                             'Từ Chối'}
+                              request.status === 'approved' ? 'Đã Duyệt' :
+                                'Từ Chối'}
                           </span>
                         </div>
                       </td>
@@ -443,21 +443,20 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                 >
                   &laquo;
                 </button>
-                
+
                 {Array.from({ length: Math.ceil(localFiltered.length / itemsPerPage) }).map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentPage(index + 1)}
-                    className={`px-3 py-1 rounded ${
-                      currentPage === index + 1
+                    className={`px-3 py-1 rounded ${currentPage === index + 1
                         ? 'bg-blue-600 text-white'
                         : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     {index + 1}
                   </button>
                 ))}
-                
+
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(localFiltered.length / itemsPerPage)))}
                   disabled={currentPage === Math.ceil(localFiltered.length / itemsPerPage)}
@@ -506,8 +505,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                     {getStatusIcon(selectedRequest.status)}
                     <span className={`ml-2 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedRequest.status)}`}>
                       {selectedRequest.status === 'pending' ? 'Chờ Duyệt' :
-                       selectedRequest.status === 'approved' ? 'Đã Duyệt' :
-                       'Từ Chối'}
+                        selectedRequest.status === 'approved' ? 'Đã Duyệt' :
+                          'Từ Chối'}
                     </span>
                   </div>
                 </div>
@@ -552,7 +551,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                           <div>
                             <span className="text-sm font-medium text-gray-500">Ngày kết thúc:</span>
                             <span className="text-sm ml-2">
-                              {selectedRequest.requestData.endDate 
+                              {selectedRequest.requestData.endDate
                                 ? new Date(selectedRequest.requestData.endDate).toLocaleDateString('vi-VN')
                                 : 'Chưa xác định'}
                             </span>
@@ -565,7 +564,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                             <span className="text-sm font-medium text-gray-500">Trạng thái chiếu:</span>
                             <span className="text-sm ml-2">
                               {selectedRequest.requestData.showingStatus === 'coming-soon' ? 'Sắp chiếu' :
-                               selectedRequest.requestData.showingStatus === 'now-showing' ? 'Đang chiếu' : 'Đã kết thúc'}
+                                selectedRequest.requestData.showingStatus === 'now-showing' ? 'Đang chiếu' : 'Đã kết thúc'}
                             </span>
                           </div>
                           <div>
@@ -684,9 +683,9 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                           <span className="font-medium text-gray-500">Người tạo:</span>
                           <span className="ml-2">
                             {selectedRequest.requestData.createdByName ||
-                             selectedRequest.requestData.createdBy?.name ||
-                             selectedRequest.requestData.createdBy ||
-                             'Không xác định'}
+                              selectedRequest.requestData.createdBy?.name ||
+                              selectedRequest.requestData.createdBy ||
+                              'Không xác định'}
                           </span>
                         </div>
                         <div className="mb-2">
@@ -734,10 +733,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                             </span>
                           </div>
                         </div>
-                      </div>
 
-                      <div>
-                        <h5 className="font-medium text-gray-700">Thời Gian</h5>
+                        <h5 className="font-medium text-gray-700 mt-4">Thời Gian</h5>
                         <div className="mt-2 space-y-2">
                           <div>
                             <span className="text-sm font-medium text-gray-500">Ngày bắt đầu:</span>
@@ -752,6 +749,23 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                             </span>
                           </div>
                         </div>
+                      </div>
+
+                      <div>
+                        <h5 className="font-medium text-gray-700">Ảnh Khuyến Mãi</h5>
+                        {selectedRequest.requestData.posterUrl ? (
+                          <div className="mt-2 border rounded-lg overflow-hidden">
+                            <img
+                              src={selectedRequest.requestData.posterUrl}
+                              alt={selectedRequest.requestData.name}
+                              className="w-full h-48 object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="mt-2 p-4 bg-gray-100 rounded-lg text-gray-500 text-sm text-center">
+                            Không có ảnh khuyến mãi
+                          </div>
+                        )}
                       </div>
                     </div>
 

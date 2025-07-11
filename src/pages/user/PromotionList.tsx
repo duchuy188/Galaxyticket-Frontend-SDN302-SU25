@@ -16,10 +16,11 @@ const UserPromotions: React.FC = () => {
     try {
       setLoading(true);
       const response = await getAllPromotions('approved');
-      // Lọc ra các mã giảm giá chưa hết hạn
+      // Lọc ra các mã giảm giá chưa hết hạn và chưa hết lượt sử dụng
       const currentDate = new Date();
-      const validPromotions = response.data?.filter(promotion => 
-        new Date(promotion.endDate) >= currentDate
+      const validPromotions = response.data?.filter(promotion =>
+        new Date(promotion.endDate) >= currentDate &&
+        promotion.currentUsage < promotion.maxUsage
       ) || [];
       setPromotions(validPromotions);
     } catch (err: any) {
@@ -39,7 +40,7 @@ const UserPromotions: React.FC = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Mã Giảm Giá Của Bạn</h1>
-      
+
       {loading ? (
         <div className="text-center">Đang tải...</div>
       ) : (
@@ -47,9 +48,18 @@ const UserPromotions: React.FC = () => {
           {promotions.map((promotion: any) => (
             <div key={promotion._id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
               <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">{promotion.name}</h3>
-                  <p className="text-sm text-gray-600">{promotion.description}</p>
+                <div className="flex items-start space-x-4">
+                  {promotion.posterUrl && (
+                    <img
+                      src={promotion.posterUrl}
+                      alt={promotion.name}
+                      className="h-24 w-24 object-cover rounded-lg"
+                    />
+                  )}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800">{promotion.name}</h3>
+                    <p className="text-sm text-gray-600">{promotion.description}</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => copyPromotionCode(promotion.code)}
@@ -66,22 +76,15 @@ const UserPromotions: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-mono font-bold text-gray-700">{promotion.code}</span>
                   <span className="text-sm font-semibold text-green-600">
-                    {promotion.type === 'percent' 
-                      ? `Giảm ${promotion.value}%` 
+                    {promotion.type === 'percent'
+                      ? `Giảm ${promotion.value}%`
                       : `Giảm ${promotion.value.toLocaleString('vi-VN')}đ`}
                   </span>
                 </div>
               </div>
 
               <div className="text-sm text-gray-500">
-                <div className="flex justify-between mb-2">
-                  <span>Hiệu lực từ:</span>
-                  <span>{new Date(promotion.startDate).toLocaleDateString('vi-VN')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Hết hạn:</span>
-                  <span>{new Date(promotion.endDate).toLocaleDateString('vi-VN')}</span>
-                </div>
+                Có hiệu lực đến: {new Date(promotion.endDate).toLocaleDateString('vi-VN')}
               </div>
             </div>
           ))}

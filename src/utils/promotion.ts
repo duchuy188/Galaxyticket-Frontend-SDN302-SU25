@@ -51,6 +51,9 @@ export interface Promotion {
     approvedBy?: string | null;
     createdAt: string;
     updatedAt: string;
+    posterUrl?: string;
+    maxUsage: number;      // Maximum number of times this promotion can be used
+    currentUsage: number;  // Current number of times this promotion has been used
 }
 
 export interface CreatePromotionData {
@@ -61,6 +64,7 @@ export interface CreatePromotionData {
     value: number;
     startDate: string;
     endDate: string;
+    posterFile?: File; // Add this line
 }
 
 export interface ApiResponse<T> {
@@ -100,7 +104,21 @@ export const getPromotionById = async (id: string): Promise<ApiResponse<Promotio
 // Create new promotion
 export const createPromotion = async (promotionData: CreatePromotionData): Promise<ApiResponse<Promotion>> => {
     try {
-        const response = await axiosInstance.post('/api/promotions', promotionData);
+        const formData = new FormData();
+        Object.keys(promotionData).forEach(key => {
+            const k = key as keyof CreatePromotionData;
+            if (k === 'posterFile' && promotionData[k]) {
+                formData.append('poster', promotionData[k] as File);
+            } else {
+                formData.append(key, String(promotionData[k]));
+            }
+        });
+
+        const response = await axiosInstance.post('/api/promotions', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
         return response.data;
     } catch (error: any) {
         if (error.response?.status === 401) {
@@ -116,7 +134,21 @@ export const createPromotion = async (promotionData: CreatePromotionData): Promi
 // Update promotion
 export const updatePromotion = async (id: string, promotionData: Partial<CreatePromotionData>): Promise<ApiResponse<Promotion>> => {
     try {
-        const response = await axiosInstance.put(`/api/promotions/${id}`, promotionData);
+        const formData = new FormData();
+        Object.keys(promotionData).forEach(key => {
+            const k = key as keyof CreatePromotionData;
+            if (k === 'posterFile' && promotionData[k]) {
+                formData.append('poster', promotionData[k] as File);
+            } else if (promotionData[k] !== undefined) {
+                formData.append(key, String(promotionData[k]));
+            }
+        });
+
+        const response = await axiosInstance.put(`/api/promotions/${id}`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
         return response.data;
     } catch (error: any) {
         if (error.response?.status === 401) {
@@ -192,6 +224,15 @@ export const validatePromotionCode = async (
         if (error.response?.status === 401) {
             throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
         }
+
+        // Handle usage limit exceeded message
+        if (error.response?.data?.message === 'Mã khuyến mãi đã hết lượt sử dụng') {
+            return {
+                isValid: false,
+                message: 'Mã khuyến mãi đã hết lượt sử dụng'
+            };
+        }
+
         return {
             isValid: false,
             message: error.response?.data?.message || 'Mã khuyến mãi không hợp lệ'
