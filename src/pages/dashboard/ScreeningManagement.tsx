@@ -43,6 +43,13 @@ const ScreeningManagement: React.FC = () => {
   // Thêm state cho bộ lọc ngày
   const [dateFilter, setDateFilter] = useState<string>('all');
 
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmModalData, setConfirmModalData] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ title: '', message: '', onConfirm: () => void 0 });
+
   const moviesNowShowing = movies.filter(m => m.showingStatus === 'now-showing');
 
   useEffect(() => {
@@ -137,16 +144,45 @@ const ScreeningManagement: React.FC = () => {
   const cancelDelete = () => setDeleteId(null);
 
   const handleEdit = (screening: Screening) => {
-    setEditingScreening(screening);
-    setForm({
-      movieId: screening.movieId?._id || '',
-      roomId: screening.roomId?._id || '',
-      theaterId: screening.theaterId?._id || '',
-      startTime: screening.startTime || '', // Giữ nguyên ISO string
-      endTime: screening.endTime || '',
-      ticketPrice: screening.ticketPrice,
-    });
-    setShowModal(true);
+    let confirmMessage = '';
+
+    if (screening.status === 'approved') {
+      confirmMessage = 'Suất chiếu này đã được duyệt. Nếu chỉnh sửa, trạng thái sẽ chuyển về chờ duyệt. Bạn có muốn tiếp tục?';
+    } else if (screening.status === 'rejected') {
+      confirmMessage = `Suất chiếu này đã bị từ chối${screening.rejectionReason ? ` với lý do: "${screening.rejectionReason}"` : ''}. Nếu chỉnh sửa, trạng thái sẽ chuyển về chờ duyệt. Bạn có muốn tiếp tục?`;
+    }
+
+    if (confirmMessage) {
+      setConfirmModalData({
+        title: 'Xác nhận chỉnh sửa',
+        message: confirmMessage,
+        onConfirm: () => {
+          setEditingScreening(screening);
+          setForm({
+            movieId: screening.movieId?._id || '',
+            roomId: screening.roomId?._id || '',
+            theaterId: screening.theaterId?._id || '',
+            startTime: screening.startTime || '',
+            endTime: screening.endTime || '',
+            ticketPrice: screening.ticketPrice,
+          });
+          setShowModal(true);
+          setIsConfirmModalOpen(false);
+        }
+      });
+      setIsConfirmModalOpen(true);
+    } else {
+      setEditingScreening(screening);
+      setForm({
+        movieId: screening.movieId?._id || '',
+        roomId: screening.roomId?._id || '',
+        theaterId: screening.theaterId?._id || '',
+        startTime: screening.startTime || '',
+        endTime: screening.endTime || '',
+        ticketPrice: screening.ticketPrice,
+      });
+      setShowModal(true);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -810,6 +846,34 @@ const ScreeningManagement: React.FC = () => {
                 onClick={confirmDelete}
               >
                 Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-800">{confirmModalData.title}</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600">{confirmModalData.message}</p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmModalData.onConfirm}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                Xác nhận
               </button>
             </div>
           </div>
