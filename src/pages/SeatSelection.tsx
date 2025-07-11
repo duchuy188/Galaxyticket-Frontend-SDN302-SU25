@@ -200,7 +200,7 @@ const SeatSelection: React.FC = () => {
         setAppliedPromoCode(promoCode);
         showPromoMessage('success', validationResponse.message || 'Mã khuyến mãi đã được áp dụng!');
       } else {
-        showPromoMessage('error', 'Mã khuyến mãi không hợp lệ hoặc đã hết hạn.');
+        showPromoMessage('error', 'Mã khuyến mãi đã hết lượt sử dụng');
         if (appliedPromoCode) {
           setTotalPrice(Number(currentTicketPrice) * selectedSeats.length);
           setAppliedPromoCode(null);

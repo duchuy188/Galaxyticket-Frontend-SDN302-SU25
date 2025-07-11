@@ -52,6 +52,8 @@ export interface Promotion {
     createdAt: string;
     updatedAt: string;
     posterUrl?: string;
+    maxUsage: number;      // Maximum number of times this promotion can be used
+    currentUsage: number;  // Current number of times this promotion has been used
 }
 
 export interface CreatePromotionData {
@@ -222,6 +224,15 @@ export const validatePromotionCode = async (
         if (error.response?.status === 401) {
             throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
         }
+
+        // Handle usage limit exceeded message
+        if (error.response?.data?.message === 'Mã khuyến mãi đã hết lượt sử dụng') {
+            return {
+                isValid: false,
+                message: 'Mã khuyến mãi đã hết lượt sử dụng'
+            };
+        }
+
         return {
             isValid: false,
             message: error.response?.data?.message || 'Mã khuyến mãi không hợp lệ'

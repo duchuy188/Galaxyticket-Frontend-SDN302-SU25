@@ -16,10 +16,11 @@ const UserPromotions: React.FC = () => {
     try {
       setLoading(true);
       const response = await getAllPromotions('approved');
-      // Lọc ra các mã giảm giá chưa hết hạn
+      // Lọc ra các mã giảm giá chưa hết hạn và chưa hết lượt sử dụng
       const currentDate = new Date();
       const validPromotions = response.data?.filter(promotion =>
-        new Date(promotion.endDate) >= currentDate
+        new Date(promotion.endDate) >= currentDate &&
+        promotion.currentUsage < promotion.maxUsage
       ) || [];
       setPromotions(validPromotions);
     } catch (err: any) {
