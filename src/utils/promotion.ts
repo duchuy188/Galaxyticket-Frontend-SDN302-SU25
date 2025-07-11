@@ -64,7 +64,8 @@ export interface CreatePromotionData {
     value: number;
     startDate: string;
     endDate: string;
-    posterFile?: File; // Add this line
+    posterFile?: File;
+    maxUsage: number;
 }
 
 export interface ApiResponse<T> {

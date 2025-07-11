@@ -34,7 +34,8 @@ const PromotionManager: React.FC = () => {
     type: 'percent',
     value: 0,
     startDate: '',
-    endDate: ''
+    endDate: '',
+    maxUsage: 5
   });
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -131,6 +132,11 @@ const PromotionManager: React.FC = () => {
         throw new Error('Giá trị tiền phải lớn hơn 0');
       }
 
+      // Validate số lượng sử dụng
+      if (!formData.maxUsage || formData.maxUsage < 1) {
+        throw new Error('Số lượng sử dụng tối đa phải lớn hơn 0');
+      }
+
       // Validate image for new promotion
       if (!editingPromotion && !selectedImage) {
         throw new Error('Vui lòng chọn ảnh cho khuyến mãi');
@@ -158,7 +164,8 @@ const PromotionManager: React.FC = () => {
         type: 'percent',
         value: 0,
         startDate: getCurrentDate(),
-        endDate: ''
+        endDate: '',
+        maxUsage: 5
       });
       setSelectedImage(null);
       setImagePreview(null);
@@ -228,7 +235,8 @@ const PromotionManager: React.FC = () => {
             type: promotion.type,
             value: promotion.value,
             startDate: new Date(promotion.startDate).toISOString().split('T')[0],
-            endDate: new Date(promotion.endDate).toISOString().split('T')[0]
+            endDate: new Date(promotion.endDate).toISOString().split('T')[0],
+            maxUsage: promotion.maxUsage || 5
           });
           if (promotion.posterUrl) {
             setImagePreview(promotion.posterUrl);
@@ -247,7 +255,8 @@ const PromotionManager: React.FC = () => {
         type: promotion.type,
         value: promotion.value,
         startDate: new Date(promotion.startDate).toISOString().split('T')[0],
-        endDate: new Date(promotion.endDate).toISOString().split('T')[0]
+        endDate: new Date(promotion.endDate).toISOString().split('T')[0],
+        maxUsage: promotion.maxUsage || 5
       });
       if (promotion.posterUrl) {
         setImagePreview(promotion.posterUrl);
@@ -328,7 +337,8 @@ const PromotionManager: React.FC = () => {
                 type: 'percent',
                 value: 0,
                 startDate: getCurrentDate(),
-                endDate: ''
+                endDate: '',
+                maxUsage: 5
               });
               setSelectedImage(null);
               setImagePreview(null);
@@ -489,7 +499,8 @@ const PromotionManager: React.FC = () => {
                                   type: promotion.type,
                                   value: promotion.value,
                                   startDate: new Date(promotion.startDate).toISOString().split('T')[0],
-                                  endDate: new Date(promotion.endDate).toISOString().split('T')[0]
+                                  endDate: new Date(promotion.endDate).toISOString().split('T')[0],
+                                  maxUsage: promotion.maxUsage || 5
                                 });
                                 if (promotion.posterUrl) {
                                   setImagePreview(promotion.posterUrl);
@@ -521,251 +532,246 @@ const PromotionManager: React.FC = () => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-800">
-                {editingPromotion ? 'Chỉnh sửa Khuyến mãi' : 'Thêm Khuyến mãi mới'}
-              </h2>
-              <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setEditingPromotion(null);
-                  setFormData({
-                    code: '',
-                    name: '',
-                    description: '',
-                    type: 'percent',
-                    value: 0,
-                    startDate: '',
-                    endDate: ''
-                  });
-                  setSelectedImage(null);
-                  setImagePreview(null);
-                  setError(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center p-4">
+          <div className="relative mx-auto w-full max-w-4xl shadow-2xl rounded-2xl bg-white">
+            <div className="p-6">
+              <div className="flex justify-between items-center border-b pb-4">
+                <h3 className="text-2xl font-semibold text-gray-800">
+                  {editingPromotion ? 'Chỉnh sửa khuyến mãi' : 'Thêm khuyến mãi mới'}
+                </h3>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                >
+                  <span className="sr-only">Đóng</span>
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-            <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Image upload section - Full width */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ảnh khuyến mãi
-                  </label>
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
-                    <div className="space-y-1 text-center">
-                      {imagePreview ? (
-                        <div className="relative">
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="mx-auto h-32 w-auto object-cover rounded-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedImage(null);
-                              setImagePreview(null);
-                            }}
-                            className="absolute top-0 right-0 -mt-2 -mr-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <svg
-                            className="mx-auto h-12 w-12 text-gray-400"
-                            stroke="currentColor"
-                            fill="none"
-                            viewBox="0 0 48 48"
-                            aria-hidden="true"
-                          >
-                            <path
-                              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                              strokeWidth={2}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
+              <form onSubmit={handleSubmit} className="mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Image upload section */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ảnh khuyến mãi
+                    </label>
+                    <div className="mt-1 flex flex-col items-center space-y-2">
+                      <div className="w-full aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                        {imagePreview ? (
+                          <div className="relative w-full h-full">
+                            <img
+                              src={imagePreview}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
                             />
-                          </svg>
-                          <div className="flex text-sm text-gray-600">
-                            <label
-                              htmlFor="file-upload"
-                              className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedImage(null);
+                                setImagePreview(null);
+                              }}
+                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors duration-200"
                             >
-                              <span>Tải ảnh lên</span>
-                              <input
-                                id="file-upload"
-                                name="file-upload"
-                                type="file"
-                                className="sr-only"
-                                accept="image/*"
-                                onChange={handleImageChange}
-                              />
-                            </label>
-                            <p className="pl-1">hoặc kéo thả vào đây</p>
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
                           </div>
-                          <p className="text-xs text-gray-500">PNG, JPG, GIF tối đa 10MB</p>
-                        </>
-                      )}
+                        ) : (
+                          <div className="h-full flex flex-col items-center justify-center p-4">
+                            <svg
+                              className="mx-auto h-12 w-12 text-gray-400"
+                              stroke="currentColor"
+                              fill="none"
+                              viewBox="0 0 48 48"
+                            >
+                              <path
+                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                strokeWidth={2}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            <div className="mt-4 flex text-sm text-gray-600">
+                              <label
+                                htmlFor="file-upload"
+                                className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                              >
+                                <span>Tải ảnh lên</span>
+                                <input
+                                  id="file-upload"
+                                  name="file-upload"
+                                  type="file"
+                                  className="sr-only"
+                                  accept="image/*"
+                                  onChange={handleImageChange}
+                                />
+                              </label>
+                            </div>
+                            <p className="mt-2 text-xs text-gray-500">PNG, JPG, GIF tối đa 10MB</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Form fields */}
+                  <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Mã khuyến mãi <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="code"
+                        value={formData.code}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        placeholder="VD: SUMMER2024"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tên khuyến mãi <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        placeholder="VD: Khuyến mãi hè 2024"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Loại khuyến mãi <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        name="type"
+                        value={formData.type}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                        required
+                      >
+                        <option value="percent">Phần trăm</option>
+                        <option value="fixed">Số tiền cố định</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {formData.type === 'percent' ? 'Giá trị (%)' : 'Giá trị (VNĐ)'} <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="value"
+                        value={formData.type === 'percent' ? formData.value : formatCurrency(formData.value)}
+                        onChange={handleValueChange}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        placeholder={formData.type === 'percent' ? 'VD: 10' : 'VD: 100,000'}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Ngày bắt đầu <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        name="startDate"
+                        value={formData.startDate}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        min={getCurrentDate()}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Ngày kết thúc <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        name="endDate"
+                        value={formData.endDate}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        min={formData.startDate}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Số lượng sử dụng tối đa <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        name="maxUsage"
+                        value={formData.maxUsage}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          maxUsage: parseInt(e.target.value) || 5
+                        }))}
+                        min="1"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        placeholder="VD: 100"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Mô tả <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        rows={3}
+                        placeholder="Mô tả chi tiết về khuyến mãi"
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* Form fields in 2 columns */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Mã khuyến mãi
-                    </label>
-                    <input
-                      type="text"
-                      name="code"
-                      value={formData.code}
-                      onChange={handleInputChange}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                      placeholder="Nhập mã khuyến mãi"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tên khuyến mãi
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                      placeholder="Nhập tên khuyến mãi"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Loại khuyến mãi
-                    </label>
-                    <select
-                      name="type"
-                      value={formData.type}
-                      onChange={handleInputChange}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    >
-                      <option value="percent">Phần trăm</option>
-                      <option value="fixed">Số tiền cố định</option>
-                    </select>
-                  </div>
+                <div className="mt-6 pt-4 border-t flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <div className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Đang xử lý...
+                      </div>
+                    ) : editingPromotion ? 'Cập nhật' : 'Thêm mới'}
+                  </button>
                 </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {formData.type === 'percent' ? 'Giá trị (%)' : 'Giá trị (VNĐ)'}
-                    </label>
-                    <input
-                      type="text"
-                      name="value"
-                      value={formData.type === 'percent' ? formData.value : formatCurrency(formData.value)}
-                      onChange={handleValueChange}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                      placeholder={formData.type === 'percent' ? 'Nhập % giảm giá' : 'Nhập số tiền giảm'}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ngày bắt đầu
-                    </label>
-                    <input
-                      type="date"
-                      name="startDate"
-                      value={formData.startDate}
-                      onChange={handleInputChange}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                      min={getCurrentDate()}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ngày kết thúc
-                    </label>
-                    <input
-                      type="date"
-                      name="endDate"
-                      value={formData.endDate}
-                      onChange={handleInputChange}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                      min={formData.startDate}
-                    />
-                  </div>
-                </div>
-
-                {/* Description - Full width */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mô tả
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                    rows={3}
-                    placeholder="Nhập mô tả khuyến mãi"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3 border-t pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setEditingPromotion(null);
-                    setFormData({
-                      code: '',
-                      name: '',
-                      description: '',
-                      type: 'percent',
-                      value: 0,
-                      startDate: '',
-                      endDate: ''
-                    });
-                    setSelectedImage(null);
-                    setImagePreview(null);
-                    setError(null);
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50"
-                  disabled={loading}
-                >
-                  {loading ? 'Đang xử lý...' : editingPromotion ? 'Cập nhật' : 'Thêm mới'}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}
