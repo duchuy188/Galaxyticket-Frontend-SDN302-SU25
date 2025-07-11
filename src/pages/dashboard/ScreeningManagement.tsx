@@ -40,6 +40,9 @@ const ScreeningManagement: React.FC = () => {
   const [roomLoading, setRoomLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Thêm state cho bộ lọc ngày
+  const [dateFilter, setDateFilter] = useState<string>('all');
+
   const moviesNowShowing = movies.filter(m => m.showingStatus === 'now-showing');
 
   useEffect(() => {
@@ -57,12 +60,43 @@ const ScreeningManagement: React.FC = () => {
     } else {
       data = await getScreenings(statusFilter as 'pending' | 'approved' | 'rejected');
     }
+    
     // Lọc theo rạp nếu có chọn
     if (theaterFilter) {
       data = data.filter((s: any) =>
         (typeof s.theaterId === 'object' ? s.theaterId._id : s.theaterId) === theaterFilter
       );
     }
+    
+    // Lọc theo thời gian
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      data = data.filter((s: any) => {
+        const screeningDate = new Date(s.startTime);
+        const screeningDay = new Date(
+          screeningDate.getFullYear(), 
+          screeningDate.getMonth(), 
+          screeningDate.getDate()
+        );
+        
+        if (dateFilter === 'today') {
+          // Suất chiếu hôm nay
+          return screeningDay.getTime() === today.getTime();
+        } else if (dateFilter === 'future') {
+          // Suất chiếu tương lai (từ ngày mai trở đi)
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          return screeningDay >= tomorrow;
+        } else if (dateFilter === 'past') {
+          // Suất chiếu quá khứ (trước ngày hôm nay)
+          return screeningDay < today;
+        }
+        return true;
+      });
+    }
+    
     setScreenings(data);
     setLoading(false);
   };
@@ -156,7 +190,7 @@ const ScreeningManagement: React.FC = () => {
   useEffect(() => {
     fetchScreenings();
     // eslint-disable-next-line
-  }, [statusFilter, theaterFilter]);
+  }, [statusFilter, theaterFilter, dateFilter]);
 
   // Get status badge style
   const getStatusBadgeStyle = (status: string) => {
@@ -261,6 +295,17 @@ const ScreeningManagement: React.FC = () => {
             {theaters.map(t => (
               <option key={t._id} value={t._id}>{t.name}</option>
             ))}
+          </select>
+          
+          <select
+            className="bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={dateFilter}
+            onChange={e => setDateFilter(e.target.value)}
+          >
+            <option value="all">Tất cả ngày chiếu</option>
+            <option value="today">Chiếu hôm nay</option>
+            <option value="future">Sắp chiếu</option>
+            <option value="past">Đã chiếu</option>
           </select>
         </div>
       </div>
