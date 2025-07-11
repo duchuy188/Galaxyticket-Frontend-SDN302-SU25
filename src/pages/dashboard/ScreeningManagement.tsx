@@ -40,6 +40,16 @@ const ScreeningManagement: React.FC = () => {
   const [roomLoading, setRoomLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Thêm state cho bộ lọc ngày
+  const [dateFilter, setDateFilter] = useState<string>('all');
+
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmModalData, setConfirmModalData] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ title: '', message: '', onConfirm: () => void 0 });
+
   const moviesNowShowing = movies.filter(m => m.showingStatus === 'now-showing');
 
   useEffect(() => {
@@ -57,12 +67,43 @@ const ScreeningManagement: React.FC = () => {
     } else {
       data = await getScreenings(statusFilter as 'pending' | 'approved' | 'rejected');
     }
+    
     // Lọc theo rạp nếu có chọn
     if (theaterFilter) {
       data = data.filter((s: any) =>
         (typeof s.theaterId === 'object' ? s.theaterId._id : s.theaterId) === theaterFilter
       );
     }
+    
+    // Lọc theo thời gian
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      data = data.filter((s: any) => {
+        const screeningDate = new Date(s.startTime);
+        const screeningDay = new Date(
+          screeningDate.getFullYear(), 
+          screeningDate.getMonth(), 
+          screeningDate.getDate()
+        );
+        
+        if (dateFilter === 'today') {
+          // Suất chiếu hôm nay
+          return screeningDay.getTime() === today.getTime();
+        } else if (dateFilter === 'future') {
+          // Suất chiếu tương lai (từ ngày mai trở đi)
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          return screeningDay >= tomorrow;
+        } else if (dateFilter === 'past') {
+          // Suất chiếu quá khứ (trước ngày hôm nay)
+          return screeningDay < today;
+        }
+        return true;
+      });
+    }
+    
     setScreenings(data);
     setLoading(false);
   };
@@ -103,16 +144,45 @@ const ScreeningManagement: React.FC = () => {
   const cancelDelete = () => setDeleteId(null);
 
   const handleEdit = (screening: Screening) => {
-    setEditingScreening(screening);
-    setForm({
-      movieId: screening.movieId?._id || '',
-      roomId: screening.roomId?._id || '',
-      theaterId: screening.theaterId?._id || '',
-      startTime: screening.startTime || '', // Giữ nguyên ISO string
-      endTime: screening.endTime || '',
-      ticketPrice: screening.ticketPrice,
-    });
-    setShowModal(true);
+    let confirmMessage = '';
+
+    if (screening.status === 'approved') {
+      confirmMessage = 'Suất chiếu này đã được duyệt. Nếu chỉnh sửa, trạng thái sẽ chuyển về chờ duyệt. Bạn có muốn tiếp tục?';
+    } else if (screening.status === 'rejected') {
+      confirmMessage = `Suất chiếu này đã bị từ chối${screening.rejectionReason ? ` với lý do: "${screening.rejectionReason}"` : ''}. Nếu chỉnh sửa, trạng thái sẽ chuyển về chờ duyệt. Bạn có muốn tiếp tục?`;
+    }
+
+    if (confirmMessage) {
+      setConfirmModalData({
+        title: 'Xác nhận chỉnh sửa',
+        message: confirmMessage,
+        onConfirm: () => {
+          setEditingScreening(screening);
+          setForm({
+            movieId: screening.movieId?._id || '',
+            roomId: screening.roomId?._id || '',
+            theaterId: screening.theaterId?._id || '',
+            startTime: screening.startTime || '',
+            endTime: screening.endTime || '',
+            ticketPrice: screening.ticketPrice,
+          });
+          setShowModal(true);
+          setIsConfirmModalOpen(false);
+        }
+      });
+      setIsConfirmModalOpen(true);
+    } else {
+      setEditingScreening(screening);
+      setForm({
+        movieId: screening.movieId?._id || '',
+        roomId: screening.roomId?._id || '',
+        theaterId: screening.theaterId?._id || '',
+        startTime: screening.startTime || '',
+        endTime: screening.endTime || '',
+        ticketPrice: screening.ticketPrice,
+      });
+      setShowModal(true);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -156,7 +226,7 @@ const ScreeningManagement: React.FC = () => {
   useEffect(() => {
     fetchScreenings();
     // eslint-disable-next-line
-  }, [statusFilter, theaterFilter]);
+  }, [statusFilter, theaterFilter, dateFilter]);
 
   // Get status badge style
   const getStatusBadgeStyle = (status: string) => {
@@ -261,6 +331,17 @@ const ScreeningManagement: React.FC = () => {
             {theaters.map(t => (
               <option key={t._id} value={t._id}>{t.name}</option>
             ))}
+          </select>
+          
+          <select
+            className="bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={dateFilter}
+            onChange={e => setDateFilter(e.target.value)}
+          >
+            <option value="all">Tất cả ngày chiếu</option>
+            <option value="today">Chiếu hôm nay</option>
+            <option value="future">Sắp chiếu</option>
+            <option value="past">Đã chiếu</option>
           </select>
         </div>
       </div>
@@ -765,6 +846,34 @@ const ScreeningManagement: React.FC = () => {
                 onClick={confirmDelete}
               >
                 Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-800">{confirmModalData.title}</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600">{confirmModalData.message}</p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmModalData.onConfirm}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                Xác nhận
               </button>
             </div>
           </div>
