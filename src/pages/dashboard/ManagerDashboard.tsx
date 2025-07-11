@@ -449,8 +449,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                     key={index}
                     onClick={() => setCurrentPage(index + 1)}
                     className={`px-3 py-1 rounded ${currentPage === index + 1
-                        ? 'bg-blue-600 text-white'
-                        : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                      ? 'bg-blue-600 text-white'
+                      : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
                       }`}
                   >
                     {index + 1}
@@ -606,7 +606,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
 
                     <div className="mt-4">
                       <h5 className="font-medium text-gray-700">Mô Tả</h5>
-                      <p className="text-sm mt-2">{selectedRequest.requestData.description}</p>
+                      <p className="text-sm mt-2 max-h-32 overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin' }}>{selectedRequest.requestData.description}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -771,7 +771,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
 
                     <div className="mt-4">
                       <h5 className="font-medium text-gray-700">Mô Tả</h5>
-                      <p className="text-sm mt-2">{selectedRequest.requestData.description}</p>
+                      <p className="text-sm mt-2 max-h-32 overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin' }}>{selectedRequest.requestData.description}</p>
                     </div>
                   </div>
                 )}

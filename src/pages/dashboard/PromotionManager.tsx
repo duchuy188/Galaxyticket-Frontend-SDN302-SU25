@@ -366,7 +366,7 @@ const PromotionManager: React.FC = () => {
                   Mã
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tên & Mô tả
+                  Tên
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Loại
@@ -419,7 +419,6 @@ const PromotionManager: React.FC = () => {
                         )}
                         <div>
                           <div className="text-sm font-medium text-gray-900">{promotion.name}</div>
-                          <div className="text-sm text-gray-500">{promotion.description}</div>
                         </div>
                       </div>
                     </td>
@@ -478,6 +477,34 @@ const PromotionManager: React.FC = () => {
                               </svg>
                               <span className="hidden group-hover:block absolute z-10 bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-1/2 transform -translate-x-1/2">
                                 Xóa
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingPromotion(promotion);
+                                setFormData({
+                                  code: promotion.code,
+                                  name: promotion.name,
+                                  description: promotion.description,
+                                  type: promotion.type,
+                                  value: promotion.value,
+                                  startDate: new Date(promotion.startDate).toISOString().split('T')[0],
+                                  endDate: new Date(promotion.endDate).toISOString().split('T')[0]
+                                });
+                                if (promotion.posterUrl) {
+                                  setImagePreview(promotion.posterUrl);
+                                }
+                                setIsModalOpen(true);
+                              }}
+                              className="text-gray-600 hover:text-gray-900 transition-colors duration-200 relative group"
+                              title="Xem chi tiết"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                              </svg>
+                              <span className="hidden group-hover:block absolute z-10 bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-1/2 transform -translate-x-1/2">
+                                Xem chi tiết
                               </span>
                             </button>
                           </div>

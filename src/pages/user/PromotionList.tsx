@@ -6,6 +6,7 @@ import { Promotion } from '../../utils/promotion';
 const UserPromotions: React.FC = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,12 +35,30 @@ const UserPromotions: React.FC = () => {
 
   const copyPromotionCode = (code: string) => {
     navigator.clipboard.writeText(code);
-    alert('Đã sao chép mã giảm giá!');
+    setShowNotification(true);
+    setTimeout(() => {
+      setShowNotification(false);
+    }, 2000);
   };
 
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Mã Giảm Giá Của Bạn</h1>
+
+      {/* Toast Notification */}
+      <div className={`fixed top-4 right-4 transform transition-all duration-300 ease-in-out ${showNotification
+          ? 'translate-y-0 opacity-100'
+          : '-translate-y-16 opacity-0'
+        }`}>
+        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg shadow-lg flex items-center space-x-3">
+          <div className="flex-shrink-0">
+            <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <p className="font-medium">Đã sao chép mã giảm giá!</p>
+        </div>
+      </div>
 
       {loading ? (
         <div className="text-center">Đang tải...</div>
@@ -58,12 +77,12 @@ const UserPromotions: React.FC = () => {
                   )}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">{promotion.name}</h3>
-                    <p className="text-sm text-gray-600">{promotion.description}</p>
+                    <p className="text-sm text-gray-600 truncate max-w-[200px]">{promotion.description}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => copyPromotionCode(promotion.code)}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-blue-600 hover:text-blue-800 transition-colors duration-200"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
