@@ -6,7 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import api from '../../utils/api';
 import { useNavigate } from 'react-router-dom';
 
-type TabType = 'history' | 'profile' | 'notifications';
+type TabType = 'profile' | 'notifications';
 
 interface FormErrors {
   fullName?: string;
@@ -299,19 +299,9 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
     }
   };
 
- const tabs = React.useMemo(() => {
-  if (user?.role === 'member' ) {
-    return [
-      { id: 'history', label: 'Lịch sử giao dịch', icon: History },
-      { id: 'profile', label: 'Thông tin cá nhân', icon: User },
-      { id: 'notifications', label: 'Thông báo', icon: Bell }
-    ];
-  }
-  // Các role khác chỉ có tab thông tin cá nhân
-  return [
-    { id: 'profile', label: 'Thông tin cá nhân', icon: User }
-  ];
-}, [user?.role]);
+ const tabs = React.useMemo(() => [
+  { id: 'profile', label: 'Thông tin cá nhân', icon: User }
+], []);
 
   const renderPasswordModal = () => {
     const passwordStrength = getPasswordStrength(passwordData.newPassword);
@@ -644,16 +634,7 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
   );
 
   const renderContent = () => {
-    switch (activeTab) {
-      case 'profile':
-        return renderProfileContent();
-      case 'history':
-        return <div className="bg-white rounded-lg shadow-sm p-8">Lịch sử giao dịch sẽ được hiển thị ở đây</div>;
-      case 'notifications':
-        return <div className="bg-white rounded-lg shadow-sm p-8">Thông báo sẽ được hiển thị ở đây</div>;
-      default:
-        return null;
-    }
+    return renderProfileContent();
   };
 
   return (
@@ -709,4 +690,4 @@ const Profile: React.FC<{ hideTabs?: boolean }> = ({ hideTabs }) => {
   );
 };
 
-export default Profile; 
+export default Profile;

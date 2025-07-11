@@ -19,8 +19,9 @@ const UserManagement: React.FC = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
-  const totalPages = Math.ceil(users.length / usersPerPage);
-  const paginatedUsers = users.slice((currentPage - 1) * usersPerPage, currentPage * usersPerPage);
+  const [filterRole, setFilterRole] = useState<string>('all');
+  const totalPages = Math.ceil((filterRole === 'all' ? users.length : users.filter(user => user.role === filterRole).length) / usersPerPage);
+  const paginatedUsers = (filterRole === 'all' ? users : users.filter(user => user.role === filterRole)).slice((currentPage - 1) * usersPerPage, currentPage * usersPerPage);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
@@ -93,7 +94,7 @@ const UserManagement: React.FC = () => {
 const handleUpdateUser = async (e: React.FormEvent) => {
   e.preventDefault();
   if (!editingUser) return;
-  const userId = editingUser._id || editingUser.id;
+  const userId = editingUser.id;
   if (!userId) {
     toast.error('Không tìm thấy ID user!');
     return;
@@ -105,7 +106,7 @@ const handleUpdateUser = async (e: React.FormEvent) => {
       { role: editingUser.role },
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    setUsers(users.map(user => ((user._id || user.id) === userId ? { ...user, role: editingUser.role } : user)));
+    setUsers(users.map(user => (user.id === userId ? { ...user, role: editingUser.role } : user)));
     toast.success('Cập nhật role thành công!');
     setEditingUser(null);
   } catch (err) {
@@ -191,15 +192,40 @@ const handleUpdateUser = async (e: React.FormEvent) => {
     }
   };
 
+  const filteredUsers = filterRole === 'all' ? users : users.filter(user => user.role === filterRole);
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'admin': return 'Quản trị viên';
+      case 'staff': return 'Nhân viên';
+      case 'manager': return 'Quản lý';
+      case 'member': return 'Thành viên';
+      default: return role;
+    }
+  };
+
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">Quản lý người dùng</h2>
-      <button
-        className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        onClick={() => setShowCreateModal(true)}
-      >
-        Tạo user mới
-      </button>
+      <div className="mb-4 flex items-center gap-4">
+        <button
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          onClick={() => setShowCreateModal(true)}
+        >
+          Tạo user mới
+        </button>
+        <select
+          className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+          value={filterRole}
+          onChange={e => { setFilterRole(e.target.value); setCurrentPage(1); }}
+        >
+          <option value="all">Tất cả vai trò</option>
+          <option value="admin">Quản trị viên</option>
+          <option value="manager">Quản lý</option>
+          <option value="staff">Nhân viên</option>
+          <option value="member">Thành viên</option>
+        </select>
+      </div>
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -230,7 +256,7 @@ const handleUpdateUser = async (e: React.FormEvent) => {
                     <div className="text-sm text-gray-500">{user.phone}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : user.role === 'staff' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>{user.role}</span>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : user.role === 'staff' ? 'bg-blue-100 text-blue-800' : user.role === 'manager' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>{getRoleLabel(user.role)}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.isLocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>{user.isLocked ? 'Đã khóa' : 'Hoạt động'}</span>
@@ -498,4 +524,4 @@ const handleUpdateUser = async (e: React.FormEvent) => {
   );
 };
 
-export default UserManagement; 
+export default UserManagement;
