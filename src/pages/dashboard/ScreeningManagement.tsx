@@ -252,6 +252,11 @@ const ScreeningManagement: React.FC = () => {
     }
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(screenings.length / itemsPerPage);
+  const paginatedScreenings = screenings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <ToastContainer position="top-right" autoClose={3000} />
@@ -381,14 +386,14 @@ const ScreeningManagement: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ) : screenings.length === 0 ? (
+              ) : paginatedScreenings.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                     Không có dữ liệu suất chiếu
                   </td>
                 </tr>
               ) : (
-                screenings.map((s) => (
+                paginatedScreenings.map((s) => (
                   <tr key={s._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 max-w-[200px]">
@@ -464,6 +469,34 @@ const ScreeningManagement: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center py-4 gap-2">
+            <button
+              className={`px-3 py-1 rounded ${currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-200'}`}
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+            >
+              &laquo;
+            </button>
+            {[...Array(totalPages)].map((_, idx) => (
+              <button
+                key={idx + 1}
+                className={`px-3 py-1 rounded ${currentPage === idx + 1 ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-blue-100'}`}
+                onClick={() => setCurrentPage(idx + 1)}
+              >
+                {idx + 1}
+              </button>
+            ))}
+            <button
+              className={`px-3 py-1 rounded ${currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-200'}`}
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+            >
+              &raquo;
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Screening Modal */}
@@ -779,7 +812,6 @@ const ScreeningManagement: React.FC = () => {
                     readOnly
                     disabled
                   />
-                  <p className="text-xs text-gray-500 mt-1">Mặc định 64 ghế (8x8)</p>
                 </div>
               </div>
 
