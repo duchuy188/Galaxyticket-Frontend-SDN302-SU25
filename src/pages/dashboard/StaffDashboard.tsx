@@ -149,6 +149,8 @@ const StaffDashboard: React.FC = () => {
   const [viewingMovie, setViewingMovie] = useState<Movie | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  // Thêm state để theo dõi phim đang được xóa
+  const [deleteMovieId, setDeleteMovieId] = useState<string | null>(null);
 
   // Lấy dữ liệu ban đầu một lần
   useEffect(() => {
@@ -224,18 +226,28 @@ const StaffDashboard: React.FC = () => {
   };
 
   const handleDeleteMovie = async (movieId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa phim này không?')) return;
+    // Thay vì sử dụng window.confirm, hiển thị modal xác nhận
+    setDeleteMovieId(movieId);
+  };
+
+  const confirmDeleteMovie = async () => {
+    if (!deleteMovieId) return;
     
     try {
       setIsLoading(true);
-      await deleteMovie(movieId);
-      setMovies(movies.filter(movie => movie._id !== movieId));
+      await deleteMovie(deleteMovieId);
+      setMovies(movies.filter(movie => movie._id !== deleteMovieId));
       toast.success('Xóa phim thành công!');
     } catch (err) {
       toast.error('Xóa phim thất bại');
     } finally {
       setIsLoading(false);
+      setDeleteMovieId(null);
     }
+  };
+
+  const cancelDeleteMovie = () => {
+    setDeleteMovieId(null);
   };
 
   const handleSaveMovie = async (e: React.FormEvent) => {
@@ -1632,6 +1644,28 @@ const StaffDashboard: React.FC = () => {
           </button>
         </div>
       </div>
+      {deleteMovieId && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-md min-w-[350px]">
+            <h3 className="text-lg font-bold mb-4 text-red-600">Xác nhận xóa</h3>
+            <p>Bạn có chắc chắn muốn xóa phim này?</p>
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                className="px-4 py-2 bg-gray-400 text-white rounded"
+                onClick={cancelDeleteMovie}
+              >
+                Hủy
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded"
+                onClick={confirmDeleteMovie}
+              >
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
   const renderPromotionManagement = () => {
