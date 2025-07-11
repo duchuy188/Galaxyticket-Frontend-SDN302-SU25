@@ -151,6 +151,13 @@ const StaffDashboard: React.FC = () => {
   const [itemsPerPage] = useState(10);
   // Thêm state để theo dõi phim đang được xóa
   const [deleteMovieId, setDeleteMovieId] = useState<string | null>(null);
+  // Thêm state cho modal xác nhận
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmModalData, setConfirmModalData] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ title: '', message: '', onConfirm: () => void 0 });
 
   // Lấy dữ liệu ban đầu một lần
   useEffect(() => {
@@ -222,7 +229,27 @@ const StaffDashboard: React.FC = () => {
   };
 
   const handleEditMovie = (movie: Movie) => {
-    setEditingMovie({ ...movie });
+    let confirmMessage = '';
+
+    if (movie.status === 'approved') {
+      confirmMessage = 'Phim này đã được duyệt. Nếu chỉnh sửa, trạng thái sẽ chuyển về chờ duyệt. Bạn có muốn tiếp tục?';
+    } else if (movie.status === 'rejected') {
+      confirmMessage = `Phim này đã bị từ chối${movie.rejectionReason ? ` với lý do: "${movie.rejectionReason}"` : ''}. Nếu chỉnh sửa, trạng thái sẽ chuyển về chờ duyệt. Bạn có muốn tiếp tục?`;
+    }
+
+    if (confirmMessage) {
+      setConfirmModalData({
+        title: 'Xác nhận chỉnh sửa',
+        message: confirmMessage,
+        onConfirm: () => {
+          setEditingMovie({ ...movie });
+          setIsConfirmModalOpen(false);
+        }
+      });
+      setIsConfirmModalOpen(true);
+    } else {
+      setEditingMovie({ ...movie });
+    }
   };
 
   const handleDeleteMovie = async (movieId: string) => {
@@ -350,7 +377,13 @@ const StaffDashboard: React.FC = () => {
         setMovies(movies.map(movie => 
           movie._id === updatedMovie._id ? updatedMovie : movie
         ));
-        toast.success('Cập nhật phim thành công!');
+        
+        // Kiểm tra nếu phim đã được duyệt, hiển thị thông báo đặc biệt
+        if (editingMovie.status === 'approved') {
+          toast.success('Yêu cầu chỉnh sửa đã được gửi và đang chờ quản lý duyệt. Phim vẫn hiển thị với thông tin cũ cho đến khi được duyệt.');
+        } else {
+          toast.success('Cập nhật phim thành công!');
+        }
       } else {
         // Tạo phim mới
         const newMovie = await createMovie(formData);
@@ -1661,6 +1694,33 @@ const StaffDashboard: React.FC = () => {
                 onClick={confirmDeleteMovie}
               >
                 Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Confirmation Modal */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-800">{confirmModalData.title}</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600">{confirmModalData.message}</p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={confirmModalData.onConfirm}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                Xác nhận
               </button>
             </div>
           </div>
