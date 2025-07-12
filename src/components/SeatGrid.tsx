@@ -52,26 +52,21 @@ const SeatGrid: React.FC<SeatGridProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchSeats = async () => {
+    let pollingInterval: NodeJS.Timeout | null = null;
+    // Lần đầu load thì set loading, polling thì không
+    const fetchSeats = async (showLoading: boolean = false) => {
       try {
-        setLoading(true);
-        console.log('Fetching seats for screeningId:', screeningId);
+        if (showLoading) setLoading(true);
         const seats = await getScreeningSeats(screeningId);
-        console.log('API response seats:', seats);
-
         const newSeatStatuses: Record<string, 'available' | 'booked' | 'reserved'> = {};
         const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
         const seatsPerRow = 8;
-
-        // Initialize all seats as available first
         rows.forEach(row => {
           Array.from({ length: seatsPerRow }, (_, i) => {
             const seatId = `${row}${i + 1}`;
             newSeatStatuses[seatId] = 'available';
           });
         });
-
-        // Update statuses based on API response
         seats.forEach(seat => {
           if (seat.seatNumber && (seat.status === 'booked' || seat.status === 'reserved')) {
             newSeatStatuses[seat.seatNumber] = seat.status;
@@ -83,11 +78,16 @@ const SeatGrid: React.FC<SeatGridProps> = ({
         setError('Failed to load seats. Please try again later.');
         console.error('Error loading seats:', err);
       } finally {
-        setLoading(false);
+        if (showLoading) setLoading(false);
       }
     };
-
-    fetchSeats();
+    fetchSeats(true); // lần đầu có loading
+    pollingInterval = setInterval(() => {
+      fetchSeats(false); // polling không loading
+    }, 5000);
+    return () => {
+      if (pollingInterval) clearInterval(pollingInterval);
+    };
   }, [screeningId]);
 
   const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];

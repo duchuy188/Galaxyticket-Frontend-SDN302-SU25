@@ -263,7 +263,7 @@ const TheaterDetail: React.FC = () => {
               <Clock className="w-5 h-5 text-blue-600 mr-2" />
               <div>
                 <p className="text-xs text-gray-500">Giờ mở cửa</p>
-                <p className="font-medium">9:00 AM - 11:00 PM</p>
+                <p className="font-medium">8:00 AM</p>
               </div>
             </div>
             <div className="flex items-center text-gray-600">
@@ -393,7 +393,10 @@ const TheaterDetail: React.FC = () => {
                             // Lọc suất chiếu nếu là hôm nay và giờ chiếu <= giờ hiện tại thì ẩn
                             .filter(screening => {
                               if (activeDay === todayValue) {
-                                return dayjs(screening.startTime).isAfter(now);
+                                // Chỉ hiện suất chiếu có giờ lớn hơn giờ hiện tại
+                                const screeningTime = dayjs(screening.startTime).format('HH:mm');
+                                const nowTime = now.format('HH:mm');
+                                return screeningTime > nowTime;
                               }
                               return true;
                             })
@@ -452,4 +455,4 @@ const TheaterDetail: React.FC = () => {
   );
 };
 
-export default TheaterDetail; 
+export default TheaterDetail;
