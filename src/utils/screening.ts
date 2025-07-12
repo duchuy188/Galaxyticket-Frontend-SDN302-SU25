@@ -146,23 +146,6 @@ export const deleteScreening = async (id: string): Promise<{ message: string }> 
     }
 };
 
-export const getScreeningsByMovie = async (movieId: string): Promise<Screening[]> => {
-    try {
-        const response = await api.get<ApiResponse<Screening[]>>(`/api/screenings/movie/${movieId}`);
-        if (response.data.success && Array.isArray(response.data.data)) {
-            return response.data.data;
-        } else {
-            return [];
-        }
-    } catch (error: any) {
-        if (error.response && error.response.status === 404) {
-            return [];
-        }
-        console.error(`Error fetching screenings for movie ${movieId}:`, error);
-        return [];
-    }
-};
-
 export const getScreeningsByStatus = async (status: 'pending' | 'approved' | 'rejected'): Promise<Screening[]> => {
     try {
         const response = await api.get<ApiResponse<Screening[]>>(`/api/screenings/status/${status}`);
@@ -173,20 +156,6 @@ export const getScreeningsByStatus = async (status: 'pending' | 'approved' | 're
         }
     } catch (error) {
         console.error(`Error fetching screenings by status ${status}:`, error);
-        return [];
-    }
-};
-
-export const getScreeningsByTheater = async (theaterId: string): Promise<Screening[]> => {
-    try {
-        const response = await api.get<ApiResponse<Screening[]>>(`/api/screenings/theater/${theaterId}`);
-        if (response.data.success && Array.isArray(response.data.data)) {
-            return response.data.data;
-        } else {
-            return [];
-        }
-    } catch (error) {
-        console.error(`Error fetching screenings for theater ${theaterId}:`, error);
         return [];
     }
 };
