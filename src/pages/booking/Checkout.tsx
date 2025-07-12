@@ -47,6 +47,7 @@ const Checkout: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(120); // 2 phút = 120 giây
   const [isExpired, setIsExpired] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showExpiredModal, setShowExpiredModal] = useState(false);
 
   useEffect(() => {
     // Check for update success message
@@ -69,12 +70,10 @@ const Checkout: React.FC = () => {
       try {
         setIsLoadingPage(true);
         const storedDetails = sessionStorage.getItem('bookingDetails');
-        
         if (!storedDetails) {
           setError('Không tìm thấy thông tin đặt vé');
           return;
         }
-
         const details = JSON.parse(storedDetails);
         console.log('Loaded booking details:', details);
 
@@ -103,6 +102,19 @@ const Checkout: React.FC = () => {
           setRoomName(details.room);
         }
 
+        // Kiểm tra quá giờ suất chiếu
+        if (details.date && details.time) {
+          // Lấy giờ hiện tại ở VN
+          const nowVN = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Ho_Chi_Minh' }));
+          // Tạo đối tượng Date cho suất chiếu
+          const [hour, minute] = details.time.split(':').map(Number);
+          const showTime = new Date(details.date + 'T00:00:00');
+          showTime.setHours(hour, minute, 0, 0);
+          if (nowVN > showTime) {
+            setShowExpiredModal(true);
+            setIsExpired(true);
+          }
+        }
       } catch (error) {
         console.error('Error loading booking details:', error);
         setError('Không thể tải thông tin đặt vé');
@@ -329,6 +341,20 @@ const Checkout: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <ToastContainer position="top-right" />
+      {/* Modal quá giờ đặt phim */}
+      {showExpiredModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
+            <h3 className="text-lg font-semibold mb-4 text-red-600">Bạn không thể đặt được suất chiếu vì đã quá giờ đặt phim rồi</h3>
+            <button
+              className="mt-4 px-6 py-2 rounded bg-red-600 text-white font-semibold hover:bg-red-700"
+              onClick={() => { setShowExpiredModal(false); navigate('/'); }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
       <div className="max-w-3xl mx-auto">
         {/* Đồng hồ đếm ngược giữ ghế */}
         <div className="flex items-center justify-center mb-6">
@@ -513,7 +539,7 @@ const Checkout: React.FC = () => {
             onClick={handlePayment}
             disabled={isPaymentProcessing || isExpired}
           >
-            {isExpired ? 'Hết thời gian giữ ghế' : (isPaymentProcessing ? 'Đang Xử Lý Thanh Toán...' : 'Thanh Toán Ngay')}
+            {isExpired ? 'Hết thời gian giữ ghế hoặc quá giờ suất chiếu' : (isPaymentProcessing ? 'Đang Xử Lý Thanh Toán...' : 'Thanh Toán Ngay')}
           </button>
 
           {/* Khi hết thời gian giữ ghế, chỉ hiện nút quay về trang chủ */}

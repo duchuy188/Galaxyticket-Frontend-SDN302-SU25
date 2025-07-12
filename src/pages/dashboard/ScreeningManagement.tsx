@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getScreenings, deleteScreening, createScreening, Screening, updateScreening } from '../../utils/screening';
 import { getMovies } from '../../utils/movie';
-import { getRooms, createRoom } from '../../utils/room';
+import { getRooms } from '../../utils/room';
 import { getTheaters } from '../../utils/theater';
 import { EditIcon, TrashIcon, EyeIcon, Clock, XCircle, CheckCircle } from 'lucide-react';
 import DatePicker from 'react-datepicker';
@@ -26,11 +26,6 @@ const ScreeningManagement: React.FC = () => {
     startTime: '',
     endTime: '',
     ticketPrice: 90000,
-  });
-  const [roomForm, setRoomForm] = useState({
-    name: '',
-    theaterId: '',
-    totalSeats: 64,
   });
 
   const [editingScreening, setEditingScreening] = useState<Screening | null>(null);
@@ -203,26 +198,6 @@ const ScreeningManagement: React.FC = () => {
     }
   };
 
-  const handleCreateRoom = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setRoomLoading(true);
-    try {
-      await createRoom({
-        name: roomForm.name,
-        theaterId: roomForm.theaterId,
-        totalSeats: Number(roomForm.totalSeats),
-      });
-      setShowRoomModal(false);
-      setRoomForm({ name: '', theaterId: '', totalSeats: 0 });
-      fetchRooms();
-      toast.success('Tạo phòng chiếu thành công!');
-    } catch (err: any) {
-      toast.error('Tạo phòng chiếu thất bại: ' + (err?.message || 'Lỗi không xác định'));
-    } finally {
-      setRoomLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchScreenings();
     // eslint-disable-next-line
@@ -251,6 +226,11 @@ const ScreeningManagement: React.FC = () => {
         return 'Chờ duyệt';
     }
   };
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(screenings.length / itemsPerPage);
+  const paginatedScreenings = screenings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -282,13 +262,6 @@ const ScreeningManagement: React.FC = () => {
             </button>
           </div>
           <div className="flex items-center gap-4">
-            <button
-              className="px-4 py-2 bg-green-600 text-white rounded-md"
-              onClick={() => setShowRoomModal(true)}
-              type="button"
-            >
-              Tạo phòng chiếu
-            </button>
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded-md"
               onClick={() => {
@@ -381,14 +354,14 @@ const ScreeningManagement: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ) : screenings.length === 0 ? (
+              ) : paginatedScreenings.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                     Không có dữ liệu suất chiếu
                   </td>
                 </tr>
               ) : (
-                screenings.map((s) => (
+                paginatedScreenings.map((s) => (
                   <tr key={s._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 max-w-[200px]">
@@ -464,6 +437,34 @@ const ScreeningManagement: React.FC = () => {
             </tbody>
           </table>
         </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center py-4 gap-2">
+            <button
+              className={`px-3 py-1 rounded ${currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-200'}`}
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+            >
+              &laquo;
+            </button>
+            {[...Array(totalPages)].map((_, idx) => (
+              <button
+                key={idx + 1}
+                className={`px-3 py-1 rounded ${currentPage === idx + 1 ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-blue-100'}`}
+                onClick={() => setCurrentPage(idx + 1)}
+              >
+                {idx + 1}
+              </button>
+            ))}
+            <button
+              className={`px-3 py-1 rounded ${currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-200'}`}
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+            >
+              &raquo;
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Screening Modal */}
@@ -506,6 +507,7 @@ const ScreeningManagement: React.FC = () => {
                     value={form.movieId}
                     onChange={e => setForm({ ...form, movieId: e.target.value })}
                     required
+                    disabled={!form.theaterId} // Chỉ cho chọn phim khi đã chọn rạp
                   >
                     <option value="">Chọn phim</option>
                     {moviesNowShowing.map(m => (
@@ -619,6 +621,7 @@ const ScreeningManagement: React.FC = () => {
                         return excludedTimes;
                       })() : []
                     }
+                    disabled={!form.movieId} // Chỉ cho chọn thời gian khi đã chọn phim
                   />
                 </div>
 
@@ -631,6 +634,7 @@ const ScreeningManagement: React.FC = () => {
                     value={form.roomId}
                     onChange={e => setForm({ ...form, roomId: e.target.value })}
                     required
+                    disabled={!form.startTime} // Chỉ cho chọn phòng khi đã chọn thời gian
                   >
                     <option value="">Chọn phòng</option>
                     {rooms
@@ -700,6 +704,7 @@ const ScreeningManagement: React.FC = () => {
                     onChange={e => setForm({ ...form, ticketPrice: Number(e.target.value) })}
                     min={0}
                     required
+                    disabled={!form.roomId} // Chỉ cho nhập giá vé khi đã chọn phòng
                   />
                 </div>
               </div>
@@ -726,84 +731,7 @@ const ScreeningManagement: React.FC = () => {
           </div>
         </div>
       )}
-
       {/* Create Room Modal */}
-      {showRoomModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800">
-                Tạo phòng chiếu mới
-              </h2>
-            </div>
-            
-            <form onSubmit={handleCreateRoom} className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Rạp
-                  </label>
-                  <select
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={roomForm.theaterId}
-                    onChange={e => setRoomForm({ ...roomForm, theaterId: e.target.value })}
-                    required
-                  >
-                    <option value="">Chọn rạp</option>
-                    {theaters.map(t => (
-                      <option key={t._id} value={t._id}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tên phòng
-                  </label>
-                  <input
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={roomForm.name}
-                    onChange={e => setRoomForm({ ...roomForm, name: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Số ghế
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100"
-                    value={64}
-                    readOnly
-                    disabled
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Mặc định 64 ghế (8x8)</p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
-                  onClick={() => setShowRoomModal(false)}
-                  disabled={roomLoading}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                >
-                  {roomLoading ? 'Đang tạo...' : 'Tạo phòng'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {viewingScreening && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow-md min-w-[350px]">

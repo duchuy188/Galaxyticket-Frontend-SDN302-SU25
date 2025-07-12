@@ -294,7 +294,7 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isComingSoon }) => {
           </div>
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
-            <span>{movie.duration} min</span>
+            <span>{movie.duration} phút</span>
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="w-4 h-4" />
