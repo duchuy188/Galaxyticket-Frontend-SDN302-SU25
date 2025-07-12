@@ -292,7 +292,7 @@ const NavBar: React.FC = () => {
                       onClick={() => setIsUserDropdownOpen(false)}
                     >
                       <User className="w-4 h-4 mr-2" />
-                      <span>Profile</span>
+                      <span>Thông tin cá nhân</span>
                     </Link>
                     <Link 
                       to="/bookings" 
