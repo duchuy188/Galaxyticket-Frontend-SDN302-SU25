@@ -669,14 +669,6 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                             {new Date(selectedRequest.requestData.endTime).toLocaleString('vi-VN', { hour12: false })}
                           </span>
                         </div>
-                        <div className="mb-2">
-                          <span className="font-medium text-gray-500">Giá vé:</span>
-                          <span className="ml-2">{selectedRequest.requestData.ticketPrice?.toLocaleString('vi-VN')} đ</span>
-                        </div>
-                        <div className="mb-2">
-                          <span className="font-medium text-gray-500">Trạng thái:</span>
-                          <span className="ml-2 capitalize">{selectedRequest.requestData.status}</span>
-                        </div>
                       </div>
                       <div>
                         <div className="mb-2">
@@ -689,16 +681,20 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                           </span>
                         </div>
                         <div className="mb-2">
-                          <span className="font-medium text-gray-500">Người duyệt:</span>
-                          <span className="ml-2">{selectedRequest.requestData.approvedBy?.name || 'Chưa duyệt'}</span>
-                        </div>
-                        <div className="mb-2">
                           <span className="font-medium text-gray-500">Ngày tạo:</span>
                           <span className="ml-2">{new Date(selectedRequest.requestData.createdAt).toLocaleString('vi-VN')}</span>
                         </div>
                         <div className="mb-2">
                           <span className="font-medium text-gray-500">Ngày cập nhật:</span>
                           <span className="ml-2">{new Date(selectedRequest.requestData.updatedAt).toLocaleString('vi-VN')}</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Giá vé:</span>
+                          <span className="ml-2">{selectedRequest.requestData.ticketPrice?.toLocaleString('vi-VN')} đ</span>
+                        </div>
+                        <div className="mb-2">
+                          <span className="font-medium text-gray-500">Trạng thái:</span>
+                          <span className="ml-2 capitalize">{selectedRequest.requestData.status}</span>
                         </div>
                       </div>
                     </div>
