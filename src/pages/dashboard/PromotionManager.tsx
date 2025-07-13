@@ -16,9 +16,11 @@ const PromotionManager: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [displayedPromotions, setDisplayedPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedUsability, setSelectedUsability] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [confirmModalData, setConfirmModalData] = useState<{
@@ -40,6 +42,10 @@ const PromotionManager: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
+  // Thêm state mới để quản lý modal xem chi tiết
+  const [viewingPromotion, setViewingPromotion] = useState<Promotion | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+
   // Thêm hàm để lấy ngày hiện tại theo định dạng YYYY-MM-DD
   const getCurrentDate = () => {
     const today = new Date();
@@ -51,7 +57,9 @@ const PromotionManager: React.FC = () => {
     try {
       setLoading(true);
       const response = await getAllPromotions(selectedStatus);
-      setPromotions(response.data || []);
+      const data = response.data || [];
+      setPromotions(data);
+      setDisplayedPromotions(data);
     } catch (err: any) {
       toast.error(err.message);
       if (err.message.includes('Phiên đăng nhập đã hết hạn')) {
@@ -62,9 +70,50 @@ const PromotionManager: React.FC = () => {
     }
   };
 
+  // Filter promotions based on usability
+  const filterPromotionsByUsability = (usabilityFilter: string) => {
+    if (!usabilityFilter) {
+      setDisplayedPromotions(promotions);
+      return;
+    }
+
+    const today = new Date();
+    
+    if (usabilityFilter === 'usable') {
+      // Khuyến mãi còn sử dụng được: đã duyệt, còn hạn sử dụng, và còn lượt sử dụng
+      const usablePromotions = promotions.filter(promo => {
+        const endDate = new Date(promo.endDate);
+        const startDate = new Date(promo.startDate);
+        return (
+          promo.status === 'approved' && 
+          endDate >= today && 
+          startDate <= today &&
+          (promo.maxUsage > (promo.currentUsage || 0))
+        );
+      });
+      setDisplayedPromotions(usablePromotions);
+    } else if (usabilityFilter === 'expired') {
+      // Khuyến mãi hết hạn sử dụng: hết hạn hoặc hết lượt sử dụng
+      const expiredPromotions = promotions.filter(promo => {
+        const endDate = new Date(promo.endDate);
+        const startDate = new Date(promo.startDate);
+        return (
+          endDate < today || 
+          (promo.maxUsage <= (promo.currentUsage || 0)) ||
+          startDate > today
+        );
+      });
+      setDisplayedPromotions(expiredPromotions);
+    }
+  };
+
   useEffect(() => {
     fetchPromotions();
   }, [selectedStatus]);
+
+  useEffect(() => {
+    filterPromotionsByUsability(selectedUsability);
+  }, [selectedUsability, promotions]);
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -265,6 +314,12 @@ const PromotionManager: React.FC = () => {
     }
   };
 
+  // Thêm hàm xử lý khi click vào nút xem chi tiết
+  const handleViewDetails = (promotion: Promotion) => {
+    setViewingPromotion(promotion);
+    setIsViewModalOpen(true);
+  };
+
   // Get status badge style
   const getStatusBadgeStyle = (status: string) => {
     switch (status) {
@@ -298,6 +353,24 @@ const PromotionManager: React.FC = () => {
       return ['pending', 'approved', 'rejected'].includes(promotion.status);
     }
     return false;
+  };
+
+  // Check promotion usability - mới tạo mặc định là còn hạn sử dụng
+  const isPromotionUsable = (promotion: Promotion) => {
+    // Khuyến mãi mới tạo (pending) mặc định là còn hạn sử dụng
+    if (promotion.status === 'pending') {
+      return true;
+    }
+    
+    const today = new Date();
+    const endDate = new Date(promotion.endDate);
+    const startDate = new Date(promotion.startDate);
+    
+    return (
+      endDate >= today && 
+      startDate <= today &&
+      (promotion.maxUsage > (promotion.currentUsage || 0))
+    );
   };
 
   return (
@@ -351,7 +424,7 @@ const PromotionManager: React.FC = () => {
 
         {/* Filter Section */}
         {(user?.role === 'manager' || user?.role === 'staff') && (
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-4">
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
@@ -361,6 +434,16 @@ const PromotionManager: React.FC = () => {
               <option value="pending">Chờ duyệt</option>
               <option value="approved">Đã duyệt</option>
               <option value="rejected">Từ chối</option>
+            </select>
+            
+            <select
+              value={selectedUsability}
+              onChange={(e) => setSelectedUsability(e.target.value)}
+              className="bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Tất cả khuyến mãi</option>
+              <option value="usable">Còn hạn sử dụng </option>
+              <option value="expired">Hết hạn sử dụng</option>
             </select>
           </div>
         )}
@@ -388,7 +471,7 @@ const PromotionManager: React.FC = () => {
                   Trạng thái
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Thời gian
+                  Thời gian & Sử dụng
                 </th>
                 {(user?.role === 'manager' || user?.role === 'staff') && (
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -406,14 +489,14 @@ const PromotionManager: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ) : promotions.length === 0 ? (
+              ) : displayedPromotions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                     Không có dữ liệu khuyến mãi
                   </td>
                 </tr>
               ) : (
-                promotions.map((promotion) => (
+                displayedPromotions.map((promotion) => (
                   <tr key={promotion._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {promotion.code}
@@ -442,24 +525,35 @@ const PromotionManager: React.FC = () => {
                       }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                          ${promotion.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            promotion.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'}`}
-                        >
-                          {getStatusText(promotion.status)}
-                        </span>
-                      </div>
-                      {promotion.rejectionReason && (
-                        <div className="mt-1 text-xs text-red-600">
-                          Lý do: {promotion.rejectionReason}
+                      {/* Chỉ hiển thị trạng thái từ chối nếu có */}
+                      {promotion.status === 'rejected' && (
+                        <div>
+                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                            Từ chối
+                          </span>
+                          {promotion.rejectionReason && (
+                            <div className="mt-1 text-xs text-red-600">
+                              Lý do: {promotion.rejectionReason}
+                            </div>
+                          )}
                         </div>
                       )}
+                      
+                      {/* Hiển thị còn/hết hạn sử dụng */}
+                      <div className={promotion.status === 'rejected' ? "mt-1" : ""}>
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                          ${isPromotionUsable(promotion) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                        >
+                          {isPromotionUsable(promotion) ? 'Còn hạn sử dụng' : 'Hết hạn sử dụng'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div>Bắt đầu: {new Date(promotion.startDate).toLocaleDateString('vi-VN')}</div>
                       <div>Kết thúc: {new Date(promotion.endDate).toLocaleDateString('vi-VN')}</div>
+                      <div className="mt-1">
+                        Sử dụng: {promotion.currentUsage || 0}/{promotion.maxUsage}
+                      </div>
                     </td>
                     {(user?.role === 'manager' || user?.role === 'staff') && (
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -490,23 +584,7 @@ const PromotionManager: React.FC = () => {
                               </span>
                             </button>
                             <button
-                              onClick={() => {
-                                setEditingPromotion(promotion);
-                                setFormData({
-                                  code: promotion.code,
-                                  name: promotion.name,
-                                  description: promotion.description,
-                                  type: promotion.type,
-                                  value: promotion.value,
-                                  startDate: new Date(promotion.startDate).toISOString().split('T')[0],
-                                  endDate: new Date(promotion.endDate).toISOString().split('T')[0],
-                                  maxUsage: promotion.maxUsage || 5
-                                });
-                                if (promotion.posterUrl) {
-                                  setImagePreview(promotion.posterUrl);
-                                }
-                                setIsModalOpen(true);
-                              }}
+                              onClick={() => handleViewDetails(promotion)}
                               className="text-gray-600 hover:text-gray-900 transition-colors duration-200 relative group"
                               title="Xem chi tiết"
                             >
@@ -799,6 +877,103 @@ const PromotionManager: React.FC = () => {
               >
                 Xác nhận
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal xem chi tiết */}
+      {isViewModalOpen && viewingPromotion && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center p-4">
+          <div className="relative mx-auto w-full max-w-4xl shadow-2xl rounded-2xl bg-white">
+            <div className="p-6">
+              <div className="flex justify-between items-center border-b pb-4">
+                <h3 className="text-2xl font-semibold text-gray-800">
+                  Chi tiết khuyến mãi
+                </h3>
+                <button
+                  onClick={() => setIsViewModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                >
+                  <span className="sr-only">Đóng</span>
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Image section */}
+                <div className="md:col-span-1">
+                  {viewingPromotion.posterUrl && (
+                    <img
+                      src={viewingPromotion.posterUrl}
+                      alt={viewingPromotion.name}
+                      className="w-full rounded-lg object-cover"
+                    />
+                  )}
+                </div>
+
+                {/* Details section */}
+                <div className="md:col-span-2 space-y-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Mã khuyến mãi</h4>
+                    <p className="text-lg font-medium">{viewingPromotion.code}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Tên khuyến mãi</h4>
+                    <p className="text-lg font-medium">{viewingPromotion.name}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Loại khuyến mãi</h4>
+                    <p>{viewingPromotion.type === 'percent' ? 'Phần trăm' : 'Số tiền cố định'}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Giá trị</h4>
+                    <p>{viewingPromotion.type === 'percent' ? 
+                      `${viewingPromotion.value}%` : 
+                      `${formatCurrency(viewingPromotion.value)}đ`}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Thời gian hiệu lực</h4>
+                    <p>Từ {new Date(viewingPromotion.startDate).toLocaleDateString('vi-VN')} đến {new Date(viewingPromotion.endDate).toLocaleDateString('vi-VN')}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Số lượng sử dụng</h4>
+                    <p>{viewingPromotion.currentUsage || 0}/{viewingPromotion.maxUsage}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Trạng thái</h4>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                        ${viewingPromotion.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          viewingPromotion.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'}`}
+                      >
+                        {getStatusText(viewingPromotion.status)}
+                      </span>
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                        ${isPromotionUsable(viewingPromotion) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                      >
+                        {isPromotionUsable(viewingPromotion) ? 'Còn hạn sử dụng' : 'Hết hạn sử dụng'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Mô tả</h4>
+                    <p className="text-gray-700 whitespace-pre-wrap">{viewingPromotion.description}</p>
+                  </div>
+                </div>
+              </div>
+              
             </div>
           </div>
         </div>

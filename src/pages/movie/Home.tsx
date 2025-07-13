@@ -1,7 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Star, Clock, Filter, Search, Calendar, Tag, Ticket, Film } from 'lucide-react';
+import { Star, Clock, Filter, Search, Calendar, Tag, Ticket, Film, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Movie, getMovies } from '../../utils/movie';
+import { getAllPromotions, Promotion } from '../../utils/promotion';
+
+// Thêm interface cho banner quảng cáo
+interface Banner {
+  id: string;
+  imageUrl: string;
+  title: string;
+  subtitle?: string;
+  link: string;
+  type: 'movie' | 'promotion';
+  badgeText?: string;
+  badgeColor?: string;
+}
 
 // Constants
 const GENRES = [
@@ -42,34 +55,148 @@ interface MovieCardProps {
 
 const Home: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'now-showing' | 'coming-soon'>('now-showing');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('Tất Cả Thể Loại');
   const [sortBy, setSortBy] = useState<keyof typeof SORT_OPTIONS>('RATING');
+  
+  // State cho banner slider
+  const [currentBanner, setCurrentBanner] = useState(0);
+  const [banners, setBanners] = useState<Banner[]>([]);
 
+  // Hàm điều khiển slider
+  const nextBanner = () => {
+    setCurrentBanner((prev) => (prev + 1) % banners.length);
+  };
+
+  const prevBanner = () => {
+    setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length);
+  };
+
+  // Cải thiện auto slide để nó phụ thuộc vào banners.length
   useEffect(() => {
-    const fetchMovies = async () => {
+    // Chỉ auto slide khi có ít nhất 2 banner
+    if (banners.length > 1) {
+      const timer = setInterval(() => {
+        nextBanner();
+      }, 5000); // Chuyển slide mỗi 5 giây
+      
+      return () => clearInterval(timer);
+    }
+  }, [banners.length]); // Thêm banners.length vào dependencies
+
+  // Sửa hàm fetchData để xử lý trường hợp không đăng nhập
+  useEffect(() => {
+    const fetchData = async () => {
       try {
-        const data = await getMovies();
-        setMovies(data || []);
+        setLoading(true);
+        
+        // Fetch movies first
+        const moviesData = await getMovies();
+        setMovies(moviesData || []);
+        
+        // Tạo banners từ phim
+        const movieBanners: Banner[] = [];
+        
+        // Tạo danh sách tất cả phim
+        const allMovies = [...moviesData];
+        
+        // Shuffle toàn bộ danh sách phim
+        const shuffledMovies = [...allMovies].sort(() => Math.random() - 0.5);
+        
+        // Lấy 3 phim đang chiếu
+        const nowShowingMovies = shuffledMovies.filter(movie => movie.showingStatus === 'now-showing').slice(0, 3);
+        
+        // Lấy 3 phim sắp chiếu
+        const comingSoonMovies = shuffledMovies.filter(movie => movie.showingStatus === 'coming-soon').slice(0, 3);
+        
+        // Thêm phim đang chiếu vào banners
+        nowShowingMovies.forEach(movie => {
+          movieBanners.push({
+            id: movie._id,
+            imageUrl: movie.posterUrl,
+            title: movie.title,
+            subtitle: movie.vietnameseTitle,
+            link: `/movie/${movie._id}`,
+            type: 'movie',
+            badgeText: 'Đang Chiếu',
+            badgeColor: 'bg-green-600'
+          });
+        });
+        
+        // Thêm phim sắp chiếu vào banners
+        comingSoonMovies.forEach(movie => {
+          movieBanners.push({
+            id: movie._id,
+            imageUrl: movie.posterUrl,
+            title: movie.title,
+            subtitle: movie.vietnameseTitle,
+            link: `/movie/${movie._id}`,
+            type: 'movie',
+            badgeText: 'Sắp Chiếu',
+            badgeColor: 'bg-blue-600'
+          });
+        });
+        
+        // Thử tải khuyến mãi nếu đã đăng nhập
+        try {
+          const token = localStorage.getItem('token');
+          if (token) {
+            const promotionsData = await getAllPromotions();
+            setPromotions(promotionsData.data || []);
+            
+            // Shuffle khuyến mãi
+            const activePromotions = (promotionsData.data?.filter(promo => 
+              promo.status === 'approved' && 
+              new Date(promo.endDate) >= new Date() &&
+              promo.maxUsage > (promo.currentUsage || 0)
+            ) || []).sort(() => Math.random() - 0.5);
+            
+            // Thêm 2 khuyến mãi
+            activePromotions.slice(0, 2).forEach(promo => {
+              movieBanners.push({
+                id: promo._id,
+                imageUrl: promo.posterUrl || 'https://via.placeholder.com/800x450?text=Khuyến+Mãi',
+                title: promo.name,
+                subtitle: promo.description,
+                link: '#', // Không có trang chi tiết khuyến mãi
+                type: 'promotion',
+                badgeText: 'Khuyến Mãi',
+                badgeColor: 'bg-red-600'
+              });
+            });
+          }
+        } catch (error) {
+          console.log('Không thể tải khuyến mãi, tiếp tục với chỉ phim');
+          // Không làm gì, tiếp tục với chỉ phim
+        }
+        
+        // Shuffle banners một lần nữa để đảm bảo thứ tự ngẫu nhiên
+        const shuffledBanners = [...movieBanners].sort(() => Math.random() - 0.5);
+        
+        // Thêm timestamp vào mỗi banner để đảm bảo ID khác nhau mỗi khi refresh
+        const timestampedBanners = shuffledBanners.map(banner => ({
+          ...banner,
+          id: `${banner.id}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+        }));
+        
+        setBanners(timestampedBanners);
       } catch (error) {
-        console.error('Error fetching movies:', error);
-        setMovies([]);
+        console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMovies();
+    fetchData();
   }, []);
 
   const nowShowing = Array.isArray(movies) ? movies.filter(movie => movie.showingStatus === 'now-showing') : [];
   const comingSoon = Array.isArray(movies) ? movies.filter(movie => movie.showingStatus === 'coming-soon') : [];
 
-
   const filteredMovies = [...(activeTab === 'now-showing' ? nowShowing : comingSoon)].filter(movie => {
-    
     if (selectedGenre !== 'Tất Cả Thể Loại') {
       if (movie.genre !== selectedGenre) {
         return false;
@@ -87,7 +214,6 @@ const Home: React.FC = () => {
     return true;
   });
 
- 
   const sortedMovies = [...filteredMovies].sort((a, b) => {
     switch (sortBy) {
       case 'RATING':
@@ -109,6 +235,89 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Thêm container với padding-top */}
+      <div className="pt-4">
+        {/* Banner Slider */}
+        <div className="relative w-full h-[350px] overflow-hidden">
+          <div 
+            className="flex transition-transform duration-700 ease-in-out h-full"
+            style={{ transform: `translateX(-${currentBanner * 100}%)` }}
+          >
+            {banners.map((banner) => (
+              <div 
+                key={banner.id} 
+                className="min-w-full h-full relative"
+              >
+                <div className="absolute inset-0 bg-black/30"></div>
+                <img 
+                  src={banner.imageUrl} 
+                  alt={banner.title} 
+                  className="w-full h-full object-contain md:object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'https://via.placeholder.com/1920x1080?text=Galaxy+Cinema';
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent/30 flex items-end">
+                  <div className="container mx-auto px-4 pb-12">
+                    {banner.badgeText && (
+                      <span className={`${banner.badgeColor} text-white px-3 py-1 rounded-md text-sm font-medium mb-3 inline-block`}>
+                        {banner.badgeText}
+                      </span>
+                    )}
+                    <h2 className="text-2xl font-bold text-white mb-1">{banner.title}</h2>
+                    {banner.subtitle && (
+                      <p className="text-base text-white/80 mb-2 line-clamp-2">{banner.subtitle}</p>
+                    )}
+                    <Link 
+                      to={banner.link}
+                      className="bg-red-600 text-white px-4 py-1.5 text-sm rounded-lg hover:bg-red-700 transition-colors inline-flex items-center gap-1.5"
+                    >
+                      {banner.type === 'movie' ? (
+                        <>
+                          <Ticket className="w-3.5 h-3.5" />
+                          Mua vé ngay
+                        </>
+                      ) : (
+                        <>
+                          <Tag className="w-3.5 h-3.5" />
+                          Xem chi tiết
+                        </>
+                      )}
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Navigation buttons */}
+          <button 
+            onClick={prevBanner}
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-1.5 rounded-full"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button 
+            onClick={nextBanner}
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/50 text-white p-1.5 rounded-full"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          
+          {/* Indicators */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+            {banners.map((_, index) => (
+              <button 
+                key={index}
+                onClick={() => setCurrentBanner(index)}
+                className={`w-3 h-3 rounded-full ${index === currentBanner ? 'bg-white' : 'bg-white/50'}`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
       <main className="container mx-auto px-4 py-8">
         {/* Tabs */}
         <div className="flex space-x-4 mb-8">
@@ -246,14 +455,14 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isComingSoon }) => {
           className="w-full h-[400px] object-cover transform group-hover:scale-105 transition-transform duration-300"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            target.src = '/placeholder-movie.jpg';
+            target.src = 'https://via.placeholder.com/300x450?text=No+Poster';
           }}
         />
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3">
           <button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/movie/${movie._id}`);  // Chuyển đến trang chi tiết phim giống nút Trailer
+              navigate(`/movie/${movie._id}`);
             }}
             className="bg-[#ff6b6b] hover:bg-[#ff5252] text-white px-6 py-2 rounded-full flex items-center gap-2 transition-colors"
           >
@@ -284,7 +493,6 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, isComingSoon }) => {
           <h3 className="font-bold text-lg line-clamp-1 group-hover:text-red-600 transition-colors">
             {movie.title}
           </h3>
-       
         </div>
 
         <div className="flex items-center gap-4 text-sm text-gray-600">

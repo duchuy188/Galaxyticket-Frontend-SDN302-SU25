@@ -162,7 +162,12 @@ const TheaterManagement: React.FC = () => {
   const handleEditRoom = (room: Room) => {
     setEditingRoom(room);
     setRoomForm({ name: room.name, totalSeats: room.totalSeats });
-    setRoomModal({ theaterId: room.theaterId._id || room.theaterId, open: true });
+    setRoomModal({ 
+      theaterId: typeof room.theaterId === 'object' && room.theaterId !== null 
+        ? (room.theaterId as any)._id 
+        : room.theaterId, 
+      open: true 
+    });
   };
 
   const handleUpdateRoom = async (e: React.FormEvent) => {
@@ -173,7 +178,9 @@ const TheaterManagement: React.FC = () => {
       const updatedRoom = await updateRoom(editingRoom._id, {
         name: roomForm.name,
         totalSeats: roomForm.totalSeats,
-        theaterId: typeof editingRoom.theaterId === 'object' ? editingRoom.theaterId._id : editingRoom.theaterId
+        theaterId: typeof editingRoom.theaterId === 'object' && editingRoom.theaterId !== null 
+          ? (editingRoom.theaterId as any)._id 
+          : editingRoom.theaterId
       });
       // Always refetch rooms and show success toast if API did not throw
       await fetchRooms();
@@ -197,7 +204,7 @@ const TheaterManagement: React.FC = () => {
       setRoomLoading(true);
       await deleteRoom(showDeleteRoomModal.room._id);
       if (showDeleteRoomModal.room) {
-        setRooms(rooms.filter(r => r._id !== showDeleteRoomModal.room._id));
+        setRooms(rooms.filter(r => r._id !== showDeleteRoomModal.room?._id));
       }
       toast.success('Xóa phòng chiếu thành công!');
       setShowDeleteRoomModal({ open: false, room: null });
@@ -374,7 +381,7 @@ const TheaterManagement: React.FC = () => {
                           <ul className="list-disc ml-6">
                             {rooms.filter(room => {
                               if (typeof room.theaterId === 'object' && room.theaterId !== null) {
-                                return room.theaterId._id === theater._id;
+                                return (room.theaterId as any)._id === theater._id;
                               }
                               return room.theaterId === theater._id;
                             }).map(room => (
@@ -404,7 +411,7 @@ const TheaterManagement: React.FC = () => {
                             ))}
                             {rooms.filter(room => {
                               if (typeof room.theaterId === 'object' && room.theaterId !== null) {
-                                return room.theaterId._id === theater._id;
+                                return (room.theaterId as any)._id === theater._id;
                               }
                               return room.theaterId === theater._id;
                             }).length === 0 && (
