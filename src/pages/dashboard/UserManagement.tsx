@@ -61,7 +61,7 @@ const UserManagement: React.FC = () => {
   const handleLockUser = async (userId: string) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(`/api/admin/users/${userId}/lock`, {}, {
+      await axios.patch(`http://localhost:5000/api/admin/users/${userId}/lock`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success('Khóa tài khoản thành công!');
@@ -76,7 +76,7 @@ const UserManagement: React.FC = () => {
   const handleUnlockUser = async (userId: string) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(`/api/admin/users/${userId}/unlock`, {}, {
+      await axios.patch(`http://localhost:5000/api/admin/users/${userId}/unlock`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success('Mở khóa tài khoản thành công!');
@@ -102,7 +102,7 @@ const handleUpdateUser = async (e: React.FormEvent) => {
   try {
     const token = localStorage.getItem('token');
     await axios.put(
-      `/api/admin/users/${userId}`,
+      `http://localhost:5000/api/admin/users/${userId}`,
       { role: editingUser.role },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -129,7 +129,7 @@ const handleUpdateUser = async (e: React.FormEvent) => {
     setDeleting(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`/api/admin/users/${userToDelete.id}`, {
+      await axios.delete(`http://localhost:5000/api/admin/users/${userToDelete.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(users.filter(user => user.id !== userToDelete.id));
@@ -164,7 +164,7 @@ const handleUpdateUser = async (e: React.FormEvent) => {
     setCreating(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.post('/api/admin/users', newUser, {
+      await axios.post('http://localhost:5000/api/admin/users', newUser, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success('Tạo user thành công!');
@@ -172,7 +172,7 @@ const handleUpdateUser = async (e: React.FormEvent) => {
       setNewUser({ name: '', email: '', phone: '', password: '', role: 'staff' });
       // Reload lại danh sách user (nếu lỗi thì chỉ log, không báo toast.error)
       try {
-        const response = await api.get('/api/users');
+        const response = await api.get('/api/auth/users');
         const usersData = (Array.isArray(response.data) ? response.data : response.data.users || []).map((u: any) => ({
           id: u._id,
           fullName: u.name,
