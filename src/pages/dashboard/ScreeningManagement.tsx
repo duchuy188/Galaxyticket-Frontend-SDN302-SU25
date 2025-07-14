@@ -62,27 +62,30 @@ const ScreeningManagement: React.FC = () => {
     } else {
       data = await getScreenings(statusFilter as 'pending' | 'approved' | 'rejected');
     }
-    
+
     // Lọc theo rạp nếu có chọn
     if (theaterFilter) {
-      data = data.filter((s: any) =>
-        (typeof s.theaterId === 'object' ? s.theaterId._id : s.theaterId) === theaterFilter
-      );
+      data = data.filter((s: any) => {
+        const screeningTheaterId = s?.theaterId?._id || s?.theaterId;
+        return screeningTheaterId === theaterFilter;
+      });
     }
-    
+
     // Lọc theo thời gian
     if (dateFilter !== 'all') {
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      
+
       data = data.filter((s: any) => {
+        if (!s?.startTime) return false;
+
         const screeningDate = new Date(s.startTime);
         const screeningDay = new Date(
-          screeningDate.getFullYear(), 
-          screeningDate.getMonth(), 
+          screeningDate.getFullYear(),
+          screeningDate.getMonth(),
           screeningDate.getDate()
         );
-        
+
         if (dateFilter === 'today') {
           // Suất chiếu hôm nay
           return screeningDay.getTime() === today.getTime();
@@ -98,7 +101,7 @@ const ScreeningManagement: React.FC = () => {
         return true;
       });
     }
-    
+
     setScreenings(data);
     setLoading(false);
   };
@@ -235,13 +238,13 @@ const ScreeningManagement: React.FC = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <ToastContainer position="top-right" autoClose={3000} />
-      
+
       {/* Header Section */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold">Quản Lý Suất Chiếu</h2>
-            <button 
+            <button
               onClick={async () => {
                 try {
                   setLoading(true);
@@ -305,7 +308,7 @@ const ScreeningManagement: React.FC = () => {
               <option key={t._id} value={t._id}>{t.name}</option>
             ))}
           </select>
-          
+
           <select
             className="bg-white border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={dateFilter}
@@ -362,29 +365,29 @@ const ScreeningManagement: React.FC = () => {
                 </tr>
               ) : (
                 paginatedScreenings.map((s) => (
-                  <tr key={s._id} className="hover:bg-gray-50">
+                  <tr key={s?._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 max-w-[200px]">
-                        {s.movieId?.title}
+                        {s?.movieId?.title || 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {s.theaterId?.name}
+                      {s?.theaterId?.name || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {s.roomId?.name}
+                      {s?.roomId?.name || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>Bắt đầu: {new Date(s.startTime).toLocaleString('vi-VN', { hour12: false })}</div>
-                      <div>Kết thúc: {new Date(s.endTime).toLocaleString('vi-VN', { hour12: false })}</div>
+                      <div>Bắt đầu: {s?.startTime ? new Date(s.startTime).toLocaleString('vi-VN', { hour12: false }) : 'N/A'}</div>
+                      <div>Kết thúc: {s?.endTime ? new Date(s.endTime).toLocaleString('vi-VN', { hour12: false }) : 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeStyle(s.status)}`}>
-                          {getStatusText(s.status)}
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeStyle(s?.status || 'pending')}`}>
+                          {getStatusText(s?.status || 'pending')}
                         </span>
                       </div>
-                      {s.status === 'rejected' && s.rejectionReason && (
+                      {s?.status === 'rejected' && s?.rejectionReason && (
                         <div className="mt-1 text-xs text-red-600">
                           Lý do: {s.rejectionReason}
                         </div>
@@ -393,7 +396,7 @@ const ScreeningManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
                         <button
-                          onClick={() => setViewingScreening(s)}
+                          onClick={() => s && setViewingScreening(s)}
                           className="text-blue-600 hover:text-blue-900 transition-colors duration-200 relative group"
                           title="Xem chi tiết"
                         >
@@ -406,7 +409,7 @@ const ScreeningManagement: React.FC = () => {
                           </span>
                         </button>
                         <button
-                          onClick={() => handleEdit(s)}
+                          onClick={() => s && handleEdit(s)}
                           className="text-blue-600 hover:text-blue-900 transition-colors duration-200 relative group"
                           title="Chỉnh sửa"
                         >
@@ -418,7 +421,7 @@ const ScreeningManagement: React.FC = () => {
                           </span>
                         </button>
                         <button
-                          onClick={() => handleDelete(s._id)}
+                          onClick={() => s?._id && handleDelete(s._id)}
                           className="text-red-600 hover:text-red-900 transition-colors duration-200 relative group"
                           title="Xóa"
                         >
@@ -476,7 +479,7 @@ const ScreeningManagement: React.FC = () => {
                 {editingScreening ? 'Chỉnh sửa suất chiếu' : 'Thêm suất chiếu mới'}
               </h2>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6">
               <div className="space-y-4">
                 <div>
@@ -574,16 +577,16 @@ const ScreeningManagement: React.FC = () => {
                       form.theaterId ? (() => {
                         const selectedDate = form.startTime ? new Date(form.startTime) : new Date();
                         const excludedTimes: Date[] = [];
-                        
+
                         // Lấy tất cả suất chiếu trong rạp đã chọn trong ngày đã chọn
                         const conflictingScreenings = screenings.filter(s => {
                           // Bỏ qua suất chiếu đang chỉnh sửa
                           if (editingScreening && s._id === editingScreening._id) return false;
-                          
+
                           // Kiểm tra cùng rạp
                           const screeningTheaterId = typeof s.theaterId === 'object' ? s.theaterId._id : s.theaterId;
                           if (screeningTheaterId !== form.theaterId) return false;
-                          
+
                           // Kiểm tra cùng ngày
                           const existingStartTime = new Date(s.startTime);
                           return (
@@ -592,23 +595,23 @@ const ScreeningManagement: React.FC = () => {
                             existingStartTime.getDate() === selectedDate.getDate()
                           );
                         });
-                        
+
                         // Thêm các thời gian bị xung đột vào danh sách exclude
                         conflictingScreenings.forEach(s => {
                           const existingStartTime = new Date(s.startTime);
-                          
+
                           // Chỉ exclude nếu cùng phim
                           const existingMovieId = typeof s.movieId === 'object' ? s.movieId._id : s.movieId;
                           if (existingMovieId !== form.movieId) return; // Khác phim thì không exclude
-                          
+
                           // Exclude thời gian bắt đầu của suất chiếu hiện có
                           excludedTimes.push(existingStartTime);
-                          
+
                           // Exclude các thời gian từ 1 phút đến 14 phút trước và sau thời gian bắt đầu
                           for (let i = 1; i < 15; i++) {
                             const timeBefore = new Date(existingStartTime.getTime() - i * 60000);
                             const timeAfter = new Date(existingStartTime.getTime() + i * 60000);
-                            
+
                             if (timeBefore.getHours() >= 8 && timeBefore.getHours() <= 23) {
                               excludedTimes.push(timeBefore);
                             }
@@ -617,7 +620,7 @@ const ScreeningManagement: React.FC = () => {
                             }
                           }
                         });
-                        
+
                         return excludedTimes;
                       })() : []
                     }
@@ -639,57 +642,62 @@ const ScreeningManagement: React.FC = () => {
                     <option value="">Chọn phòng</option>
                     {rooms
                       .filter(r => {
-                        if (!r.theaterId) return false;
-                        if ((typeof r.theaterId === 'object' ? r.theaterId._id : r.theaterId) !== form.theaterId) return false;
-                        
+                        if (!r?.theaterId) return false;
+                        const roomTheaterId = r?.theaterId?._id || r?.theaterId;
+                        if (roomTheaterId !== form.theaterId) return false;
+
                         // Kiểm tra xung đột thời gian nếu đã chọn thời gian bắt đầu
                         if (form.startTime) {
                           const selectedStartTime = new Date(form.startTime);
-                          const selectedMovieDuration = movies.find(m => m._id === form.movieId)?.duration || 120; // mặc định 120 phút
+                          const selectedMovieDuration = movies.find(m => m?._id === form.movieId)?.duration || 120; // mặc định 120 phút
                           const selectedEndTime = new Date(selectedStartTime.getTime() + selectedMovieDuration * 60000);
-                          
+
                           // Kiểm tra các suất chiếu hiện có trong cùng rạp
                           const conflictingScreenings = screenings.filter(s => {
+                            if (!s) return false;
+
                             // Bỏ qua suất chiếu đang chỉnh sửa
-                            if (editingScreening && s._id === editingScreening._id) return false;
-                            
+                            if (editingScreening && s?._id === editingScreening._id) return false;
+
                             // Kiểm tra cùng rạp
-                            const screeningTheaterId = typeof s.theaterId === 'object' ? s.theaterId._id : s.theaterId;
+                            const screeningTheaterId = s?.theaterId?._id || s?.theaterId;
                             if (screeningTheaterId !== form.theaterId) return false;
-                            
+
+                            if (!s?.startTime || !s?.endTime) return false;
+
                             const existingStartTime = new Date(s.startTime);
                             const existingEndTime = new Date(s.endTime);
-                            
+
                             // Quy tắc 1: Nếu cùng phòng, không được trùng thời gian
-                            const screeningRoomId = typeof s.roomId === 'object' ? s.roomId._id : s.roomId;
-                            if (screeningRoomId === r._id) {
+                            const screeningRoomId = s?.roomId?._id || s?.roomId;
+                            if (screeningRoomId === r?._id) {
                               return (
                                 (selectedStartTime >= existingStartTime && selectedStartTime < existingEndTime) ||
                                 (selectedEndTime > existingStartTime && selectedEndTime <= existingEndTime) ||
                                 (selectedStartTime <= existingStartTime && selectedEndTime >= existingEndTime)
                               );
                             }
-                            
+
                             // Quy tắc 2: Nếu khác phòng nhưng cùng rạp và cùng phim, không được cùng giờ bắt đầu (phải cách nhau ít nhất 15 phút)
-                            const existingMovieId = typeof s.movieId === 'object' ? s.movieId._id : s.movieId;
+                            const existingMovieId = s?.movieId?._id || s?.movieId;
                             if (existingMovieId === form.movieId) { // Chỉ áp dụng quy tắc này khi cùng phim
                               const timeDifference = Math.abs(selectedStartTime.getTime() - existingStartTime.getTime());
                               const fifteenMinutes = 15 * 60 * 1000; // 15 phút tính bằng milliseconds
-                              
+
                               return timeDifference < fifteenMinutes;
                             }
-                            
+
                             return false; // Khác phim thì không có xung đột
                           });
-                          
+
                           return conflictingScreenings.length === 0;
                         }
-                        
+
                         return true;
                       })
                       .map(r => (
                         <option key={r._id} value={r._id}>{r.name}</option>
-                    ))}
+                      ))}
                   </select>
                 </div>
 
@@ -736,14 +744,14 @@ const ScreeningManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded shadow-md min-w-[350px]">
             <h3 className="text-lg font-bold mb-4">Thông tin suất chiếu</h3>
-            <div className="mb-2"><b>Phim:</b> {typeof viewingScreening.movieId === 'object' ? viewingScreening.movieId.title : viewingScreening.movieId}</div>
-            <div className="mb-2"><b>Rạp:</b> {typeof viewingScreening.theaterId === 'object' ? viewingScreening.theaterId.name : viewingScreening.theaterId}</div>
-            <div className="mb-2"><b>Phòng:</b> {typeof viewingScreening.roomId === 'object' ? viewingScreening.roomId.name : viewingScreening.roomId}</div>
-            <div className="mb-2"><b>Thời gian bắt đầu:</b> {new Date(viewingScreening.startTime).toLocaleString('vi-VN', { hour12: false })}</div>
-            <div className="mb-2"><b>Thời gian kết thúc:</b> {new Date(viewingScreening.endTime).toLocaleString('vi-VN', { hour12: false })}</div>
-            <div className="mb-2"><b>Trạng thái:</b> {viewingScreening.status}</div>
-            <div className="mb-2"><b>Giá vé:</b> {viewingScreening.ticketPrice?.toLocaleString()} đ</div>
-            {viewingScreening.status === 'rejected' && viewingScreening.rejectionReason && (
+            <div className="mb-2"><b>Phim:</b> {typeof viewingScreening?.movieId === 'object' ? viewingScreening?.movieId?.title : viewingScreening?.movieId || 'N/A'}</div>
+            <div className="mb-2"><b>Rạp:</b> {typeof viewingScreening?.theaterId === 'object' ? viewingScreening?.theaterId?.name : viewingScreening?.theaterId || 'N/A'}</div>
+            <div className="mb-2"><b>Phòng:</b> {typeof viewingScreening?.roomId === 'object' ? viewingScreening?.roomId?.name : viewingScreening?.roomId || 'N/A'}</div>
+            <div className="mb-2"><b>Thời gian bắt đầu:</b> {viewingScreening?.startTime ? new Date(viewingScreening.startTime).toLocaleString('vi-VN', { hour12: false }) : 'N/A'}</div>
+            <div className="mb-2"><b>Thời gian kết thúc:</b> {viewingScreening?.endTime ? new Date(viewingScreening.endTime).toLocaleString('vi-VN', { hour12: false }) : 'N/A'}</div>
+            <div className="mb-2"><b>Trạng thái:</b> {viewingScreening?.status || 'N/A'}</div>
+            <div className="mb-2"><b>Giá vé:</b> {viewingScreening?.ticketPrice?.toLocaleString() || 'N/A'} đ</div>
+            {viewingScreening?.status === 'rejected' && viewingScreening?.rejectionReason && (
               <div className="mb-2 text-red-600"><b>Lý do từ chối:</b> {viewingScreening.rejectionReason}</div>
             )}
             <div className="flex justify-end mt-4">
