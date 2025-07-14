@@ -18,10 +18,14 @@ const RevenueReport: React.FC = () => {
   const [movieMap, setMovieMap] = useState<Record<string, string>>({});
   const [theaterMap, setTheaterMap] = useState<Record<string, string>>({});
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [filterTheater, setFilterTheater] = useState<'all' | string>('all');
 
-  const filteredBookings = filterStatus === 'all'
-    ? bookings
-    : bookings.filter(b => b.paymentStatus === filterStatus);
+  const filteredBookings = bookings.filter(b => {
+    const statusMatch = filterStatus === 'all' || b.paymentStatus === filterStatus;
+    const theaterId = typeof b.screeningId?.theaterId === 'string' ? b.screeningId?.theaterId : b.screeningId?.theaterId?._id;
+    const theaterMatch = filterTheater === 'all' || theaterId === filterTheater;
+    return statusMatch && theaterMatch;
+  });
   const paginatedBookings = filteredBookings.slice((currentPage - 1) * bookingsPerPage, currentPage * bookingsPerPage);
   const totalPages = Math.ceil(filteredBookings.length / bookingsPerPage);
 
@@ -78,6 +82,25 @@ const RevenueReport: React.FC = () => {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Quản lý đặt vé</h1>
+      <div className="flex items-center gap-4 mb-4">
+        <button
+          className="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 font-semibold shadow"
+          onClick={() => window.location.reload()}
+        >
+          Cập Nhật Dữ Liệu
+        </button>
+        <select
+          className="px-3 py-2 border rounded min-w-[220px]"
+          value={filterTheater}
+          onChange={e => setFilterTheater(e.target.value)}
+        >
+          <option value="all">Tất cả rạp</option>
+          {Object.entries(theaterMap).map(([id, name]) => (
+            <option key={id} value={id}>{name}</option>
+          ))}
+        </select>
+      </div>
+      {/* Bộ lọc trạng thái */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 ${filterStatus === 'all' ? 'bg-blue-600 text-white' : 'bg-white hover:bg-blue-50'}`} onClick={() => handleStatusFilter('all')}>
           <span className="text-lg font-semibold mb-2">Tổng số vé</span>
@@ -125,9 +148,15 @@ const RevenueReport: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap max-w-[180px] overflow-hidden text-ellipsis" title={typeof b.screeningId?.theaterId === 'string' ? theaterMap[b.screeningId?.theaterId] : b.screeningId?.theaterId?.name}>{typeof b.screeningId?.theaterId === 'string' ? theaterMap[b.screeningId?.theaterId] : b.screeningId?.theaterId?.name || ''}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{b.totalPrice ? b.totalPrice.toLocaleString() + '₫' : ''}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded text-white text-xs ${b.paymentStatus === 'paid' ? 'bg-green-400' : b.paymentStatus === 'cancelled' ? 'bg-red-400' : 'bg-yellow-400'}`}>
-                        {b.paymentStatus}
-                      </span>
+                      {b.paymentStatus === 'paid' && (
+                        <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-semibold">Đã thanh toán</span>
+                      )}
+                      {b.paymentStatus === 'cancelled' && (
+                        <span className="px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm font-semibold">Hủy thanh toán</span>
+                      )}
+                      {b.paymentStatus === 'pending' && (
+                        <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-sm font-semibold">Chờ thanh toán</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <button
@@ -283,7 +312,11 @@ const RevenueReport: React.FC = () => {
               <>
                 <div className="text-gray-500 text-xs mb-1">Mã vé: <span className="font-semibold text-gray-700">{selectedBooking._id}</span></div>
                 <div className="text-gray-500 text-xs mb-1">Tên phim: <span className="font-semibold text-gray-700">{typeof selectedBooking.screeningId?.movieId === 'string' ? movieMap[selectedBooking.screeningId.movieId] : selectedBooking.screeningId?.movieId?.title || 'Không tìm thấy phim'}</span></div>
-                <div className="text-gray-500 text-xs mb-1">Tên rạp: <span className="font-semibold text-gray-700">{selectedBooking.screeningId?.roomId?.theaterName || theaterMap[selectedBooking.screeningId?.roomId?._id] || 'Không tìm thấy rạp'}</span></div>
+                <div className="text-gray-500 text-xs mb-1">Tên rạp: <span className="font-semibold text-gray-700">{
+                  typeof selectedBooking.screeningId?.theaterId === 'string'
+                    ? theaterMap[selectedBooking.screeningId.theaterId] || 'Không tìm thấy rạp'
+                    : selectedBooking.screeningId?.theaterId?.name || 'Không tìm thấy rạp'
+                }</span></div>
                 <div className="text-gray-500 text-xs mb-1">Phòng chiếu: <span className="font-semibold text-gray-700">{selectedBooking.screeningId?.roomId?.name}</span></div>
                 <div className="text-gray-500 text-xs mb-1">Ghế: <span className="font-semibold text-gray-700">{selectedBooking.seatNumbers?.join(', ')}</span></div>
                 <div className="text-gray-500 text-xs mb-1">Thời gian chiếu: <span className="font-semibold text-gray-700">{selectedBooking.screeningId?.startTime ? new Date(selectedBooking.screeningId.startTime).toLocaleString() : ''}</span></div>
@@ -297,6 +330,9 @@ const RevenueReport: React.FC = () => {
             {selectedBooking && (
               <>
                 <div className="text-gray-500 text-xs mb-1">Giá vé: <span className="font-semibold text-gray-700">{selectedBooking.screeningId?.ticketPrice?.toLocaleString()}₫</span></div>
+                {selectedBooking.code && (
+                  <div className="text-gray-500 text-xs mb-1">Mã khuyến mãi: <span className="font-semibold text-gray-700">{selectedBooking.code}</span></div>
+                )}
                 <div className="text-gray-500 text-xs mb-1">Tổng tiền: <span className="font-semibold text-gray-700">{selectedBooking.totalPrice?.toLocaleString()}₫</span></div>
               </>
             )}
