@@ -23,6 +23,7 @@ import StaffRoutes from './StaffRoutes';
 import ManagerRoutes from './ManagerRoutes';
 import UserPromotions from '../pages/user/PromotionList';
 import PromotionManager from '../pages/dashboard/PromotionManager';
+import RevenueReport from '../pages/dashboard/RevenueReport';
 
 export const AppRoutes = () => {
     return (
@@ -63,7 +64,11 @@ export const AppRoutes = () => {
                     <AdminDashboard />
                 </DashboardLayout>
             </PrivateRoute>} />
-            
+            <Route path="admin/reports" element={<PrivateRoute allowedRoles={['admin']}>
+                <DashboardLayout>
+                    <RevenueReport />
+                </DashboardLayout>
+            </PrivateRoute>} />
 
             {/* Manager Dashboard Routes */}
             <Route path="manager/*" element={<PrivateRoute allowedRoles={['manager']}>
@@ -88,4 +93,4 @@ export const AppRoutes = () => {
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
-}; 
+};

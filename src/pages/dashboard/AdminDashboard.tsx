@@ -8,6 +8,10 @@ import 'react-toastify/dist/ReactToastify.css';
 import UserManagement from './UserManagement';
 import AdminProfile from './AdminProfile';
 import api from '../../utils/api';
+import { adminGetBookings } from '../../utils/booking';
+import { getMovieById } from '../../utils/movie';
+import { getTheaterById } from '../../utils/theater';
+
 // Mock user data
 interface User {
   id: string;
@@ -17,16 +21,23 @@ interface User {
   role: string;
   isLocked?: boolean;
 }
+
 const AdminDashboard: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [bookings, setBookings] = useState([]);
+  const [bookingStatusSummary, setBookingStatusSummary] = useState({ pending: 0, paid: 0, cancelled: 0 });
+  const [monthlyRevenue, setMonthlyRevenue] = useState(0);
+  const [dailyRevenueData, setDailyRevenueData] = useState<{ date: string; revenue: number }[]>([]);
+
   // Check if we're on the main dashboard or a subpage
   const isMainDashboard = location.pathname === '/admin';
   const isUserManagement = location.pathname === '/admin/users';
   const isProfilePage = location.pathname === '/admin/profile';
   // const isRevenueReports = location.pathname === '/admin/reports';
+
   useEffect(() => {
     // Fetch user list từ backend khi vào dashboard hoặc user managementAdd commentMore actions
     const fetchUsers = async () => {
@@ -48,8 +59,79 @@ const AdminDashboard: React.FC = () => {
         console.error('Failed to fetch users:', err);
       }
     };
+
+    const fetchBookings = async () => {
+      try {
+        const res = await adminGetBookings();
+        const bookingsRaw = res.bookings || [];
+        // Lấy danh sách các movieId và theaterId duy nhất
+        const movieIds = Array.from(new Set(bookingsRaw.map((b: any) => typeof b.screeningId?.movieId === 'string' ? b.screeningId.movieId : null).filter(Boolean)));
+        const theaterIds = Array.from(new Set(bookingsRaw.map((b: any) => typeof b.screeningId?.theaterId === 'string' ? b.screeningId.theaterId : null).filter(Boolean)));
+        // Fetch thông tin phim và rạp
+        const movieMap: Record<string, string> = {};
+        const theaterMap: Record<string, string> = {};
+        await Promise.all([
+          ...movieIds.map(async (id) => {
+            try {
+              const movie = await getMovieById(id);
+              movieMap[id] = movie?.title || 'Không tìm thấy phim';
+            } catch {
+              movieMap[id] = 'Không tìm thấy phim';
+            }
+          }),
+          ...theaterIds.map(async (id) => {
+            try {
+              const theater = await getTheaterById(id);
+              theaterMap[id] = theater?.name || 'Không tìm thấy rạp';
+            } catch {
+              theaterMap[id] = 'Không tìm thấy rạp';
+            }
+          })
+        ]);
+        // Map lại bookings để thêm tên phim và tên rạp
+        const bookingsWithNames = bookingsRaw.map((b: any) => ({
+          ...b,
+          movieTitle: typeof b.screeningId?.movieId === 'string' ? (movieMap[b.screeningId.movieId] || 'Không tìm thấy phim') : b.screeningId?.movieId?.title || 'Không tìm thấy phim',
+          theaterName: typeof b.screeningId?.theaterId === 'string' ? (theaterMap[b.screeningId.theaterId] || 'Không tìm thấy rạp') : b.screeningId?.theaterId?.name || 'Không tìm thấy rạp'
+        }));
+        setBookings(bookingsWithNames);
+        // Count status
+        const summary = { pending: 0, paid: 0, cancelled: 0 };
+        let revenue = 0;
+        const dailyMap: Record<string, number> = {};
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        bookingsRaw.forEach((b: any) => {
+          if (b.paymentStatus === 'pending') summary.pending++;
+          else if (b.paymentStatus === 'paid') {
+            summary.paid++;
+            revenue += b.totalPrice || 0;
+            // Lấy ngày thanh toán, nếu có
+            const paidDate = b.paidAt ? new Date(b.paidAt) : (b.createdAt ? new Date(b.createdAt) : null);
+            if (paidDate && paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear) {
+              const dateStr = paidDate.toLocaleDateString('vi-VN');
+              dailyMap[dateStr] = (dailyMap[dateStr] || 0) + (b.totalPrice || 0);
+            }
+          }
+          else if (b.paymentStatus === 'cancelled') summary.cancelled++;
+        });
+        setBookingStatusSummary(summary);
+        setMonthlyRevenue(revenue);
+        // Chuyển map thành mảng cho biểu đồ
+        const dailyRevenueArr = Object.entries(dailyMap).map(([date, revenue]) => ({ date, revenue }));
+        // Sắp xếp theo ngày tăng dần
+        dailyRevenueArr.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        setDailyRevenueData(dailyRevenueArr);
+      } catch (err) {
+        console.error('Failed to fetch bookings:', err);
+      }
+    };
+
     fetchUsers();
+    fetchBookings();
   }, [location.pathname]);
+
   const handleToggleLock = (userId: string) => {
     try {
       const user = users.find(u => u.id === userId);
@@ -69,11 +151,13 @@ const AdminDashboard: React.FC = () => {
       });
     }
   };
+
   const handleEditUser = (user: any) => {
     setEditingUser({
       ...user
     });
   };
+
   const handleUpdateUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
@@ -95,6 +179,7 @@ const AdminDashboard: React.FC = () => {
       });
     }
   };
+
   const handleDeleteUser = (userId: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa người dùng này?')) {
       try {
@@ -111,44 +196,36 @@ const AdminDashboard: React.FC = () => {
       }
     }
   };
+
   const renderMainDashboard = () => <div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold mb-2">Tổng người dùng</h3>
           <p className="text-3xl font-bold">{users.length}</p>
-          <div className="mt-2 text-sm text-gray-500">
-            <span className="text-green-500">↑ 12%</span> từ tháng trước
-          </div>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold mb-2">Đặt vé hoạt động</h3>
-          <p className="text-3xl font-bold">42</p>
-          <div className="mt-2 text-sm text-gray-500">
-            <span className="text-green-500">↑ 8%</span> từ tuần trước
-          </div>
+          <p className="text-3xl font-bold">{bookings.length}</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold mb-2">Doanh thu tháng</h3>
-          <p className="text-3xl font-bold">$12,450</p>
-          <div className="mt-2 text-sm text-gray-500">
-            <span className="text-green-500">↑ 5%</span> từ tháng trước
-          </div>
+          <p className="text-3xl font-bold">{monthlyRevenue.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</p>
         </div>
       </div>
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold mb-4">Tổng quan doanh thu</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={revenueData} margin={{
+            <BarChart data={dailyRevenueData} margin={{
             top: 20,
             right: 30,
             left: 20,
             bottom: 5
           }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
+              <XAxis dataKey="date" />
               <YAxis />
-              <Tooltip formatter={(value: any) => [`$${value}`, 'Doanh thu']} />
+              <Tooltip formatter={(value: number) => [value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }), 'Doanh thu']} />
               <Legend />
               <Bar dataKey="revenue" name="Doanh thu" fill="#3B82F6" />
             </BarChart>
@@ -201,6 +278,48 @@ const AdminDashboard: React.FC = () => {
           <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
             <button className="text-sm font-medium text-blue-600 hover:text-blue-500" onClick={() => navigate('/admin/users')}>
               Xem tất cả người dùng
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-4">Đặt vé gần đây</h3>
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã vé</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên phim</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên rạp</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giá vé</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái thanh toán</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {bookings.slice(0, 5).map((b: any) => (
+                <tr key={b._id}>
+                  <td className="px-6 py-4 whitespace-nowrap max-w-[180px] overflow-hidden text-ellipsis" title={b._id}>
+                    {b._id.length > 20 ? b._id.slice(0, 20) + '...' : b._id}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap max-w-[180px] overflow-hidden text-ellipsis" title={b.userId?.email}>
+                    {b.userId?.email && b.userId.email.length > 20 ? b.userId.email.slice(0, 20) + '...' : b.userId?.email || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap max-w-[180px] overflow-hidden text-ellipsis" title={b.movieTitle}>
+                    {b.movieTitle && b.movieTitle.length > 20 ? b.movieTitle.slice(0, 20) + '...' : b.movieTitle || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{b.theaterName || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{b.screeningId?.ticketPrice ? b.screeningId.ticketPrice.toLocaleString() + '₫' : '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${b.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : b.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{b.paymentStatus}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+            <button className="text-sm font-medium text-blue-600 hover:text-blue-500" onClick={() => navigate('/admin/reports')}>
+              Xem tất cả đặt vé
             </button>
           </div>
         </div>
@@ -397,6 +516,7 @@ const AdminDashboard: React.FC = () => {
   //       </table>
   //     </div>
   //   </div>;
+
   return <div>
       <ToastContainer />
       <h1 className="text-3xl font-bold mb-6">Bảng điều khiển quản trị</h1>
@@ -406,4 +526,5 @@ const AdminDashboard: React.FC = () => {
       {/* {isRevenueReports && renderRevenueReports()} */}
     </div>;
 };
+
 export default AdminDashboard;

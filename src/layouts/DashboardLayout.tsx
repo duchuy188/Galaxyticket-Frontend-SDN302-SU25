@@ -27,16 +27,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     navigate('/signin')
   }
   const adminNavItems = [
+        {
+      label: 'Bảng điều khiển',
+      path: `${basePath}`,
+      icon: <LayoutDashboardIcon size={20} />,
+    },
     {
       label: 'Quản lý người dùng',
       path: `${basePath}/users`,
       icon: <UsersIcon size={20} />,
     },
-    // {
-    //   label: 'Báo cáo doanh thu',
-    //   path: `${basePath}/reports`,
-    //   icon: <CreditCardIcon size={20} />,
-    // },
+    {
+      label: 'Quản lý đặt vé',
+      path: `${basePath}/reports`,
+      icon: <CreditCardIcon size={20} />,
+    },
   ]
   const staffNavItems = [
    
