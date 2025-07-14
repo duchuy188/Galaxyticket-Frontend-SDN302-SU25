@@ -377,3 +377,19 @@ export const sendTicketEmail = async (bookingId: string): Promise<BookingRespons
         throw error;
     }
 };
+
+export const adminGetBookings = async (filters: BookingFilters = {}): Promise<BookingResponse> => {
+    try {
+        const response = await api.get('/api/bookings/admin', { params: filters });
+        return {
+            success: response.data.success,
+            message: response.data.message,
+            bookings: response.data.data?.bookings || []
+        };
+    } catch (error: any) {
+        if (error.response) {
+            throw new Error(error.response.data.message || 'Error fetching admin bookings');
+        }
+        throw error;
+    }
+};
