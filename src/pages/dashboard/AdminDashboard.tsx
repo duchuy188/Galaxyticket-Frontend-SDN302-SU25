@@ -264,7 +264,7 @@ const AdminDashboard: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : user.role === 'staff' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                      {user.role}
+                      {user.role === 'admin' ? 'Quản trị viên' : user.role === 'staff' ? 'Nhân viên' : user.role === 'manager' ? 'Quản lý' : user.role === 'member' ? 'Thành viên' : user.role}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -311,7 +311,9 @@ const AdminDashboard: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">{b.theaterName || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{b.screeningId?.ticketPrice ? b.screeningId.ticketPrice.toLocaleString() + '₫' : '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${b.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : b.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{b.paymentStatus}</span>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${b.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : b.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                      {b.paymentStatus === 'paid' ? 'Đã thanh toán' : b.paymentStatus === 'pending' ? 'Chờ thanh toán' : b.paymentStatus === 'cancelled' ? 'Hủy thanh toán' : b.paymentStatus}
+                    </span>
                   </td>
                 </tr>
               ))}
