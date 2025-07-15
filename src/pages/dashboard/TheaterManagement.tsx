@@ -518,41 +518,44 @@ const TheaterManagement: React.FC = () => {
                     <p className="text-xs text-gray-500 mt-1">4-10 số</p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Trạng Thái
-                    </label>
-                    <div className="mt-1">
-                      <button
-                        type="button"
-                        className={`px-4 py-2 rounded-md ${
-                          editingTheater.status 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-white border border-gray-300 text-gray-700'
-                        }`}
-                        onClick={() => setEditingTheater({
-                          ...editingTheater,
-                          status: true
-                        })}
-                      >
-                        Hoạt Động
-                      </button>
-                      <button
-                        type="button"
-                        className={`px-4 py-2 rounded-md ml-2 ${
-                          !editingTheater.status 
-                            ? 'bg-red-100 text-red-800' 
-                            : 'bg-white border border-gray-300 text-gray-700'
-                        }`}
-                        onClick={() => setEditingTheater({
-                          ...editingTheater,
-                          status: false
-                        })}
-                      >
-                        Tạm Đóng
-                      </button>
+                  {/* Status selection - only show when editing an existing theater */}
+                  {editingTheater._id && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Trạng Thái
+                      </label>
+                      <div className="mt-1">
+                        <button
+                          type="button"
+                          className={`px-4 py-2 rounded-md ${
+                            editingTheater.status 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-white border border-gray-300 text-gray-700'
+                          }`}
+                          onClick={() => setEditingTheater({
+                            ...editingTheater,
+                            status: true
+                          })}
+                        >
+                          Hoạt Động
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-4 py-2 rounded-md ml-2 ${
+                            !editingTheater.status 
+                              ? 'bg-red-100 text-red-800' 
+                              : 'bg-white border border-gray-300 text-gray-700'
+                          }`}
+                          onClick={() => setEditingTheater({
+                            ...editingTheater,
+                            status: false
+                          })}
+                        >
+                          Tạm Đóng
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -1279,30 +1279,33 @@ const StaffDashboard: React.FC = () => {
                       </div>
                     </label>
                     
-                    <label className="relative flex items-center group cursor-pointer">
-                      <input 
-                        type="radio" 
-                        className="absolute w-0 h-0 opacity-0 peer" 
-                        checked={editingMovie.showingStatus === 'ended'} 
-                        onChange={() => setEditingMovie({
-                          ...editingMovie,
-                          showingStatus: 'ended'
-                        })} 
-                      />
-                      <div className="px-4 py-2 rounded-full border-2 border-gray-400 bg-gray-50 text-gray-700 peer-checked:bg-gray-400 peer-checked:text-white transition-all duration-200 group-hover:bg-gray-100 peer-checked:group-hover:bg-gray-500 relative">
-                        <div className="flex items-center space-x-2">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          <span className="text-sm font-medium">Đã Kết Thúc</span>
+                    {/* Trạng thái "Đã Kết Thúc" - chỉ hiển thị khi chỉnh sửa phim */}
+                    {editingMovie._id && (
+                      <label className="relative flex items-center group cursor-pointer">
+                        <input 
+                          type="radio" 
+                          className="absolute w-0 h-0 opacity-0 peer" 
+                          checked={editingMovie.showingStatus === 'ended'} 
+                          onChange={() => setEditingMovie({
+                            ...editingMovie,
+                            showingStatus: 'ended'
+                          })} 
+                        />
+                        <div className="px-4 py-2 rounded-full border-2 border-gray-400 bg-gray-50 text-gray-700 peer-checked:bg-gray-400 peer-checked:text-white transition-all duration-200 group-hover:bg-gray-100 peer-checked:group-hover:bg-gray-500 relative">
+                          <div className="flex items-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span className="text-sm font-medium">Đã Kết Thúc</span>
+                          </div>
+                          <div className="absolute -right-1 -top-1 w-5 h-5 bg-gray-400 rounded-full border-2 border-white peer-checked:opacity-100 opacity-0 transition-opacity duration-200 shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full text-white p-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
                         </div>
-                        <div className="absolute -right-1 -top-1 w-5 h-5 bg-gray-400 rounded-full border-2 border-white peer-checked:opacity-100 opacity-0 transition-opacity duration-200 shadow-sm">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full text-white p-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </label>
+                      </label>
+                    )}
                   </div>
                 </div>
 

@@ -117,8 +117,14 @@ const ScreeningManagement: React.FC = () => {
   };
 
   const fetchTheaters = async () => {
-    const data = await getTheaters();
-    setTheaters(data);
+    try {
+      const data = await getTheaters();
+   
+      const activeTheaters = data.filter(theater => theater.status === true);
+      setTheaters(activeTheaters);
+    } catch (error) {
+      toast.error('Không thể lấy danh sách rạp');
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -185,6 +191,19 @@ const ScreeningManagement: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Kiểm tra giờ chiếu có nằm trong khoảng cho phép không
+    if (form.startTime) {
+      const startTime = new Date(form.startTime);
+      const hour = startTime.getHours();
+      const minute = startTime.getMinutes();
+      
+      if (hour < 8 || (hour === 23 && minute > 45) || hour > 23) {
+        toast.error('Giờ chiếu phải nằm trong khoảng từ 8:00 sáng đến 23:45 tối');
+        return;
+      }
+    }
+    
     try {
       if (editingScreening) {
         await updateScreening(editingScreening._id, form);
@@ -526,7 +545,7 @@ const ScreeningManagement: React.FC = () => {
                   <DatePicker
                     selected={form.startTime ? new Date(form.startTime) : null}
                     onChange={date => {
-                      setForm({ ...form, startTime: date ? date.toISOString() : '', roomId: '' }); // Reset phòng khi đổi thời gian
+                      setForm({ ...form, startTime: date ? date.toISOString() : '', roomId: '' });
                     }}
                     showTimeSelect
                     timeFormat="HH:mm"
@@ -537,6 +556,7 @@ const ScreeningManagement: React.FC = () => {
                     placeholderText="Chọn thời gian bắt đầu"
                     required
                     minDate={new Date()}
+                    strictParsing={true}
                     minTime={
                       (() => {
                         const selectedDate = form.startTime ? new Date(form.startTime) : new Date();
