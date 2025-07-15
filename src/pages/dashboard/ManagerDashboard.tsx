@@ -4,6 +4,7 @@ import { CheckCircleIcon, XCircleIcon, ClockIcon, EyeIcon } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { getApprovalRequests, updateApprovalRequest, ApprovalRequest } from '../../utils/approval';
+import { getTheaters, Theater } from '../../utils/theater';
 
 interface ManagerDashboardProps {
   filterType?: 'movie' | 'promotion' | 'screening';
@@ -49,6 +50,10 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
+  // Thêm vào phần khai báo state (sau dòng khai báo state dateFilter)
+  const [theaters, setTheaters] = useState<Theater[]>([]);
+  const [selectedTheaterId, setSelectedTheaterId] = useState<string>('all');
+
   // Fetch dữ liệu chỉ một lần khi component mount
   useEffect(() => {
     if (filterType) {
@@ -58,7 +63,22 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
     // Chỉ fetch dữ liệu một lần khi component được tạo
     // hoặc khi filterType thay đổi (không phải khi route thay đổi)
     fetchApprovalRequests();
-  }, [filterType]); // Chỉ phụ thuộc vào filterType
+    
+    // Thêm dòng này để fetch danh sách rạp
+    fetchTheaters();
+  }, [filterType]);
+
+  // Thêm hàm fetchTheaters
+  const fetchTheaters = async () => {
+    try {
+      const data = await getTheaters();
+      // Chỉ lấy các rạp đang hoạt động (status = true)
+      const activeTheaters = data.filter(theater => theater.status === true);
+      setTheaters(activeTheaters);
+    } catch (error) {
+      console.error('Error fetching theaters:', error);
+    }
+  };
 
   // Thêm vào useEffect xử lý bộ lọc
   useEffect(() => {
@@ -72,10 +92,26 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
       filtered = filtered.filter(req => req.status === filterStatus);
     }
 
+    // Thêm lọc theo rạp (chỉ áp dụng cho screening)
+    if (selectedTheaterId !== 'all') {
+      filtered = filtered.filter(req => {
+        // Chỉ lọc theo rạp với yêu cầu lịch chiếu
+        if (req.type === 'screening' && req.requestData && req.requestData.theaterId) {
+          // Kiểm tra nếu theaterId là object hoặc string
+          if (typeof req.requestData.theaterId === 'object') {
+            return req.requestData.theaterId._id === selectedTheaterId;
+          } else {
+            return req.requestData.theaterId === selectedTheaterId;
+          }
+        }
+        return true; // Giữ lại các yêu cầu không phải lịch chiếu
+      });
+    }
+
     // Thêm lọc theo ngày
     if (dateFilter > 0) {
       const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - dateFilter); // Lấy ngày cách đây dateFilter ngày
+      cutoffDate.setDate(cutoffDate.getDate() - dateFilter);
 
       filtered = filtered.filter(req => {
         const requestDate = new Date(req.createdAt);
@@ -85,7 +121,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
 
     setLocalFiltered(filtered);
     setCurrentPage(1); // Reset về trang đầu tiên khi thay đổi bộ lọc
-  }, [requests, filterTypeState, filterStatus, dateFilter]);
+  }, [requests, filterTypeState, filterStatus, dateFilter, selectedTheaterId]);
 
   // 2. Thêm logic phân trang (thêm vào sau đoạn code lọc dữ liệu localFiltered)
   // Tính toán các yêu cầu hiển thị cho trang hiện tại
@@ -328,6 +364,22 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
                 <option value={90}>90 ngày gần đây</option>
                 <option value={180}>6 tháng gần đây</option>
               </select>
+
+              {/* Bộ lọc theo rạp - chỉ hiển thị khi đang xem lịch chiếu */}
+              {(filterTypeState === 'screening' || filterType === 'screening') && (
+                <select
+                  value={selectedTheaterId}
+                  onChange={(e) => setSelectedTheaterId(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="all">Tất Cả Rạp</option>
+                  {theaters.map(theater => (
+                    <option key={theater._id} value={theater._id}>
+                      {theater.name}
+                    </option>
+                  ))}
+                </select>
+              )}
 
               <button
                 onClick={() => {
