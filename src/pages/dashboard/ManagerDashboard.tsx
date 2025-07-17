@@ -5,6 +5,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { getApprovalRequests, updateApprovalRequest, ApprovalRequest } from '../../utils/approval';
 import { getTheaters, Theater } from '../../utils/theater';
+import Pagination from '../../components/Pagination';
 
 interface ManagerDashboardProps {
   filterType?: 'movie' | 'promotion' | 'screening';
@@ -487,36 +488,11 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ filterType }) => {
 
             {/* 4. Thêm UI phân trang vào cuối bảng (sau thẻ table) */}
             <div className="mt-4 flex justify-center">
-              <div className="flex items-center space-x-1">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  &laquo;
-                </button>
-
-                {Array.from({ length: Math.ceil(localFiltered.length / itemsPerPage) }).map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentPage(index + 1)}
-                    className={`px-3 py-1 rounded ${currentPage === index + 1
-                      ? 'bg-blue-600 text-white'
-                      : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                      }`}
-                  >
-                    {index + 1}
-                  </button>
-                ))}
-
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(localFiltered.length / itemsPerPage)))}
-                  disabled={currentPage === Math.ceil(localFiltered.length / itemsPerPage)}
-                  className="px-3 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  &raquo;
-                </button>
-              </div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(localFiltered.length / itemsPerPage)}
+                onPageChange={setCurrentPage}
+              />
             </div>
           </div>
         </div>
