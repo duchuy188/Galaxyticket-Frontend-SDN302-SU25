@@ -9,6 +9,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import dayjs from 'dayjs';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Pagination from '../../components/Pagination';
 
 const ScreeningManagement: React.FC = () => {
   const [screenings, setScreenings] = useState<Screening[]>([]);
@@ -462,29 +463,11 @@ const ScreeningManagement: React.FC = () => {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center py-4 gap-2">
-            <button
-              className={`px-3 py-1 rounded ${currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-200'}`}
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-            >
-              &laquo;
-            </button>
-            {[...Array(totalPages)].map((_, idx) => (
-              <button
-                key={idx + 1}
-                className={`px-3 py-1 rounded ${currentPage === idx + 1 ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-blue-100'}`}
-                onClick={() => setCurrentPage(idx + 1)}
-              >
-                {idx + 1}
-              </button>
-            ))}
-            <button
-              className={`px-3 py-1 rounded ${currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-700 hover:bg-gray-200'}`}
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-            >
-              &raquo;
-            </button>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

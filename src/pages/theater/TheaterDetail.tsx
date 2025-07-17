@@ -184,8 +184,11 @@ const TheaterDetail: React.FC = () => {
     );
   };
 
-  // Nhóm suất chiếu theo phim
-  const screeningsByMovie = screenings.reduce((acc, screening) => {
+  // Nhóm suất chiếu theo phim (lọc lại đúng ngày)
+  const filteredScreenings = screenings.filter(screening =>
+    dayjs(screening.startTime).isSame(dayjs(days.find(d => d.value === activeDay)?.fullDate), 'day')
+  );
+  const screeningsByMovie = filteredScreenings.reduce((acc, screening) => {
     const movieId = screening.movieId._id;
     if (!acc[movieId]) acc[movieId] = [];
     acc[movieId].push(screening);
