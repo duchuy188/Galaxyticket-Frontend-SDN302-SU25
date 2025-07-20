@@ -75,7 +75,11 @@ const Checkout: React.FC = () => {
           return;
         }
         const details = JSON.parse(storedDetails);
-        console.log('Loaded booking details:', details);
+        // Đảm bảo paymentMethod luôn có trong bookingDetails
+        if (!details.paymentMethod) {
+          details.paymentMethod = paymentMethod; // Lưu đúng giá trị 'card' hoặc 'vnpay'
+          sessionStorage.setItem('bookingDetails', JSON.stringify(details));
+        }
 
         // Đảm bảo các giá trị số được chuyển đổi đúng
         const bookingInfo = {
@@ -145,6 +149,14 @@ const Checkout: React.FC = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, [timeLeft, isExpired]);
+
+  // Khi người dùng chọn phương thức thanh toán, cập nhật vào sessionStorage
+  useEffect(() => {
+    if (bookingDetails) {
+      const updatedDetails = { ...bookingDetails, paymentMethod };
+      sessionStorage.setItem('bookingDetails', JSON.stringify(updatedDetails));
+    }
+  }, [paymentMethod, bookingDetails]);
 
   const handleVNPayReturn = async () => {
     try {
@@ -226,6 +238,7 @@ const Checkout: React.FC = () => {
           totalPrice: bookingDetails.total,
           paymentStatus: 'pending',
           createdAt: new Date().toISOString(),
+          paymentMethod: paymentMethod, // Lưu đúng giá trị 'card' hoặc 'vnpay'
         };
 
         sessionStorage.setItem('confirmationDetails', JSON.stringify(confirmationDetails));
@@ -245,8 +258,8 @@ const Checkout: React.FC = () => {
           totalPrice: bookingDetails.total,
           paymentStatus: 'pending',
           createdAt: new Date().toISOString(),
+          paymentMethod: paymentMethod, // Lưu đúng giá trị 'card' hoặc 'vnpay'
         };
-
         sessionStorage.setItem('confirmationDetails', JSON.stringify(confirmationDetails));
         navigate('/confirmation');
       }

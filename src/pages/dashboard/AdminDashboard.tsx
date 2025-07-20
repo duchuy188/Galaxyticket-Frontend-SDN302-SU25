@@ -30,7 +30,9 @@ const AdminDashboard: React.FC = () => {
   const [bookings, setBookings] = useState([]);
   const [bookingStatusSummary, setBookingStatusSummary] = useState({ pending: 0, paid: 0, cancelled: 0 });
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
-  const [dailyRevenueData, setDailyRevenueData] = useState<{ date: string; revenue: number }[]>([]);
+  const [dailyRevenueData, setDailyRevenueData] = useState<{ date: string; vnpayRevenue: number; cardRevenue: number }[]>([]);
+  const [vnpayRevenue, setVnpayRevenue] = useState(0);
+  const [cardRevenue, setCardRevenue] = useState(0);
 
   // Check if we're on the main dashboard or a subpage
   const isMainDashboard = location.pathname === '/admin';
@@ -98,7 +100,9 @@ const AdminDashboard: React.FC = () => {
         // Count status
         const summary = { pending: 0, paid: 0, cancelled: 0 };
         let revenue = 0;
-        const dailyMap: Record<string, number> = {};
+        let vnpaySum = 0;
+        let cardSum = 0;
+        const dailyMap: Record<string, { vnpayRevenue: number; cardRevenue: number }> = {};
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
@@ -107,19 +111,25 @@ const AdminDashboard: React.FC = () => {
           else if (b.paymentStatus === 'paid') {
             summary.paid++;
             revenue += b.totalPrice || 0;
+            if (b.paymentMethod === 'vnpay') vnpaySum += b.totalPrice || 0;
+            if (b.paymentMethod === 'card') cardSum += b.totalPrice || 0;
             // Lấy ngày thanh toán, nếu có
             const paidDate = b.paidAt ? new Date(b.paidAt) : (b.createdAt ? new Date(b.createdAt) : null);
             if (paidDate && paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear) {
               const dateStr = paidDate.toLocaleDateString('vi-VN');
-              dailyMap[dateStr] = (dailyMap[dateStr] || 0) + (b.totalPrice || 0);
+              if (!dailyMap[dateStr]) dailyMap[dateStr] = { vnpayRevenue: 0, cardRevenue: 0 };
+              if (b.paymentMethod === 'vnpay') dailyMap[dateStr].vnpayRevenue += b.totalPrice || 0;
+              if (b.paymentMethod === 'card') dailyMap[dateStr].cardRevenue += b.totalPrice || 0;
             }
           }
           else if (b.paymentStatus === 'cancelled') summary.cancelled++;
         });
         setBookingStatusSummary(summary);
         setMonthlyRevenue(revenue);
+        setVnpayRevenue(vnpaySum);
+        setCardRevenue(cardSum);
         // Chuyển map thành mảng cho biểu đồ
-        const dailyRevenueArr = Object.entries(dailyMap).map(([date, revenue]) => ({ date, revenue }));
+        const dailyRevenueArr = Object.entries(dailyMap).map(([date, obj]) => ({ date, vnpayRevenue: obj.vnpayRevenue, cardRevenue: obj.cardRevenue }));
         // Sắp xếp theo ngày tăng dần
         dailyRevenueArr.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         setDailyRevenueData(dailyRevenueArr);
@@ -225,9 +235,10 @@ const AdminDashboard: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis />
-              <Tooltip formatter={(value: number) => [value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }), 'Doanh thu']} />
+              <Tooltip formatter={(value: number, name: string) => [value.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }), name === 'vnpayRevenue' ? 'Doanh thu VNPay' : 'Doanh thu Thẻ']} />
               <Legend />
-              <Bar dataKey="revenue" name="Doanh thu" fill="#3B82F6" />
+              <Bar dataKey="vnpayRevenue" name="Doanh thu VNPay" fill="#3B82F6" />
+              <Bar dataKey="cardRevenue" name="Doanh thu Thẻ" fill="#F59E42" />
             </BarChart>
           </ResponsiveContainer>
         </div>

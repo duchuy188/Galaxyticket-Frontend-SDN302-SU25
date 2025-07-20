@@ -19,12 +19,16 @@ const RevenueReport: React.FC = () => {
   const [theaterMap, setTheaterMap] = useState<Record<string, string>>({});
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [filterTheater, setFilterTheater] = useState<'all' | string>('all');
+  const [filterPaymentMethod, setFilterPaymentMethod] = useState<'all' | 'vnpay' | 'card'>('all');
+  const [vnpayTotal, setVnpayTotal] = useState(0);
+  const [cardTotal, setCardTotal] = useState(0);
 
   const filteredBookings = bookings.filter(b => {
     const statusMatch = filterStatus === 'all' || b.paymentStatus === filterStatus;
     const theaterId = typeof b.screeningId?.theaterId === 'string' ? b.screeningId?.theaterId : b.screeningId?.theaterId?._id;
     const theaterMatch = filterTheater === 'all' || theaterId === filterTheater;
-    return statusMatch && theaterMatch;
+    const paymentMatch = filterPaymentMethod === 'all' || b.paymentMethod === filterPaymentMethod;
+    return statusMatch && theaterMatch && paymentMatch;
   });
   const paginatedBookings = filteredBookings.slice((currentPage - 1) * bookingsPerPage, currentPage * bookingsPerPage);
   const totalPages = Math.ceil(filteredBookings.length / bookingsPerPage);
@@ -41,6 +45,17 @@ const RevenueReport: React.FC = () => {
           paid: bookingsData.filter(b => b.paymentStatus === 'paid').length,
           cancelled: bookingsData.filter(b => b.paymentStatus === 'cancelled').length,
         });
+        // Tính tổng tiền VNPay và Card
+        let vnpaySum = 0;
+        let cardSum = 0;
+        bookingsData.forEach(b => {
+          if (b.paymentStatus === 'paid') {
+            if (b.paymentMethod === 'vnpay') vnpaySum += b.totalPrice || 0;
+            if (b.paymentMethod === 'card') cardSum += b.totalPrice || 0;
+          }
+        });
+        setVnpayTotal(vnpaySum);
+        setCardTotal(cardSum);
         // Lấy danh sách các movieId, theaterId duy nhất
         const movieIds = Array.from(new Set(bookingsData.map((b: Booking) => typeof b.screeningId?.movieId === 'string' ? b.screeningId.movieId : null).filter(Boolean)));
         const theaterIds = Array.from(new Set(bookingsData.map((b: Booking) => typeof b.screeningId?.theaterId === 'string' ? b.screeningId.theaterId : null).filter(Boolean)));
@@ -99,9 +114,18 @@ const RevenueReport: React.FC = () => {
             <option key={id} value={id}>{name}</option>
           ))}
         </select>
+        <select
+          className="px-3 py-2 border rounded min-w-[180px]"
+          value={filterPaymentMethod}
+          onChange={e => setFilterPaymentMethod(e.target.value as 'all' | 'vnpay' | 'card')}
+        >
+          <option value="all">Tất cả phương thức</option>
+          <option value="vnpay">VNPay</option>
+          <option value="card">Thẻ tín dụng/ghi nợ</option>
+        </select>
       </div>
       {/* Bộ lọc trạng thái */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
         <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 ${filterStatus === 'all' ? 'bg-blue-600 text-white' : 'bg-white hover:bg-blue-50'}`} onClick={() => handleStatusFilter('all')}>
           <span className="text-lg font-semibold mb-2">Tổng số vé</span>
           <span className="text-3xl font-bold">{stats.total}</span>
@@ -117,6 +141,14 @@ const RevenueReport: React.FC = () => {
         <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 ${filterStatus === 'cancelled' ? 'bg-red-500 text-white' : 'bg-white hover:bg-red-50'}`} onClick={() => handleStatusFilter('cancelled')}>
           <span className="text-lg font-semibold mb-2">Hủy thanh toán</span>
           <span className="text-3xl font-bold">{stats.cancelled}</span>
+        </div>
+        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 ${filterPaymentMethod === 'vnpay' ? 'bg-blue-600 text-white' : 'bg-white hover:bg-blue-50'}`} onClick={() => setFilterPaymentMethod('vnpay')}>
+          <span className="text-lg font-semibold mb-2">Tổng tiền VNPay</span>
+          <span className="text-3xl font-bold">{vnpayTotal.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</span>
+        </div>
+        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 ${filterPaymentMethod === 'card' ? 'bg-orange-500 text-white' : 'bg-white hover:bg-orange-50'}`} onClick={() => setFilterPaymentMethod('card')}>
+          <span className="text-lg font-semibold mb-2">Tổng tiền Thẻ</span>
+          <span className="text-3xl font-bold">{cardTotal.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</span>
         </div>
       </div>
       {/* Bảng đặt vé */}
@@ -334,6 +366,17 @@ const RevenueReport: React.FC = () => {
                   <div className="text-gray-500 text-xs mb-1">Mã khuyến mãi: <span className="font-semibold text-gray-700">{selectedBooking.code}</span></div>
                 )}
                 <div className="text-gray-500 text-xs mb-1">Tổng tiền: <span className="font-semibold text-gray-700">{selectedBooking.totalPrice?.toLocaleString()}₫</span></div>
+                                {selectedBooking && (
+                  <div className="text-gray-500 text-xs mb-1">
+                    Phương thức thanh toán: <span className="font-semibold text-gray-700">
+                      {selectedBooking.paymentMethod === 'vnpay'
+                        ? 'VNPay'
+                        : selectedBooking.paymentMethod === 'card'
+                        ? 'Thẻ tín dụng/ghi nợ'
+                        : 'Chưa chọn'}
+                    </span>
+                  </div>
+                )}
               </>
             )}
           </div>
