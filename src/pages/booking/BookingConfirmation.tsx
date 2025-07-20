@@ -19,6 +19,7 @@ type ConfirmationDetails = {
   paymentStatus: 'pending' | 'paid' | 'failed' | 'cancelled';
   createdAt?: string;
   qrCodeDataUrl?: string;
+  paymentMethod?: string; // Thêm trường này
 };
 
 const BookingConfirmation: React.FC = () => {
@@ -53,6 +54,14 @@ const BookingConfirmation: React.FC = () => {
         if (storedDetails) {
           storedConfirmationDetails = JSON.parse(storedDetails);
           bookingId = storedConfirmationDetails.bookingId;
+          // Nếu paymentMethod chưa có, thử lấy từ bookingDetails
+          if (!storedConfirmationDetails.paymentMethod) {
+            const bookingDetails = sessionStorage.getItem('bookingDetails');
+            if (bookingDetails) {
+              const detailsObj = JSON.parse(bookingDetails);
+              storedConfirmationDetails.paymentMethod = detailsObj.paymentMethod || '';
+            }
+          }
         }
 
         if (!bookingId) {
@@ -86,7 +95,8 @@ const BookingConfirmation: React.FC = () => {
           discount: storedConfirmationDetails?.discount || updatedBooking.discount || 0,
           paymentStatus: updatedBooking.paymentStatus,
           createdAt: updatedBooking.bookingDate || updatedBooking.createdAt,
-          qrCodeDataUrl: updatedBooking.qrCodeDataUrl
+          qrCodeDataUrl: updatedBooking.qrCodeDataUrl,
+          paymentMethod: storedConfirmationDetails?.paymentMethod || '', // Thêm trường này
         };
         setConfirmationDetails(confirmedDetails);
         sessionStorage.removeItem('currentBookingId');
@@ -287,6 +297,16 @@ const BookingConfirmation: React.FC = () => {
               <div>
                 <p className="text-gray-600 text-sm">Ngày đặt chỗ</p>
                 <p className="font-medium">{formatDateTime(confirmationDetails.createdAt || '')}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm">Phương thức thanh toán</p>
+                <p className="font-medium">
+                  {confirmationDetails.paymentMethod === 'vnpay'
+                    ? 'VNPay'
+                    : confirmationDetails.paymentMethod === 'card'
+                    ? 'Thẻ tín dụng/ghi nợ'
+                    : 'Chưa chọn'}
+                </p>
               </div>
             </div>
           </div>
