@@ -7,6 +7,7 @@ export interface Room {
     theaterId: string;
     name: string;
     totalSeats: number;
+    isActive: boolean; 
     createdAt?: string;
     updatedAt?: string;
     __v?: number;
@@ -57,6 +58,16 @@ export const deleteRoom = async (id: string): Promise<void> => {
         await axios.delete(`${API_URL}/api/rooms/${id}`);
     } catch (error) {
         console.error(`Error deleting room with id ${id}:`, error);
+        throw error;
+    }
+};
+
+export const activateRoom = async (id: string): Promise<Room> => {
+    try {
+        const response = await axios.patch(`${API_URL}/api/rooms/${id}/activate`);
+        return response.data.data;
+    } catch (error) {
+        console.error(`Error activating room with id ${id}:`, error);
         throw error;
     }
 };
