@@ -3,7 +3,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { PlusIcon, MapPinIcon } from 'lucide-react';
 import { getTheaters, createTheater, updateTheater, deleteTheater, Theater } from '../../utils/theater';
-import { getRooms, createRoom, updateRoom, deleteRoom, Room } from '../../utils/room';
+import { getRooms, createRoom, updateRoom, deleteRoom, Room, activateRoom } from '../../utils/room';
 
 const TheaterManagement: React.FC = () => {
   const [theaters, setTheaters] = useState<Theater[]>([]);
@@ -20,6 +20,7 @@ const TheaterManagement: React.FC = () => {
   const [roomLoading, setRoomLoading] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [showDeleteRoomModal, setShowDeleteRoomModal] = useState<{ open: boolean, room: Room | null }>({ open: false, room: null });
+  const [showInactiveRooms, setShowInactiveRooms] = useState(false);
 
   useEffect(() => {
     fetchTheaters();
@@ -43,6 +44,7 @@ const TheaterManagement: React.FC = () => {
     try {
       setRoomLoading(true);
       const data = await getRooms();
+      // Mặc định chỉ hiển thị phòng active
       setRooms(data);
     } catch (err) {
       toast.error('Không thể lấy danh sách phòng chiếu');
@@ -139,10 +141,11 @@ const TheaterManagement: React.FC = () => {
     if (!roomModal.theaterId) return;
     try {
       setRoomLoading(true);
-      const newRoom = await createRoom({
+      await createRoom({
         theaterId: roomModal.theaterId,
         name: roomForm.name,
-        totalSeats: 64
+        totalSeats: 64,
+        isActive: true // Thêm trường isActive mới
       });
       await fetchRooms();
       toast.success('Tạo phòng chiếu thành công!');
@@ -175,7 +178,7 @@ const TheaterManagement: React.FC = () => {
     if (!editingRoom) return;
     try {
       setRoomLoading(true);
-      const updatedRoom = await updateRoom(editingRoom._id, {
+      await updateRoom(editingRoom._id, {
         name: roomForm.name,
         totalSeats: roomForm.totalSeats,
         theaterId: typeof editingRoom.theaterId === 'object' && editingRoom.theaterId !== null 
@@ -203,13 +206,16 @@ const TheaterManagement: React.FC = () => {
     try {
       setRoomLoading(true);
       await deleteRoom(showDeleteRoomModal.room._id);
-      if (showDeleteRoomModal.room) {
-        setRooms(rooms.filter(r => r._id !== showDeleteRoomModal.room?._id));
-      }
-      toast.success('Xóa phòng chiếu thành công!');
+      // Sau khi "xóa", cập nhật lại danh sách phòng
+      await fetchRooms();
+      toast.success('Phòng chiếu đã được ngừng hoạt động!');
       setShowDeleteRoomModal({ open: false, room: null });
-    } catch (err) {
-      toast.error('Không thể xóa phòng chiếu');
+    } catch (err: any) {
+      if (err?.response?.data?.message) {
+        toast.error(err.response.data.message);
+      } else {
+        toast.error('Không thể xóa phòng chiếu');
+      }
     } finally {
       setRoomLoading(false);
     }
@@ -217,6 +223,24 @@ const TheaterManagement: React.FC = () => {
 
   const handleCancelDeleteRoom = () => {
     setShowDeleteRoomModal({ open: false, room: null });
+  };
+
+  // Thêm hàm xử lý kích hoạt lại phòng
+  const handleActivateRoom = async (room: Room) => {
+    try {
+      setRoomLoading(true);
+      await activateRoom(room._id);
+      await fetchRooms();
+      toast.success('Phòng chiếu đã được kích hoạt lại thành công!');
+    } catch (err: any) {
+      if (err?.response?.data?.message) {
+        toast.error(err.response.data.message);
+      } else {
+        toast.error('Không thể kích hoạt lại phòng chiếu');
+      }
+    } finally {
+      setRoomLoading(false);
+    }
   };
 
   return (
@@ -275,6 +299,19 @@ const TheaterManagement: React.FC = () => {
         />
         <label htmlFor="showInactive" className="ml-2 text-sm text-gray-700">
           Hiển thị rạp tạm đóng
+        </label>
+      </div>
+
+      <div className="flex items-center mb-4">
+        <input
+          type="checkbox"
+          id="showInactiveRooms"
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          checked={showInactiveRooms}
+          onChange={e => setShowInactiveRooms(e.target.checked)}
+        />
+        <label htmlFor="showInactiveRooms" className="ml-2 text-sm text-gray-700">
+          Hiển thị phòng đã ngừng hoạt động
         </label>
       </div>
 
@@ -380,14 +417,20 @@ const TheaterManagement: React.FC = () => {
                         ) : (
                           <ul className="list-disc ml-6">
                             {rooms.filter(room => {
-                              if (typeof room.theaterId === 'object' && room.theaterId !== null) {
-                                return (room.theaterId as any)._id === theater._id;
-                              }
-                              return room.theaterId === theater._id;
+                              // Lọc theo theaterId
+                              const isCorrectTheater = typeof room.theaterId === 'object' && room.theaterId !== null 
+                                ? (room.theaterId as any)._id === theater._id
+                                : room.theaterId === theater._id;
+                              
+                              // Lọc theo trạng thái active
+                              const isActiveMatch = showInactiveRooms ? true : room.isActive !== false;
+                              
+                              return isCorrectTheater && isActiveMatch;
                             }).map(room => (
                               <li key={room._id} className="mb-1 flex items-center justify-between">
                                 <span>
                                   <span className="font-medium">{room.name}</span> - Số ghế: {room.totalSeats}
+                                  {room.isActive === false && <span className="ml-2 text-xs px-2 py-1 bg-red-100 text-red-800 rounded-full">Đã ngừng hoạt động</span>}
                                 </span>
                                 <span className="flex gap-2">
                                   <button
@@ -398,14 +441,27 @@ const TheaterManagement: React.FC = () => {
                                       <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                                     </svg>
                                   </button>
-                                  <button
-                                    className="p-1 hover:bg-red-100 rounded-full"
-                                    onClick={() => handleDeleteRoomClick(room)}
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                    </svg>
-                                  </button>
+                                  
+                                  {room.isActive === false ? (
+                                    <button
+                                      className="p-1 hover:bg-green-100 rounded-full"
+                                      onClick={() => handleActivateRoom(room)}
+                                      title="Kích hoạt lại phòng"
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                      </svg>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      className="p-1 hover:bg-red-100 rounded-full"
+                                      onClick={() => handleDeleteRoomClick(room)}
+                                    >
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                      </svg>
+                                    </button>
+                                  )}
                                 </span>
                               </li>
                             ))}
@@ -678,6 +734,44 @@ const TheaterManagement: React.FC = () => {
                   placeholder="Ví dụ: 64"
                 />
               </div>
+              
+              {/* Xóa phần trạng thái khi chỉnh sửa phòng */}
+              {/* {editingRoom && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+                  <div className="flex space-x-4">
+                    <button
+                      type="button"
+                      className={`px-4 py-2 rounded-md ${
+                        editingRoom.isActive !== false
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-white border border-gray-300 text-gray-700'
+                      }`}
+                      onClick={() => setEditingRoom({
+                        ...editingRoom,
+                        isActive: true
+                      })}
+                    >
+                      Hoạt động
+                    </button>
+                    <button
+                      type="button"
+                      className={`px-4 py-2 rounded-md ${
+                        editingRoom.isActive === false
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-white border border-gray-300 text-gray-700'
+                      }`}
+                      onClick={() => setEditingRoom({
+                        ...editingRoom,
+                        isActive: false
+                      })}
+                    >
+                      Ngừng hoạt động
+                    </button>
+                  </div>
+                </div>
+              )} */}
+              
               <div className="flex justify-end space-x-4 pt-4">
                 <button
                   type="button"

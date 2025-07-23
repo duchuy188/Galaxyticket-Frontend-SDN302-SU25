@@ -319,7 +319,8 @@ export const updateBookingStatus = async (bookingId: string): Promise<BookingRes
             totalPrice: Number(bookingDetails.total),
             basePrice: Number(bookingDetails.basePrice),
             discount: Number(bookingDetails.discount),
-            paymentStatus: 'paid'
+            paymentStatus: 'paid',
+            paymentMethod: bookingDetails.paymentMethod // Truyền thêm paymentMethod lên backend
         });
 
         // Cập nhật lại thông tin xác nhận trong sessionStorage
@@ -335,7 +336,8 @@ export const updateBookingStatus = async (bookingId: string): Promise<BookingRes
             discountAmount: Number(bookingDetails.discountAmount),
             paymentStatus: 'paid',
             promotionId: response.data.booking.promotionId,
-            code: bookingDetails.code
+            code: bookingDetails.code,
+            paymentMethod: bookingDetails.paymentMethod || sessionStorage.getItem('paymentMethod') || '' // Đảm bảo luôn có giá trị
         };
         sessionStorage.setItem('confirmationDetails', JSON.stringify(confirmationDetails));
 

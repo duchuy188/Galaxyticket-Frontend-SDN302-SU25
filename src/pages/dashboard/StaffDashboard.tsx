@@ -265,8 +265,13 @@ const StaffDashboard: React.FC = () => {
       await deleteMovie(deleteMovieId);
       setMovies(movies.filter(movie => movie._id !== deleteMovieId));
       toast.success('Xóa phim thành công!');
-    } catch (err) {
-      toast.error('Xóa phim thất bại');
+    } catch (err: any) {
+      // Check for the specific error message about upcoming screenings
+      if (err.response && err.response.data && err.response.data.message) {
+        toast.error(err.response.data.message);
+      } else {
+        toast.error('Xóa phim thất bại');
+      }
     } finally {
       setIsLoading(false);
       setDeleteMovieId(null);
@@ -380,7 +385,7 @@ const StaffDashboard: React.FC = () => {
         
         // Kiểm tra nếu phim đã được duyệt, hiển thị thông báo đặc biệt
         if (editingMovie.status === 'approved') {
-          toast.success('Yêu cầu chỉnh sửa đã được gửi và đang chờ quản lý duyệt. Phim vẫn hiển thị với thông tin cũ cho đến khi được duyệt.');
+          toast.success('Yêu cầu chỉnh sửa đã được gửi. Phim đã chuyển về trạng thái chờ duyệt.');
         } else {
           toast.success('Cập nhật phim thành công!');
         }

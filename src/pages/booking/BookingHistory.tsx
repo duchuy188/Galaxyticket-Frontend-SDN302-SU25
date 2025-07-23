@@ -172,6 +172,16 @@ const BookingHistory: React.FC = () => {
                             : 'N/A'}
                         </p>
                       </div>
+                      <div>
+                        <p className="text-gray-600 text-sm mb-1">Phương thức thanh toán</p>
+                        <p className="font-medium">
+                          {booking.paymentMethod === 'vnpay'
+                            ? 'VNPay'
+                            : booking.paymentMethod === 'card'
+                            ? 'Thẻ tín dụng/ghi nợ'
+                            : 'Chưa chọn'}
+                        </p>
+                      </div>
                     </div>
                     {/* QR code */}
                     <div className="mt-6 flex justify-center">
