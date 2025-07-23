@@ -124,29 +124,21 @@ const RevenueReport: React.FC = () => {
           <option value="card">Thẻ tín dụng/ghi nợ</option>
         </select>
       </div>
-      {/* Bộ lọc trạng thái */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
-        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 ${filterStatus === 'all' ? 'bg-blue-600 text-white' : 'bg-white hover:bg-blue-50'}`} onClick={() => handleStatusFilter('all')}>
+      {/* Bộ lọc trạng thái - Hiển thị đều các thẻ */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 w-full ${filterStatus === 'all' ? 'bg-blue-600 text-white' : 'bg-white hover:bg-blue-50'}`} onClick={() => handleStatusFilter('all')}>
           <span className="text-lg font-semibold mb-2">Tổng số vé</span>
           <span className="text-3xl font-bold">{stats.total}</span>
         </div>
-        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 ${filterStatus === 'pending' ? 'bg-yellow-400 text-white' : 'bg-white hover:bg-yellow-50'}`} onClick={() => handleStatusFilter('pending')}>
-          <span className="text-lg font-semibold mb-2">Chờ thanh toán</span>
-          <span className="text-3xl font-bold">{stats.pending}</span>
-        </div>
-        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 ${filterStatus === 'paid' ? 'bg-green-500 text-white' : 'bg-white hover:bg-green-50'}`} onClick={() => handleStatusFilter('paid')}>
+        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 w-full ${filterStatus === 'paid' ? 'bg-green-500 text-white' : 'bg-white hover:bg-green-50'}`} onClick={() => handleStatusFilter('paid')}>
           <span className="text-lg font-semibold mb-2">Đã thanh toán</span>
           <span className="text-3xl font-bold">{stats.paid}</span>
         </div>
-        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 ${filterStatus === 'cancelled' ? 'bg-red-500 text-white' : 'bg-white hover:bg-red-50'}`} onClick={() => handleStatusFilter('cancelled')}>
-          <span className="text-lg font-semibold mb-2">Hủy thanh toán</span>
-          <span className="text-3xl font-bold">{stats.cancelled}</span>
-        </div>
-        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 ${filterPaymentMethod === 'vnpay' ? 'bg-blue-600 text-white' : 'bg-white hover:bg-blue-50'}`} onClick={() => setFilterPaymentMethod('vnpay')}>
+        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 w-full ${filterPaymentMethod === 'vnpay' ? 'bg-blue-600 text-white' : 'bg-white hover:bg-blue-50'}`} onClick={() => setFilterPaymentMethod('vnpay')}>
           <span className="text-lg font-semibold mb-2">Tổng tiền VNPay</span>
           <span className="text-3xl font-bold">{vnpayTotal.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</span>
         </div>
-        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 ${filterPaymentMethod === 'card' ? 'bg-orange-500 text-white' : 'bg-white hover:bg-orange-50'}`} onClick={() => setFilterPaymentMethod('card')}>
+        <div className={`rounded-lg shadow p-4 flex flex-col items-center cursor-pointer transition-colors duration-150 w-full ${filterPaymentMethod === 'card' ? 'bg-orange-500 text-white' : 'bg-white hover:bg-orange-50'}`} onClick={() => setFilterPaymentMethod('card')}>
           <span className="text-lg font-semibold mb-2">Tổng tiền Thẻ</span>
           <span className="text-3xl font-bold">{cardTotal.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}</span>
         </div>

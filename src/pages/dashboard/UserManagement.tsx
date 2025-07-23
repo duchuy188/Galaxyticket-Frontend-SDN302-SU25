@@ -274,9 +274,9 @@ const handleUpdateUser = async (e: React.FormEvent) => {
                     <button onClick={() => handleEditUser(user)} className="text-blue-600 hover:text-blue-900 mr-3">
                       <EditIcon size={18} />
                     </button>
-                    <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-900">
+                    {/* <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-900">
                       <TrashIcon size={18} />
-                    </button>
+                    </button> */}
                   </td>
                 </tr>
               ))
