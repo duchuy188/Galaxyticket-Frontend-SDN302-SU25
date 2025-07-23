@@ -160,6 +160,36 @@ export const getStaffMovies = async (params?: {
     }
 };
 
+export const activateMovie = async (id: string): Promise<Movie> => {
+    try {
+        const token = getAuthToken();
+        const response = await axios.patch(`${API_URL}/api/movies/${id}/activate`, {}, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return response.data.data;
+    } catch (error) {
+        console.error(`Error activating movie with id ${id}:`, error);
+        throw error;
+    }
+};
+
+export const getDeletedMovies = async (): Promise<Movie[]> => {
+    try {
+        const token = getAuthToken();
+        const response = await axios.get(`${API_URL}/api/movies/deleted`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        return Array.isArray(response.data.data) ? response.data.data : [];
+    } catch (error) {
+        console.error('Error fetching deleted movies:', error);
+        return [];
+    }
+};
+
 const getAuthToken = () => {
     return localStorage.getItem('token');
 };
