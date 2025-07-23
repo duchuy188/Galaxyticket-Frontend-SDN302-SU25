@@ -5,7 +5,7 @@ import {  PlusIcon, TicketIcon } from 'lucide-react';
 import Select from 'react-select';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {  createMovie, updateMovie, deleteMovie, Movie } from '../../utils/movie';
+import {  createMovie, updateMovie, deleteMovie, activateMovie, getDeletedMovies, Movie } from '../../utils/movie';
 import { getStaffMovies } from '../../utils/movie';
 
 interface SeatLayout {
@@ -126,6 +126,7 @@ const StaffDashboard: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [movies, setMovies] = useState<Movie[]>([]);
+  const [deletedMovies, setDeletedMovies] = useState<Movie[]>([]);
   const [showtimes, setShowtimes] = useState(initialShowtimes);
   const [editingMovie, setEditingMovie] = useState<Partial<Movie> | null>(null);
   const [editingShowtime, setEditingShowtime] = useState<Partial<Showtime> | null>(null);
@@ -140,6 +141,7 @@ const StaffDashboard: React.FC = () => {
   const [showingStatusFilter, setShowingStatusFilter] = useState<'all' | 'coming-soon' | 'now-showing' | 'ended'>('all');
   const [localMovies, setLocalMovies] = useState<Movie[]>([]);
   const [isFilterLoading, setIsFilterLoading] = useState(false);
+  const [showDeletedMovies, setShowDeletedMovies] = useState(false);
   // Check which section we're on
   const isMainDashboard = location.pathname === '/staff';
   const isMovieManagement = location.pathname === '/staff/movies';
@@ -183,9 +185,19 @@ const StaffDashboard: React.FC = () => {
   // Thêm useEffect để lọc phim từ dữ liệu local
   useEffect(() => {
     setIsFilterLoading(true);
-    // Lọc phim dựa trên tiêu chí từ state
-    let filtered = [...movies];
     
+    // Lọc phim dựa trên tiêu chí từ state
+    let filtered = [];
+    
+    // Nếu checkbox được chọn, chỉ hiển thị phim đã xóa
+    if (showDeletedMovies) {
+      filtered = [...deletedMovies];
+    } else {
+      // Nếu không chọn checkbox, chỉ hiển thị phim chưa xóa
+      filtered = [...movies].filter(movie => movie.isActive !== false);
+    }
+    
+    // Tiếp tục lọc theo các tiêu chí khác
     if (showingStatusFilter !== 'all') {
       filtered = filtered.filter(movie => movie.showingStatus === showingStatusFilter);
     }
@@ -203,7 +215,7 @@ const StaffDashboard: React.FC = () => {
     
     setLocalMovies(filtered);
     setIsFilterLoading(false);
-  }, [statusFilter, showingStatusFilter, movies]);
+  }, [statusFilter, showingStatusFilter, showDeletedMovies, movies, deletedMovies]);
 
   const handleAddMovie = () => {
     setEditingMovie({
@@ -280,6 +292,44 @@ const StaffDashboard: React.FC = () => {
 
   const cancelDeleteMovie = () => {
     setDeleteMovieId(null);
+  };
+
+  const handleActivateMovie = async (movieId: string) => {
+    try {
+      setIsLoading(true);
+      const activatedMovie = await activateMovie(movieId);
+      
+      // Xóa phim khỏi danh sách phim đã xóa
+      setDeletedMovies(prevDeletedMovies => 
+        prevDeletedMovies.filter(movie => movie._id !== movieId)
+      );
+      
+      // Cập nhật danh sách phim chính với phim đã được kích hoạt
+      setMovies(prevMovies => {
+        // Kiểm tra xem phim đã tồn tại trong danh sách chưa
+        const movieExists = prevMovies.some(movie => movie._id === movieId);
+        
+        if (movieExists) {
+          // Nếu đã tồn tại, cập nhật trạng thái isActive
+          return prevMovies.map(movie => 
+            movie._id === movieId ? { ...movie, isActive: true } : movie
+          );
+        } else {
+          // Nếu chưa tồn tại, thêm phim đã kích hoạt vào danh sách
+          return [...prevMovies, activatedMovie];
+        }
+      });
+      
+      toast.success('Phim đã được kích hoạt lại thành công!');
+    } catch (err: any) {
+      if (err.response && err.response.data && err.response.data.message) {
+        toast.error(err.response.data.message);
+      } else {
+        toast.error('Không thể kích hoạt lại phim');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSaveMovie = async (e: React.FormEvent) => {
@@ -668,6 +718,35 @@ const StaffDashboard: React.FC = () => {
             <option value="rejected">Từ Chối</option>
           </select>
 
+          {/* Thêm checkbox hiển thị phim đã xóa */}
+          <label className="flex items-center space-x-2 ml-2">
+            <input
+              type="checkbox"
+              checked={showDeletedMovies}
+              onChange={async (e) => {
+                setShowDeletedMovies(e.target.checked);
+                // Nếu checkbox được chọn, gọi API lấy phim đã xóa
+                if (e.target.checked) {
+                  try {
+                    setIsFilterLoading(true);
+                    const deletedData = await getDeletedMovies();
+                    setDeletedMovies(deletedData);
+                  } catch (err) {
+                    console.error('Error fetching deleted movies:', err);
+                    toast.error('Không thể lấy danh sách phim đã xóa');
+                  } finally {
+                    setIsFilterLoading(false);
+                  }
+                } else {
+                  // Khi bỏ chọn checkbox, hiển thị lại danh sách phim thường
+                  setLocalMovies([...movies]);
+                }
+              }}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <span className="text-sm text-gray-700">Hiển thị phim đã xóa</span>
+          </label>
+
           <button 
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center"
             onClick={handleAddMovie}
@@ -696,7 +775,7 @@ const StaffDashboard: React.FC = () => {
                 Ngày Khởi Chiếu
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Trạng Thái
+                Trạng Thái Phê Duyệt
               </th>
               <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Thao Tác
@@ -738,14 +817,20 @@ const StaffDashboard: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex gap-2">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      movie.showingStatus === 'now-showing' ? 'bg-blue-100 text-blue-800' :
-                      movie.showingStatus === 'coming-soon' ? 'bg-purple-100 text-purple-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {movie.showingStatus === 'now-showing' ? 'Đang Chiếu' :
-                       movie.showingStatus === 'coming-soon' ? 'Sắp Chiếu' : 'Đã Kết Thúc'}
-                    </span>
+                    {movie.isActive === false ? (
+                      <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800">
+                        Đã xóa
+                      </span>
+                    ) : (
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        movie.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        movie.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {movie.status === 'approved' ? 'Đã Duyệt' :
+                         movie.status === 'pending' ? 'Chờ Duyệt' : 'Từ Chối'}
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -763,29 +848,45 @@ const StaffDashboard: React.FC = () => {
                       </svg>
                     </button>
 
-                    <button 
-                      className="group relative p-2 hover:bg-blue-50 rounded-full"
-                      onClick={() => handleEditMovie(movie)}
-                    >
-                      <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2">
-                        Chỉnh sửa
-                      </span>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                      </svg>
-                    </button>
+                    {movie.isActive === false ? (
+                      <button 
+                        className="group relative p-2 hover:bg-green-50 rounded-full"
+                        onClick={() => handleActivateMovie(movie._id)}
+                      >
+                        <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2">
+                          Kích hoạt lại
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <>
+                        <button 
+                          className="group relative p-2 hover:bg-blue-50 rounded-full"
+                          onClick={() => handleEditMovie(movie)}
+                        >
+                          <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2">
+                            Chỉnh sửa
+                          </span>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          </svg>
+                        </button>
 
-                    <button 
-                      className="group relative p-2 hover:bg-red-50 rounded-full"
-                      onClick={() => handleDeleteMovie(movie._id)}
-                    >
-                      <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2">
-                        Xóa
-                      </span>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                    </button>
+                        <button 
+                          className="group relative p-2 hover:bg-red-50 rounded-full"
+                          onClick={() => handleDeleteMovie(movie._id)}
+                        >
+                          <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 -top-8 -left-2">
+                            Xóa
+                          </span>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
