@@ -645,6 +645,7 @@ const ScreeningManagement: React.FC = () => {
                     <option value="">Chọn phòng</option>
                     {rooms
                       .filter(r => {
+                        if (!r?.isActive) return false;
                         if (!r?.theaterId) return false;
                         const roomTheaterId = r?.theaterId?._id || r?.theaterId;
                         if (roomTheaterId !== form.theaterId) return false;

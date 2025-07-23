@@ -72,7 +72,7 @@ const NavBar: React.FC = () => {
     {
       name: 'Rạp Chiếu',
       path: '#',
-      items: theaters.map(theater => theater.name)
+      items: theaters.filter(theater => theater.status === true).map(theater => theater.name)
     },
     {
       name: 'Vé Của Tôi',
@@ -329,13 +329,13 @@ const NavBar: React.FC = () => {
                   to="/signin" 
                   className="px-4 py-2 text-gray-200 hover:text-white"
                 >
-                  Sign In
+                  Đăng nhập
                 </Link>
                 <Link 
                   to="/signup" 
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-200"
                 >
-                  Sign Up
+                  Đăng ký
                 </Link>
               </>
             )}
