@@ -3,3 +3,26 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 /* DO NOT DELETE THESE TAILWIND IMPORTS, OTHERWISE THE STYLING WILL NOT RENDER AT ALL */
+
+/* Hide "Scan an Image File" button in QR Scanner */
+#qr-reader button[title="Scan an Image File"] {
+  display: none !important;
+}
+
+#qr-reader .html5-qrcode-element {
+  display: none !important;
+}
+
+/* QR Scanner Focus Animation */
+@keyframes scanLine {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.scan-line {
+  animation: scanLine 2s ease-in-out infinite;
+}

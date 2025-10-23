@@ -395,3 +395,19 @@ export const adminGetBookings = async (filters: BookingFilters = {}): Promise<Bo
         throw error;
     }
 };
+
+// Check-in booking by QR code
+export const checkInBooking = async (qrCodeData: string) => {
+    try {
+        const response = await api.post('/api/bookings/check-in', {
+            qrData: qrCodeData
+        });
+        return response.data;
+    } catch (error: any) {
+        console.error('Check-in failed:', error);
+        if (error.response) {
+            throw new Error(error.response.data?.message || 'Check-in thất bại');
+        }
+        throw new Error('Không thể kết nối đến server. Vui lòng thử lại.');
+    }
+};

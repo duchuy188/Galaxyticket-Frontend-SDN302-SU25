@@ -5,6 +5,7 @@ import TheaterManagement from '../pages/dashboard/TheaterManagement';
 import ScreeningManagement from '../pages/dashboard/ScreeningManagement';
 import PromotionManager from '../pages/dashboard/PromotionManager';
 import StaffProfile from '../pages/dashboard/StaffProfile';
+import QRScannerPage from '../pages/dashboard/QRScannerPage';
 
 const StaffRoutes: React.FC = () => {
   return (
@@ -15,9 +16,10 @@ const StaffRoutes: React.FC = () => {
       <Route path="screenings" element={<ScreeningManagement />} />
       <Route path="promotions" element={<PromotionManager />} />
       <Route path="theaters" element={<TheaterManagement />} />
+      <Route path="qr-scanner" element={<QRScannerPage />} />
+      <Route path="profile" element={<StaffProfile />} />
       {/* Cập nhật route mặc định để chuyển đến movies thay vì staff */}
       <Route path="*" element={<Navigate to="/staff/movies" replace />} />
-      <Route path="profile" element={<StaffProfile />} />
     </Routes>
   );
 };
