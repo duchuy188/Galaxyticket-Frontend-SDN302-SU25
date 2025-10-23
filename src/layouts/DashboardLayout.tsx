@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -11,7 +11,10 @@ import {
   TagIcon,
   LayoutGridIcon,
   HomeIcon,
+  QrCodeIcon,
 } from 'lucide-react'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 type DashboardLayoutProps = {
   children: React.ReactNode
 }
@@ -22,6 +25,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const isAdmin = user?.role === 'admin'
   const isManager = user?.role === 'manager'
   const basePath = isAdmin ? '/admin' : isManager ? '/manager' : '/staff'
+  
   const handleLogout = () => {
     logout()
     navigate('/signin')
@@ -90,6 +94,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       : staffNavItems
   return (
     <div className="flex h-screen">
+      <ToastContainer />
       {/* Thanh bên */}
       <div className="w-64 bg-gray-800 text-white h-full flex flex-col">
         <div className="p-4 flex-1">
@@ -138,6 +143,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                   </Link>
                 </li>
               )}
+              {/* QR Check-in link for staff */}
+              {(!isAdmin && !isManager) && (
+                <li>
+                  <Link
+                    to="/staff/qr-scanner"
+                    className={`flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-700 transition-colors ${location.pathname === '/staff/qr-scanner' ? 'bg-gray-700' : ''}`}
+                  >
+                    <QrCodeIcon size={20} />
+                    <span>Check-in QR</span>
+                  </Link>
+                </li>
+              )}
               {(!isAdmin && !isManager) && (
                 <li>
                   <Link
@@ -166,6 +183,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       <div className="flex-1 overflow-auto">
         <div className="p-6 bg-gray-100 min-h-full">{children}</div>
       </div>
+      
     </div>
   )
 }

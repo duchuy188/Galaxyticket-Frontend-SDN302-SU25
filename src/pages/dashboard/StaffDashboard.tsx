@@ -160,6 +160,7 @@ const StaffDashboard: React.FC = () => {
     message: string;
     onConfirm: () => void;
   }>({ title: '', message: '', onConfirm: () => void 0 });
+  
 
   // Lấy dữ liệu ban đầu một lần
   useEffect(() => {
@@ -331,6 +332,7 @@ const StaffDashboard: React.FC = () => {
       setIsLoading(false);
     }
   };
+
 
   const handleSaveMovie = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1998,6 +2000,7 @@ const StaffDashboard: React.FC = () => {
       {isMovieManagement && renderMovieManagement()}
       {isScreeningManagement && renderScreeningManagement()}
       {isPromotionManagement && renderPromotionManagement()}
+      
     </div>;
 };
 export default StaffDashboard;
