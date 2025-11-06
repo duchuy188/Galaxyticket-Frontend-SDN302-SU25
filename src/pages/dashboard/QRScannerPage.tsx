@@ -1,9 +1,46 @@
 import React, { useState } from 'react';
-import { CameraIcon } from 'lucide-react';
+import { CameraIcon, CheckCircle, XCircle, Calendar, Clock, MapPin, Users, CreditCard, Tag, Ticket } from 'lucide-react';
 import QrScanner from 'react-qr-scanner';
-import { checkInBooking } from '../../utils/booking';
+import { checkInBooking, getBookingById, adminGetBookings } from '../../utils/booking';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+interface BookingInfo {
+  _id: string;
+  userId?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  screeningId?: {
+    _id: string;
+    movieId?: {
+      _id: string;
+      title: string;
+      poster?: string;
+    };
+    roomId?: {
+      _id: string;
+      name: string;
+    };
+    startTime: string;
+    ticketPrice: number;
+  };
+  seatNumbers?: string[];
+  totalPrice?: number;
+  paymentStatus: string;
+  paymentMethod?: string;
+  promotionId?: string;
+  discountAmount?: number;
+  code?: string;
+  emailSent?: boolean;
+  checkInStatus: string;
+  checkedInAt?: string;
+  checkedInBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  theaterName?: string;  // Thêm tên rạp
+}
 
 const QRScannerPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +51,7 @@ const QRScannerPage: React.FC = () => {
   const [scanCooldown, setScanCooldown] = useState(false);
   const [scanCount, setScanCount] = useState(0);
   const [successCount, setSuccessCount] = useState(0);
+  const [bookingInfo, setBookingInfo] = useState<BookingInfo | null>(null);
 
   const handleQRScanSuccess = async (qrData: string | null) => {
     if (!qrData) return;
@@ -47,19 +85,129 @@ const QRScannerPage: React.FC = () => {
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('API timeout after 10 seconds')), 10000)
         )
-      ]);
+      ]) as { success: boolean; data?: BookingInfo; booking?: BookingInfo };
       console.log('✅ API Response:', result);
+      console.log('✅ Result data:', result.data);
+      console.log('✅ Result booking:', result.booking);
+      console.log('✅ Result success:', result.success);
+      
+      // Lưu thông tin vé - backend có thể trả về data hoặc booking
+      const bookingData = result.data || result.booking;
+      if (result.success && bookingData) {
+        console.log('💾 Saving booking info:', bookingData);
+        
+        // Lấy bookingId (có thể là _id hoặc bookingId)
+        const bookingId = bookingData._id || (bookingData as {bookingId?: string}).bookingId;
+        
+        if (bookingId) {
+          try {
+            console.log('🔍 Fetching full booking details for ID:', bookingId);
+            
+            // Thử gọi adminGetBookings trước
+            try {
+              console.log('🔍 Trying adminGetBookings...');
+              const adminResult = await adminGetBookings({ });
+              console.log('📦 Admin bookings result:', adminResult);
+              
+              // Tìm booking theo ID
+              const foundBooking = adminResult.bookings?.find((b: { _id: string }) => b._id === bookingId);
+              if (foundBooking) {
+                console.log('✅ Found booking via adminGetBookings:', foundBooking);
+                setBookingInfo(foundBooking as unknown as BookingInfo);
+                return; // Dừng tại đây nếu tìm thấy
+              }
+            } catch (adminError) {
+              console.warn('⚠️ adminGetBookings failed, trying getBookingById...');
+            }
+            
+            // Fallback: thử getBookingById
+            const fullBookingData = await getBookingById(bookingId);
+            console.log('📦 Full booking data from getBookingById:', fullBookingData);
+            setBookingInfo(fullBookingData as unknown as BookingInfo);
+          } catch (fetchError) {
+            console.warn('⚠️ Could not fetch full booking details, using partial data');
+            console.log('📊 Available fields:', Object.keys(bookingData));
+            console.log('📊 Full bookingData:', bookingData);
+            
+            // Cast to any để access các field không có trong interface
+            const data = bookingData as Record<string, unknown> & BookingInfo;
+            
+            // Fallback: Map dữ liệu từ response sang cấu trúc UI expect
+            const mappedBooking: BookingInfo = {
+              _id: bookingId,
+              checkInStatus: data.checkInStatus || 'checked_in',
+              checkedInAt: data.checkedInAt || new Date().toISOString(),
+              totalPrice: (data.totalPrice as number) || (data.amount as number) || (data.price as number) || 0,
+              paymentStatus: data.paymentStatus || 'paid',
+              paymentMethod: data.paymentMethod,
+              code: data.code,
+              discountAmount: (data.discountAmount as number) || (data.discount as number) || 0,
+              createdAt: data.createdAt || new Date().toISOString(),
+              updatedAt: data.updatedAt || new Date().toISOString(),
+              seatNumbers: data.seatNumbers || [],
+              theaterName: (data.theaterName as string),  // Thêm tên rạp
+              // Map thông tin nested từ flat data
+              userId: data.userId || {
+                _id: (data.customerId as string) || '',
+                name: (data.customerName as string) || 'N/A',
+                email: (data.customerEmail as string) || 'N/A'
+              },
+              screeningId: {
+                _id: (typeof data.screeningId === 'string' ? data.screeningId : data.screeningId?._id) || '',
+                startTime: (data.screeningTime as string) || new Date().toISOString(),
+                ticketPrice: (data.ticketPrice as number) || 0,
+                movieId: {
+                  _id: (data.movieId as string) || '',
+                  title: (data.movieTitle as string) || 'N/A',
+                  poster: (data.moviePoster as string)
+                },
+                roomId: {
+                  _id: (data.roomId as string) || '',
+                  name: (data.roomName as string) || 'N/A'
+                }
+              }
+            };
+            console.log('� Mapped booking info:', mappedBooking);
+            setBookingInfo(mappedBooking);
+          }
+        } else {
+          console.error('❌ No booking ID found in response');
+        }
+      } else {
+        console.warn('⚠️ No data in result or success is false');
+        console.warn('⚠️ Full result object:', JSON.stringify(result, null, 2));
+      }
+      
       setSuccessCount(prev => prev + 1);
       toast.success('Check-in thành công!');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { 
+        message?: string; 
+        data?: BookingInfo;
+        success?: boolean;
+        response?: { 
+          data?: unknown; 
+          status?: number; 
+          statusText?: string 
+        } 
+      };
       console.error('❌ API Error:', error);
       console.error('❌ Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        statusText: error.response?.statusText
+        message: err.message,
+        data: err.data,
+        response: err.response?.data,
+        status: err.response?.status,
+        statusText: err.response?.statusText
       });
-      toast.error(error.message || 'Check-in thất bại');
+      
+      // Nếu có dữ liệu booking trong lỗi (ví dụ: vé đã check-in), vẫn hiển thị thông tin
+      if (err.data) {
+        setBookingInfo(err.data);
+      } else {
+        setBookingInfo(null);
+      }
+      
+      toast.error(err.message || 'Check-in thất bại');
     } finally {
       setIsLoading(false);
       // Reset scanner và cooldown sau 3 giây
@@ -72,10 +220,11 @@ const QRScannerPage: React.FC = () => {
     }
   };
 
-  const handleQRScanError = (error: any) => {
+  const handleQRScanError = (error: unknown) => {
+    const err = error as { message?: string };
     console.error('QR Scan Error:', error);
-    if (!error.message?.includes("No QR code found")) {
-      toast.error('Lỗi quét QR code: ' + error.message);
+    if (!err.message?.includes("No QR code found")) {
+      toast.error('Lỗi quét QR code: ' + err.message);
     }
   };
 
@@ -148,9 +297,9 @@ const QRScannerPage: React.FC = () => {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="grid grid-cols-1 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* QR Scanner Section */}
-            <div>
+            <div className="lg:col-span-2">
               <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
                 {isLoading && (
                   <div className="flex items-center justify-center mb-6">
@@ -282,6 +431,145 @@ const QRScannerPage: React.FC = () => {
                         </div>
                       )} */}
                     </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Booking Information Section */}
+            <div className="lg:col-span-1">
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 sticky top-8">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <Ticket className="mr-2 text-blue-600" size={24} />
+                  Thông tin vé
+                </h2>
+                
+                {bookingInfo ? (
+                  <div className="space-y-4">
+                    {/* Check-in Status */}
+                    <div className={`p-4 rounded-xl ${
+                      bookingInfo.checkInStatus === 'checked_in' 
+                        ? 'bg-green-50 border border-green-200' 
+                        : 'bg-yellow-50 border border-yellow-200'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700">Trạng thái:</span>
+                        <span className={`flex items-center text-sm font-semibold ${
+                          bookingInfo.checkInStatus === 'checked_in' ? 'text-green-700' : 'text-yellow-700'
+                        }`}>
+                          {bookingInfo.checkInStatus === 'checked_in' ? (
+                            <>
+                              <CheckCircle size={16} className="mr-1" />
+                              Đã check-in
+                            </>
+                          ) : (
+                            <>
+                              <XCircle size={16} className="mr-1" />
+                              Chưa check-in
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      {bookingInfo.checkedInAt && (
+                        <div className="mt-2 text-xs text-gray-600">
+                          <Clock size={12} className="inline mr-1" />
+                          {new Date(bookingInfo.checkedInAt).toLocaleString('vi-VN')}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Movie Info */}
+                    <div className="border-b border-gray-200 pb-4">
+                      {bookingInfo.screeningId?.movieId?.poster && (
+                        <img 
+                          src={bookingInfo.screeningId.movieId.poster} 
+                          alt={bookingInfo.screeningId.movieId.title}
+                          className="w-full h-48 object-cover rounded-lg mb-3"
+                        />
+                      )}
+                      <h3 className="font-bold text-lg text-gray-900 mb-2">
+                        {bookingInfo.screeningId?.movieId?.title || 'N/A'}
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-start">
+                          <Calendar size={16} className="text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700">
+                            {bookingInfo.screeningId?.startTime ? new Date(bookingInfo.screeningId.startTime).toLocaleDateString('vi-VN', { 
+                              weekday: 'long',
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            }) : 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex items-start">
+                          <Clock size={16} className="text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700">
+                            {bookingInfo.screeningId?.startTime ? new Date(bookingInfo.screeningId.startTime).toLocaleTimeString('vi-VN', { 
+                              hour: '2-digit', 
+                              minute: '2-digit',
+                              hour12: false 
+                            }) : 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex items-start">
+                          <MapPin size={16} className="text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
+                          <div className="text-gray-700">
+                            <div>{bookingInfo.screeningId?.roomId?.name || 'N/A'}</div>
+                            {bookingInfo.theaterName && (
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                Rạp: {bookingInfo.theaterName}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Customer Info */}
+                    <div className="border-b border-gray-200 pb-4">
+                      <h4 className="font-semibold text-sm text-gray-900 mb-2 flex items-center">
+                        <Users size={16} className="mr-2 text-blue-600" />
+                        Khách hàng
+                      </h4>
+                      <div className="space-y-1 text-sm">
+                        <p className="text-gray-700">{bookingInfo.userId?.name || 'N/A'}</p>
+                        {bookingInfo.userId?.email && bookingInfo.userId.email !== 'N/A' && (
+                          <p className="text-gray-600 text-xs">{bookingInfo.userId.email}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Seat Info */}
+                    <div className="border-b border-gray-200 pb-4">
+                      <h4 className="font-semibold text-sm text-gray-900 mb-2">Ghế ngồi</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {bookingInfo.seatNumbers?.map((seat, index) => (
+                          <span 
+                            key={index}
+                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium"
+                          >
+                            {seat}
+                          </span>
+                        )) || <span className="text-gray-500 text-sm">N/A</span>}
+                      </div>
+                    </div>
+
+                    {/* Booking ID */}
+                    <div className="mt-4">
+                      <p className="text-xs text-gray-500">
+                        Mã đặt vé: <span className="font-mono">{bookingInfo._id}</span>
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Ticket size={32} className="text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 text-sm">
+                      Quét QR code để xem thông tin vé
+                    </p>
                   </div>
                 )}
               </div>

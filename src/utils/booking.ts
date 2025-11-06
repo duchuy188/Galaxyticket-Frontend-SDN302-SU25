@@ -406,7 +406,13 @@ export const checkInBooking = async (qrCodeData: string) => {
     } catch (error: any) {
         console.error('Check-in failed:', error);
         if (error.response) {
-            throw new Error(error.response.data?.message || 'Check-in thất bại');
+            // Nếu có dữ liệu booking trong response lỗi, ném ra cùng với message
+            const errorData = {
+                message: error.response.data?.message || 'Check-in thất bại',
+                data: error.response.data?.data || null,
+                success: false
+            };
+            throw errorData;
         }
         throw new Error('Không thể kết nối đến server. Vui lòng thử lại.');
     }
